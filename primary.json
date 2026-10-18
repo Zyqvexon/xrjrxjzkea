@@ -13,6 +13,58 @@
       "Farming",
       "Automation"
     ]
+  }, 
+  {
+    "Name": "Top Sniper",
+    "Description": "Explore sniper-focused gameplay tools and combat controls designed for the fast-paced shooting action in Top Sniper.",
+    "RawUrl": "https://raw.githubusercontent.com/Zyqvexon/q7vx2n9k4m8z/refs/heads/main/005.lua",
+    "ImageAssetId": "rbxassetid://117794153233959",
+    "TagType": "HOT",
+    "LastUpdated": 1792364641,
+    "PlaceId": 119214646022567,
+    "Category": "Shooter",
+    "Tags": [
+      "FPS",
+      "Sniper",
+      "Combat",
+      "Weapons"
+    ]
+  },
+  {
+    "Name": "[🎃] +1 Loot to Forge",
+    "Description": "Automate training, combat, ore collection, forging, gear upgrades, rebirths, and pet farming to speed up your progression in +1 Loot to Forge.",
+    "RawUrl": "https://raw.githubusercontent.com/Zyqvexon/q7vx2n9k4m8z/refs/heads/main/006.lua",
+    "ImageAssetId": "rbxassetid://81101266460143",
+    "TagType": "HOT",
+    "LastUpdated": 1792364641,
+    "PlaceId": 118805555015549,
+    "Category": "Simulator",
+    "Tags": [
+      "Auto Farm",
+      "Combat",
+      "Loot",
+      "Forging",
+      "Progression",
+      "Pets"
+    ]
+  },
+  {
+    "Name": "[⚗️🌻] Search For The Needle",
+    "Description": "Automate hay and gem collection, tool usage, needle searching, selling, shop purchases, and upgrades to make progression easier in Search For The Needle.",
+    "RawUrl": "https://raw.githubusercontent.com/Zyqvexon/q7vx2n9k4m8z/refs/heads/main/004.lua",
+    "ImageAssetId": "rbxassetid://123286298489347",
+    "TagType": "HOT",
+    "LastUpdated": 1792364641,
+    "PlaceId": 77108422251420,
+    "Category": "Simulator",
+    "Tags": [
+      "Auto Farm",
+      "Collection",
+      "Needle Search",
+      "Upgrades",
+      "Automation",
+      "Progression"
+    ]
     },
     {
     "Name": "Flee the Facility",
