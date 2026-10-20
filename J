@@ -106,21 +106,21 @@ elseif type(load) == "function" then
 	end
 end
 Theme = {
-	Accent = Color3.fromRGB(99, 102, 241),
-	BackgroundMain = Color3.fromRGB(15, 23, 42),
-	BackgroundSecondary = Color3.fromRGB(20, 29, 55),
-	Card = Color3.fromRGB(24, 33, 50),
-	CardHover = Color3.fromRGB(30, 41, 59),
-	TextPrimary = Color3.fromRGB(248, 250, 252),
-	TextSecondary = Color3.fromRGB(203, 213, 225),
-	Success = Color3.fromRGB(16, 185, 129),
-	Error = Color3.fromRGB(180, 50, 50),
-	Warning = Color3.fromRGB(220, 140, 15),
+	Accent = Color3.fromRGB(129, 120, 255),
+	BackgroundMain = Color3.fromRGB(10, 14, 29),
+	BackgroundSecondary = Color3.fromRGB(17, 24, 46),
+	Card = Color3.fromRGB(22, 31, 57),
+	CardHover = Color3.fromRGB(31, 43, 76),
+	TextPrimary = Color3.fromRGB(248, 250, 255),
+	TextSecondary = Color3.fromRGB(174, 187, 214),
+	Success = Color3.fromRGB(52, 211, 153),
+	Error = Color3.fromRGB(251, 113, 133),
+	Warning = Color3.fromRGB(251, 191, 36),
 	Info = Color3.fromRGB(56, 189, 248),
-	System = Color3.fromRGB(168, 85, 247),
-	Execution = Color3.fromRGB(99, 102, 241),
-	Stroke = Color3.fromRGB(51, 65, 85),
-	ToggleOff = Color3.fromRGB(71, 85, 105)
+	System = Color3.fromRGB(167, 139, 250),
+	Execution = Color3.fromRGB(129, 120, 255),
+	Stroke = Color3.fromRGB(51, 64, 101),
+	ToggleOff = Color3.fromRGB(77, 91, 123)
 }
 VeloxIcons = {
 	Changelog = "rbxassetid://132233084740467",
@@ -1447,11 +1447,11 @@ MainPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainPanel.AnchorPoint = Vector2.new(0.5, 0.5)
 MainPanel.BackgroundColor3 = Theme.BackgroundMain
 MainPanel.BorderSizePixel = 0
-Instance.new("UICorner", MainPanel).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", MainPanel).CornerRadius = UDim.new(0, 14)
 MainPanelOutline = Instance.new("UIStroke", MainPanel)
-MainPanelOutline.Color = Color3.fromRGB(99, 102, 241)
-MainPanelOutline.Transparency = 0.52
-MainPanelOutline.Thickness = 1
+MainPanelOutline.Color = Theme.Accent
+MainPanelOutline.Transparency = 0.34
+MainPanelOutline.Thickness = 1.2
 MainPanel.ClipsDescendants = true
 MainPanel.Visible = true
 MainPanel.Active = true
@@ -1463,10 +1463,11 @@ MainModalBtn.Modal = true
 MainModalBtn.Text = ""
 MainGradient = Instance.new("UIGradient", MainPanel)
 MainGradient.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Theme.BackgroundMain),
-	ColorSequenceKeypoint.new(1, Theme.BackgroundSecondary)
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(9, 13, 27)),
+	ColorSequenceKeypoint.new(0.52, Theme.BackgroundMain),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(19, 24, 48))
 })
-MainGradient.Rotation = 45
+MainGradient.Rotation = 28
 PanelGroup = Instance.new("Frame", MainPanel)
 PanelGroup.Size = UDim2.new(1, 0, 1, 0)
 PanelGroup.BackgroundTransparency = 1
@@ -1481,14 +1482,14 @@ Sidebar = Instance.new("Frame", PanelGroup)
 Sidebar.Size = UDim2.new(0, SideWidth, 1, 0)
 Sidebar.Position = UDim2.new(0, 0, 0, 0)
 Sidebar.BackgroundColor3 = Theme.BackgroundSecondary
-Sidebar.BackgroundTransparency = 0.16
+Sidebar.BackgroundTransparency = 0.06
 Sidebar.BorderSizePixel = 0
 Sidebar.ClipsDescendants = true
 SidebarDivider = Instance.new("Frame", Sidebar)
 SidebarDivider.Size = UDim2.new(0, 1, 1, 0)
 SidebarDivider.Position = UDim2.new(1, -1, 0, 0)
 SidebarDivider.BackgroundColor3 = Theme.Stroke
-SidebarDivider.BackgroundTransparency = 0.3
+SidebarDivider.BackgroundTransparency = 0.12
 SidebarDivider.BorderSizePixel = 0
 SidebarDragHandle = Instance.new("TextButton", Sidebar)
 SidebarDragHandle.Name = "SidebarDragHandle"
@@ -1515,7 +1516,6 @@ SidebarLogo.BorderSizePixel = 0
 SidebarLogo.Image = "rbxassetid://97589005673854"
 SidebarLogo.ScaleType = Enum.ScaleType.Fit
 SidebarLogo.Active = false
-Instance.new("UICorner", MainPanel).CornerRadius = UDim.new(0, 12)
 PanelUIScale = Instance.new("UIScale", MainPanel)
 PanelUIScale.Scale = math.clamp(tonumber(SavedData.Settings.UIScale) or 1, 0.8, 1.2)
 function ApplyPanelUIScale(scaleValue)
@@ -2749,6 +2749,14 @@ HeaderContainer.Size = UDim2.new(1, -28, 0, IsMobile and 48 or 56)
 HeaderContainer.Position = UDim2.new(0, 14, 0, IsMobile and 6 or 10)
 HeaderContainer.BackgroundTransparency = 1
 HeaderContainer.Active = true
+HeaderDivider = Instance.new("Frame", MainContent)
+HeaderDivider.Name = "HeaderDivider"
+HeaderDivider.Size = UDim2.new(1, -28, 0, 1)
+HeaderDivider.Position = UDim2.new(0, 14, 0, IsMobile and 60 or 72)
+HeaderDivider.BackgroundColor3 = Theme.Stroke
+HeaderDivider.BackgroundTransparency = 0.42
+HeaderDivider.BorderSizePixel = 0
+HeaderDivider.ZIndex = 2
 mainDragStart, mainStartPos = nil, nil
 _VH_RegConn(HeaderContainer.InputBegan:Connect(function(input)
 	if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not activeMainDragInput then
@@ -3034,7 +3042,7 @@ function CreateCanvas(name)
 	scroll.Visible = (name == currentTab)
 	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y; scroll.CanvasSize = UDim2.new(0, 0, 0, 0); scroll.Active = true
 	local layout = Instance.new("UIListLayout", scroll)
-	layout.Padding = UDim.new(0, IsMobile and 8 or 12); layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.HorizontalAlignment = Enum.HorizontalAlignment.Left; layout.VerticalAlignment = Enum.VerticalAlignment.Top
+	layout.Padding = UDim.new(0, IsMobile and 7 or 9); layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.HorizontalAlignment = Enum.HorizontalAlignment.Left; layout.VerticalAlignment = Enum.VerticalAlignment.Top
 	local pad = Instance.new("UIPadding", scroll)
 	pad.PaddingLeft = UDim.new(0, 3); pad.PaddingRight = UDim.new(0, 6); pad.PaddingBottom = UDim.new(0, 16)
 	TabViews[name] = scroll
@@ -3054,12 +3062,12 @@ ScriptsView.Size = IsMobile and UDim2.new(1, -28, 1, -180) or UDim2.new(1, -28, 
 ScriptsView.BackgroundColor3 = Color3.fromRGB(10, 16, 30)
 ScriptsView.BackgroundTransparency = 0.68
 ScriptsView.ClipsDescendants = true
-Instance.new("UICorner", ScriptsView).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", ScriptsView).CornerRadius = UDim.new(0, 10)
 ScriptsViewOutline = Instance.new("UIStroke", ScriptsView)
 ScriptsViewOutline.Name = "CatalogViewportOutline"
-ScriptsViewOutline.Color = Color3.fromRGB(203, 213, 225)
-ScriptsViewOutline.Transparency = 0.78
-ScriptsViewOutline.Thickness = 0.8
+ScriptsViewOutline.Color = Color3.fromRGB(205, 214, 238)
+ScriptsViewOutline.Transparency = 0.56
+ScriptsViewOutline.Thickness = 0.9
 pcall(function() ScriptsViewOutline.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
 EmptyStateMessage = Instance.new("TextLabel", ScriptsView)
 EmptyStateMessage.Name = "EmptyStateMessage"
@@ -3311,15 +3319,15 @@ SearchScopeButton = Instance.new("TextButton", SearchRow)
 SearchScopeButton.Name = "SearchScopeButton"
 SearchScopeButton.Size = UDim2.new(0, scopeBtnWidth, 1, 0)
 SearchScopeButton.Position = UDim2.new(0, 0, 0, 0)
-SearchScopeButton.BackgroundColor3 = Color3.fromRGB(35, 43, 75)
+SearchScopeButton.BackgroundColor3 = Theme.Card
 SearchScopeButton.BorderSizePixel = 0
 SearchScopeButton.AutoButtonColor = false
 SearchScopeButton.Text = ""
 SearchScopeButton.ZIndex = 52
 Instance.new("UICorner", SearchScopeButton).CornerRadius = UDim.new(0, 8)
 SearchScopeStroke = Instance.new("UIStroke", SearchScopeButton)
-SearchScopeStroke.Color = Color3.fromRGB(203, 213, 225)
-SearchScopeStroke.Transparency = 0.72
+SearchScopeStroke.Color = Theme.Stroke
+SearchScopeStroke.Transparency = 0.38
 SearchScopeStroke.Thickness = 1
 SearchScopeLabel = Instance.new("TextLabel", SearchScopeButton)
 SearchScopeLabel.Size = UDim2.new(1, -8, 1, 0)
@@ -3334,10 +3342,10 @@ SearchScopeLabel.TextTruncate = Enum.TextTruncate.AtEnd
 SearchScopeLabel.Active = false
 SearchScopeLabel.ZIndex = 53
 SearchContainer = Instance.new("Frame", SearchRow)
-SearchContainer.Size = UDim2.new(1, -(scopeBtnWidth + filterBtnWidth + sortBtnWidth + gap * 3), 1, 0); SearchContainer.Position = UDim2.new(0, scopeBtnWidth + gap, 0, 0); SearchContainer.BackgroundColor3 = Color3.fromRGB(27, 37, 58)
+SearchContainer.Size = UDim2.new(1, -(scopeBtnWidth + filterBtnWidth + sortBtnWidth + gap * 3), 1, 0); SearchContainer.Position = UDim2.new(0, scopeBtnWidth + gap, 0, 0); SearchContainer.BackgroundColor3 = Theme.Card
 SearchContainer.ClipsDescendants = true; SearchContainer.ZIndex = 51
 Instance.new("UICorner", SearchContainer).CornerRadius = UDim.new(0, 8)
-SearchStroke = Instance.new("UIStroke", SearchContainer); SearchStroke.Color = Color3.fromRGB(203, 213, 225); SearchStroke.Transparency = 0.76; SearchStroke.Thickness = 0.8
+SearchStroke = Instance.new("UIStroke", SearchContainer); SearchStroke.Color = Theme.Stroke; SearchStroke.Transparency = 0.35; SearchStroke.Thickness = 0.9
 pcall(function() SearchStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
 
 SearchIcon = Instance.new("ImageLabel", SearchContainer)
@@ -3376,7 +3384,7 @@ SearchScopeDropdown.Visible = false
 SearchScopeDropdown.ZIndex = 1700
 Instance.new("UICorner", SearchScopeDropdown).CornerRadius = UDim.new(0, 9)
 SearchScopeDropdownStroke = Instance.new("UIStroke", SearchScopeDropdown)
-SearchScopeDropdownStroke.Color = Color3.fromRGB(112, 118, 245)
+SearchScopeDropdownStroke.Color = Theme.Accent
 SearchScopeDropdownStroke.Transparency = 0.22
 SearchScopeDropdownStroke.Thickness = 1
 SearchScopeDropdownLayout = Instance.new("UIListLayout", SearchScopeDropdown)
@@ -3439,10 +3447,10 @@ end))
 
 FilterBtn = Instance.new("TextButton", SearchRow)
 FilterBtn.Size = UDim2.new(0, filterBtnWidth, 1, 0); FilterBtn.Position = UDim2.new(1, -(filterBtnWidth + sortBtnWidth + gap), 0, 0)
-FilterBtn.BackgroundColor3 = Color3.fromRGB(30, 41, 59); FilterBtn.Text = ""
+FilterBtn.BackgroundColor3 = Theme.Card; FilterBtn.Text = ""
 FilterBtn.ZIndex = 51; FilterBtn.AutoButtonColor = false
 Instance.new("UICorner", FilterBtn).CornerRadius = UDim.new(0, 8)
-FilterBtnStroke = Instance.new("UIStroke", FilterBtn); FilterBtnStroke.Color = Color3.fromRGB(203, 213, 225); FilterBtnStroke.Transparency = 0.76; FilterBtnStroke.Thickness = 1
+FilterBtnStroke = Instance.new("UIStroke", FilterBtn); FilterBtnStroke.Color = Theme.Stroke; FilterBtnStroke.Transparency = 0.35; FilterBtnStroke.Thickness = 0.9
 
 FilterIcon = CreateVeloxIcon(FilterBtn, VeloxIcons.Filter, 16, Theme.TextSecondary, UDim2.new(0.5, -8, 0.5, -8), nil, 52, "FilterIcon")
 
@@ -3456,16 +3464,16 @@ Instance.new("UICorner", FilterBadge).CornerRadius = UDim.new(1, 0)
 
 SortDropdownBtn = Instance.new("TextButton", SearchRow)
 SortDropdownBtn.Size = UDim2.new(0, sortBtnWidth, 1, 0); SortDropdownBtn.Position = UDim2.new(1, -sortBtnWidth, 0, 0)
-SortDropdownBtn.BackgroundColor3 = Color3.fromRGB(38, 51, 74); SortDropdownBtn.Text = ""
+SortDropdownBtn.BackgroundColor3 = Theme.CardHover; SortDropdownBtn.Text = ""
 SortDropdownBtn.ZIndex = 51; SortDropdownBtn.ClipsDescendants = true; SortDropdownBtn.AutoButtonColor = false
 SortIcon = Instance.new("ImageLabel", SortDropdownBtn)
 SortIcon.Name = "SortIcon"
 SortIcon.Size = UDim2.new(0, 15, 0, 15); SortIcon.Position = UDim2.new(0.5, -7.5, 0.5, -7.5)
 SortIcon.BackgroundTransparency = 1; SortIcon.Image = VeloxIcons.Sort; SortIcon.ImageColor3 = Theme.TextSecondary; SortIcon.ScaleType = Enum.ScaleType.Fit
 Instance.new("UICorner", SortDropdownBtn).CornerRadius = UDim.new(0, 8)
-SortBtnStroke = Instance.new("UIStroke", SortDropdownBtn); SortBtnStroke.Color = Color3.fromRGB(203, 213, 225); SortBtnStroke.Transparency = 0.76; SortBtnStroke.Thickness = 0.8
+SortBtnStroke = Instance.new("UIStroke", SortDropdownBtn); SortBtnStroke.Color = Theme.Stroke; SortBtnStroke.Transparency = 0.35; SortBtnStroke.Thickness = 0.9
 pcall(function() SortBtnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
-ApplyInteractiveAnimations(SortDropdownBtn, Color3.fromRGB(38, 51, 74), Color3.fromRGB(50, 68, 96), Theme.BackgroundSecondary, SortBtnStroke, Theme.Stroke, Theme.Accent)
+ApplyInteractiveAnimations(SortDropdownBtn, Theme.CardHover, Color3.fromRGB(48, 58, 91), Theme.BackgroundSecondary, SortBtnStroke, Theme.Stroke, Theme.Accent)
 
 _VH_RegConn(SearchInput.Focused:Connect(function() SearchStroke.Color = Theme.Accent end))
 _VH_RegConn(SearchInput.FocusLost:Connect(function() SearchStroke.Color = Theme.Stroke end))
@@ -3505,7 +3513,7 @@ RecommendationPanelGradient.Color = ColorSequence.new({
 RecommendationAccent = Instance.new("Frame", RecommendationPanel)
 RecommendationAccent.Size = UDim2.new(1, -28, 0, 2)
 RecommendationAccent.Position = UDim2.new(0, 14, 0, 10)
-RecommendationAccent.BackgroundColor3 = Color3.fromRGB(99, 102, 241)
+RecommendationAccent.BackgroundColor3 = Theme.Accent
 RecommendationAccent.BorderSizePixel = 0
 RecommendationAccent.ZIndex = 5
 Instance.new("UICorner", RecommendationAccent).CornerRadius = UDim.new(1, 0)
@@ -3554,7 +3562,7 @@ RecommendationSubtitle.Size = UDim2.new(1, -(IsMobile and 155 or 175), 0, 15)
 RecommendationSubtitle.Position = UDim2.new(0, IsMobile and 46 or 50, 0, IsMobile and 35 or 37)
 RecommendationSubtitle.BackgroundTransparency = 1
 RecommendationSubtitle.Text = L("Based on your current game")
-RecommendationSubtitle.TextColor3 = Color3.fromRGB(203, 213, 225)
+RecommendationSubtitle.TextColor3 = Theme.TextSecondary
 RecommendationSubtitle.Font = Enum.Font.GothamMedium
 RecommendationSubtitle.TextSize = IsMobile and 8 or 9
 RecommendationSubtitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -3908,7 +3916,7 @@ end
 function _VH_UpdateFilterControl()
 	local count = _VH_GetFilterCount()
 	local active = count > 0
-	FilterBtn.BackgroundColor3 = active and Color3.fromRGB(42, 37, 100) or Color3.fromRGB(30, 41, 59)
+	FilterBtn.BackgroundColor3 = active and Color3.fromRGB(42, 37, 100) or Theme.CardHover
 	FilterBtnStroke.Color = active and Theme.Accent or Theme.Stroke
 	FilterBadge.Visible = count > 0
 	FilterBadge.Text = count > 9 and "9+" or tostring(count)
@@ -4629,8 +4637,8 @@ function CreateTab(name, index)
 	local btn = Instance.new("TextButton", TabContainer)
 	btn.Size = UDim2.new(1, -10, 0, tabHeight)
 	btn.Position = UDim2.new(0, 5, 0, yOffset)
-	btn.BackgroundColor3 = (name == currentTab) and Theme.CardHover or Theme.BackgroundSecondary
-	btn.BackgroundTransparency = (name == currentTab) and 0.05 or 0.62
+	btn.BackgroundColor3 = (name == currentTab) and Color3.fromRGB(39, 45, 87) or Theme.BackgroundSecondary
+	btn.BackgroundTransparency = (name == currentTab) and 0.08 or 0.78
 	btn.BorderSizePixel = 0
 	btn.Text = ""
 	btn.AutoButtonColor = false
@@ -4640,9 +4648,9 @@ function CreateTab(name, index)
 	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 	local tabStroke = Instance.new("UIStroke", btn)
 	tabStroke.Name = "TabOutline"
-	tabStroke.Color = (name == currentTab) and Theme.Accent or Color3.fromRGB(255, 255, 255)
-	tabStroke.Transparency = (name == currentTab) and 0.34 or 0.82
-	tabStroke.Thickness = 1
+	tabStroke.Color = (name == currentTab) and Theme.Accent or Theme.Stroke
+	tabStroke.Transparency = (name == currentTab) and 0.18 or 0.62
+	tabStroke.Thickness = (name == currentTab) and 1.1 or 0.8
 
 	local icon = Instance.new("ImageLabel", btn)
 	icon.Name = "TabIcon"
@@ -4711,12 +4719,12 @@ function CreateTab(name, index)
 		for tName, tBtn in pairs(TabButtonCache) do
 			local active = tName == currentTab
 			local activeColor = active and Theme.TextPrimary or Theme.TextSecondary
-			tBtn.BackgroundColor3 = active and Theme.CardHover or Theme.BackgroundSecondary
-			tBtn.BackgroundTransparency = active and 0.05 or 0.62
+			tBtn.BackgroundColor3 = active and Color3.fromRGB(39, 45, 87) or Theme.BackgroundSecondary
+			tBtn.BackgroundTransparency = active and 0.08 or 0.78
 			local tabOutline = tBtn:FindFirstChild("TabOutline")
 			if tabOutline and tabOutline:IsA("UIStroke") then
-				tabOutline.Color = active and Theme.Accent or Color3.fromRGB(255, 255, 255)
-				tabOutline.Transparency = active and 0.34 or 0.82
+				tabOutline.Color = active and Theme.Accent or Theme.Stroke
+				tabOutline.Transparency = active and 0.18 or 0.62
 			end
 			local childIcon = tBtn:FindFirstChild("TabIcon")
 			local childLabel = tBtn:FindFirstChild("TabLabel")
@@ -4730,24 +4738,26 @@ _VH_UpdateFilterControl()
 TabIndicator.Position = UDim2.new(0, 0, 0, 5)
 
 local function _VH_CreateDiscoverSection(parent, key, titleText, subtitleText, order)
+    parent = DiscoverySectionsContainer or parent
     local panel = Instance.new("Frame", parent)
     panel.Name = key .. "Section"
-    panel.Size = UDim2.new(1, -4, 0, 0)
-    panel.AutomaticSize = Enum.AutomaticSize.Y
-    panel.BackgroundColor3 = Theme.BackgroundSecondary
-    panel.BackgroundTransparency = 0.2
+    panel.Size = UDim2.new(1, 0, 0, 150)
+    panel.AutomaticSize = Enum.AutomaticSize.None
+    panel.BackgroundColor3 = Theme.Card
+    panel.BackgroundTransparency = 0.04
     panel.BorderSizePixel = 0
     panel.LayoutOrder = order
     panel.ClipsDescendants = true
-    Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 10)
     local stroke = Instance.new("UIStroke", panel)
-    stroke.Color = Color3.fromRGB(203, 213, 225); stroke.Transparency = 0.84; stroke.Thickness = 0.8
+    stroke.Color = Theme.Stroke; stroke.Transparency = 0.30; stroke.Thickness = 0.9
     local pad = Instance.new("UIPadding", panel)
     pad.PaddingTop = UDim.new(0, 7); pad.PaddingBottom = UDim.new(0, 7)
     pad.PaddingLeft = UDim.new(0, 9); pad.PaddingRight = UDim.new(0, 9)
     local stack = Instance.new("UIListLayout", panel)
     stack.SortOrder = Enum.SortOrder.LayoutOrder
     stack.Padding = UDim.new(0, 3)
+    stack.HorizontalAlignment = Enum.HorizontalAlignment.Left
     local header = Instance.new("Frame", panel)
     header.Name = "SectionHeading"
     header.Size = UDim2.new(1, 0, 0, 18)
@@ -4761,10 +4771,10 @@ local function _VH_CreateDiscoverSection(parent, key, titleText, subtitleText, o
         Featured = VeloxIcons.Flame,
         SavedEntries = VeloxIcons.Heart
     }
-    CreateVeloxIcon(header, iconAssets[key] or VeloxIcons.Tag, 13, Theme.TextSecondary, UDim2.new(0, 0, 0.5, -6.5), nil, 4, "SectionIcon")
+    CreateVeloxIcon(header, iconAssets[key] or VeloxIcons.Tag, 13, Theme.Accent, UDim2.new(0, 0, 0.5, -6.5), nil, 4, "SectionIcon")
     local title = Instance.new("TextLabel", header)
     title.Name = "SectionTitle"
-    title.Size = UDim2.new(1, -88, 1, 0)
+    title.Size = UDim2.new(1, -82, 1, 0)
     title.Position = UDim2.new(0, 21, 0, 0)
     title.BackgroundTransparency = 1; title.Text = L(titleText)
     title:SetAttribute("VeloxTranslationKey", titleText)
@@ -4773,8 +4783,8 @@ local function _VH_CreateDiscoverSection(parent, key, titleText, subtitleText, o
     title.TextTruncate = Enum.TextTruncate.AtEnd
     local viewButton = Instance.new("TextButton", header)
     viewButton.Name = "SectionViewButton"
-    viewButton.Size = UDim2.new(0, 64, 1, 0)
-    viewButton.Position = UDim2.new(1, -64, 0, 0)
+    viewButton.Size = UDim2.new(0, 62, 1, 0)
+    viewButton.Position = UDim2.new(1, -62, 0, 0)
     viewButton.BackgroundTransparency = 1
     viewButton.BorderSizePixel = 0
     viewButton.AutoButtonColor = false
@@ -4794,27 +4804,37 @@ local function _VH_CreateDiscoverSection(parent, key, titleText, subtitleText, o
     end))
     local subtitle = Instance.new("TextLabel", panel)
     subtitle.Name = "SectionSubtitle"
-    subtitle.Size = UDim2.new(1, 0, 0, 0); subtitle.AutomaticSize = Enum.AutomaticSize.Y
+    subtitle.Size = UDim2.new(1, 0, 0, 14)
     subtitle.BackgroundTransparency = 1; subtitle.Text = L(subtitleText or "")
     subtitle:SetAttribute("VeloxTranslationKey", subtitleText or "")
     subtitle.TextColor3 = Theme.TextSecondary; subtitle.Font = Enum.Font.Gotham
-    subtitle.TextSize = IsMobile and 7 or 8; subtitle.TextWrapped = true
-    subtitle.TextXAlignment = Enum.TextXAlignment.Left; subtitle.LayoutOrder = 2
-    local content = Instance.new("Frame", panel)
+    subtitle.TextSize = IsMobile and 7 or 8; subtitle.TextWrapped = false
+    subtitle.TextXAlignment = Enum.TextXAlignment.Left; subtitle.TextTruncate = Enum.TextTruncate.AtEnd
+    subtitle.LayoutOrder = 2
+    local content = Instance.new("ScrollingFrame", panel)
     content.Name = "SectionContent"
-    content.Size = UDim2.new(1, 0, 0, 0); content.AutomaticSize = Enum.AutomaticSize.Y
+    content.Size = UDim2.new(1, 0, 0, 88)
     content.BackgroundTransparency = 1; content.LayoutOrder = 3
+    content.BorderSizePixel = 0; content.Active = true
+    content.ScrollBarThickness = 2; content.ScrollBarImageColor3 = Theme.Accent
+    content.ScrollingDirection = Enum.ScrollingDirection.X
+    content.AutomaticCanvasSize = Enum.AutomaticSize.X
+    content.CanvasSize = UDim2.new(0, 0, 0, 0)
+    content.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
     local layout = Instance.new("UIListLayout", content)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.Padding = UDim.new(0, 4)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.Padding = UDim.new(0, 7)
+    layout.FillDirection = Enum.FillDirection.Horizontal
+    layout.VerticalAlignment = Enum.VerticalAlignment.Center
     local empty = Instance.new("TextLabel", content)
     empty.Name = "EmptyMessage"
-    empty.Size = UDim2.new(1, 0, 0, 24)
+    empty.Size = UDim2.new(1, -4, 1, 0)
     empty.BackgroundTransparency = 1
     empty.Text = L("No entries yet. Refresh the catalogs to populate Discover.")
     empty:SetAttribute("VeloxTranslationKey", "No entries yet. Refresh the catalogs to populate Discover.")
     empty.TextColor3 = Theme.TextSecondary; empty.Font = Enum.Font.Gotham
     empty.TextSize = IsMobile and 8 or 9; empty.TextWrapped = true
     empty.TextXAlignment = Enum.TextXAlignment.Left; empty.TextYAlignment = Enum.TextYAlignment.Center
+    empty.LayoutOrder = 1
     DiscoverySections[key] = { Panel = panel, Content = content, Empty = empty, Header = header, Title = title, Subtitle = subtitle, ViewButton = viewButton }
     return panel
 end
@@ -4822,19 +4842,74 @@ end
 DiscoverHero = Instance.new("Frame", DiscoverView)
 DiscoverHero.Name = "DiscoverHero"
 DiscoverHero.Size = UDim2.new(1, -4, 0, IsMobile and 96 or 100)
-DiscoverHero.BackgroundColor3 = Color3.fromRGB(22, 28, 58)
-DiscoverHero.BackgroundTransparency = 0.04
+DiscoverHero.BackgroundColor3 = Color3.fromRGB(21, 27, 55)
+DiscoverHero.BackgroundTransparency = 0.02
 DiscoverHero.BorderSizePixel = 0
 DiscoverHero.LayoutOrder = 0
 DiscoverHero.ClipsDescendants = true
-Instance.new("UICorner", DiscoverHero).CornerRadius = UDim.new(0, 11)
+Instance.new("UICorner", DiscoverHero).CornerRadius = UDim.new(0, 12)
+DiscoverySectionsContainer = Instance.new("Frame", DiscoverView)
+DiscoverySectionsContainer.Name = "DiscoveryHorizontalShelves"
+DiscoverySectionsContainer.Size = UDim2.new(1, -4, 0, 0)
+DiscoverySectionsContainer.BackgroundTransparency = 1
+DiscoverySectionsContainer.BorderSizePixel = 0
+DiscoverySectionsContainer.LayoutOrder = 2
+DiscoverySectionsContainer.ClipsDescendants = false
+DiscoverySectionsGridLayout = Instance.new("UIGridLayout", DiscoverySectionsContainer)
+DiscoverySectionsGridLayout.Name = "DiscoveryGridLayout"
+DiscoverySectionsGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+DiscoverySectionsGridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
+DiscoverySectionsGridLayout.CellSize = UDim2.new(1, 0, 0, 150)
+DiscoverySectionsLinearLayout = Instance.new("UIListLayout", DiscoverySectionsContainer)
+DiscoverySectionsLinearLayout.Name = "FavoritesLayout"
+DiscoverySectionsLinearLayout.SortOrder = Enum.SortOrder.LayoutOrder
+DiscoverySectionsLinearLayout.Padding = UDim.new(0, 8)
+DiscoverySectionsLinearLayout.Parent = nil
+function _VH_ApplyDiscoveryLayout()
+    if not DiscoverySectionsContainer or not DiscoverySectionsContainer.Parent then return end
+    local favoritesMode = DiscoveryMode == "Favorites"
+    local availableWidth = DiscoverView and DiscoverView.AbsoluteSize.X or 0
+    local twoColumns = not IsMobile and availableWidth >= 560 and not favoritesMode
+    if favoritesMode then
+        DiscoverySectionsGridLayout.Parent = nil
+        DiscoverySectionsLinearLayout.Parent = DiscoverySectionsContainer
+    else
+        DiscoverySectionsLinearLayout.Parent = nil
+        DiscoverySectionsGridLayout.Parent = DiscoverySectionsContainer
+    end
+    DiscoverySectionsGridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
+    DiscoverySectionsGridLayout.CellSize = twoColumns and UDim2.new(0.5, -4, 0, 150) or UDim2.new(1, 0, 0, 150)
+    if FavoriteEntriesPanel then
+        FavoriteEntriesPanel.Size = UDim2.new(1, 0, 0, 150)
+        FavoriteEntriesPanel.LayoutOrder = favoritesMode and 1 or 7
+        if favoritesMode then
+            FavoriteEntriesPanel.Parent = DiscoverySectionsContainer
+        else
+            FavoriteEntriesPanel.Parent = nil
+        end
+    end
+    local sectionCount = 0
+    for key, section in pairs(DiscoverySections) do
+        if key ~= "SavedEntries" and section and section.Panel and section.Panel.Parent then
+            sectionCount = sectionCount + 1
+        end
+    end
+    local columns = twoColumns and 2 or 1
+    local rows = favoritesMode and 1 or math.ceil(sectionCount / columns)
+    local totalHeight = rows > 0 and (rows * 150 + math.max(0, rows - 1) * 8) or 0
+    DiscoverySectionsContainer.Size = UDim2.new(1, -4, 0, totalHeight)
+end
+_VH_RegConn(DiscoverView:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+    if isDestroying then return end
+    _VH_ApplyDiscoveryLayout()
+end))
 DiscoverHeroStroke = Instance.new("UIStroke", DiscoverHero)
-DiscoverHeroStroke.Color = Color3.fromRGB(99, 102, 241); DiscoverHeroStroke.Transparency = 0.22; DiscoverHeroStroke.Thickness = 1
+DiscoverHeroStroke.Color = Theme.Accent; DiscoverHeroStroke.Transparency = 0.18; DiscoverHeroStroke.Thickness = 1.1
 DiscoverHeroGradient = Instance.new("UIGradient", DiscoverHero)
 DiscoverHeroGradient.Rotation = 15
 DiscoverHeroGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 39, 89)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 23, 42))
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(38, 44, 94)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 20, 40))
 })
 DiscoverHeroIcon = Instance.new("Frame", DiscoverHero)
 DiscoverHeroIcon.Size = UDim2.new(0, IsMobile and 28 or 32, 0, IsMobile and 28 or 32)
@@ -4871,7 +4946,7 @@ local function _VH_CreateDiscoverAction(name, order, width)
     button.TextSize = IsMobile and 7 or 9; button.LayoutOrder = order
     Instance.new("UICorner", button).CornerRadius = UDim.new(0, 6)
     local stroke = Instance.new("UIStroke", button)
-    stroke.Color = Color3.fromRGB(99, 102, 241); stroke.Transparency = 0.5; stroke.Thickness = 0.8
+    stroke.Color = Theme.Accent; stroke.Transparency = 0.42; stroke.Thickness = 0.85
     ApplyInteractiveAnimations(button, Color3.fromRGB(44, 49, 112), Color3.fromRGB(58, 65, 140), Color3.fromRGB(31, 35, 83), stroke, stroke.Color, Theme.Accent)
     return button
 end
@@ -4894,8 +4969,8 @@ local function _VH_CreateDiscoverModeButton(buttonName, iconAsset, xPos, widthSc
     button.ZIndex = 3
     Instance.new("UICorner", button).CornerRadius = UDim.new(0, 7)
     local stroke = Instance.new("UIStroke", button)
-    stroke.Name = "ModeOutline"; stroke.Color = Color3.fromRGB(203, 213, 225)
-    stroke.Transparency = 0.82; stroke.Thickness = 0.8
+    stroke.Name = "ModeOutline"; stroke.Color = Theme.Stroke
+    stroke.Transparency = 0.62; stroke.Thickness = 0.8
     CreateVeloxIcon(button, iconAsset, IsMobile and 11 or 13, Theme.TextSecondary, UDim2.new(0, 9, 0.5, -(IsMobile and 5.5 or 6.5)), nil, 5, buttonName .. "Icon")
     local label = Instance.new("TextLabel", button)
     label.Name = "ModeLabel"; label.Size = UDim2.new(1, -32, 1, 0); label.Position = UDim2.new(0, 29, 0, 0)
@@ -4922,17 +4997,18 @@ function _VH_UpdateDiscoveryModeUI()
             if label then label.TextColor3 = item.Active and Theme.TextPrimary or Theme.TextSecondary end
             if icon then icon.ImageColor3 = item.Active and Color3.fromRGB(224, 231, 255) or Theme.TextSecondary end
             if stroke then
-                stroke.Color = item.Active and Theme.Accent or Color3.fromRGB(203, 213, 225)
+                stroke.Color = item.Active and Theme.Accent or Theme.Stroke
                 stroke.Transparency = item.Active and 0.22 or 0.82
                 stroke.Thickness = item.Active and 1 or 0.8
             end
         end
     end
     for key, section in pairs(DiscoverySections) do
-        if section and section.Panel and section.Panel.Parent then
+        if section and section.Panel then
             section.Panel.Visible = favoritesMode and key == "SavedEntries" or (not favoritesMode and key ~= "SavedEntries")
         end
     end
+    _VH_ApplyDiscoveryLayout()
 end
 _VH_RegConn(DiscoverForYouButton.Activated:Connect(function()
     if isDestroying then return end
@@ -4955,6 +5031,7 @@ _VH_CreateDiscoverSection(DiscoverView, "Categories", "Explore Categories", "Bro
 _VH_CreateDiscoverSection(DiscoverView, "Featured", "Featured Entries", "Uses the catalog's existing metadata labels.", 6)
 FavoriteEntriesPanel = _VH_CreateDiscoverSection(DiscoverView, "SavedEntries", "Saved entries", "Your saved Games and Utilities entries.", 7)
 FavoriteEntriesPanel.Name = "FavoriteEntriesSection"
+_VH_ApplyDiscoveryLayout()
 _VH_UpdateDiscoveryModeUI()
 
 _VH_RegConn(DiscoverGamesButton.Activated:Connect(function() if type(_VH_OpenCatalogFromDiscover) == "function" then _VH_OpenCatalogFromDiscover("Games", "", nil) end end))
@@ -5095,7 +5172,7 @@ function CreateParagraph(title, desc, parentView, order)
 	dLbl.TextWrapped = true; dLbl.LayoutOrder = 2
 end
 CreateParagraph("Found a Bug?", "If you run into any bugs, issues, or anything that doesn't seem right, please report it on our Discord. It really helps me figure out what's going wrong and fix it faster. Even small details can be useful, so don't hesitate to report anything you notice!", ChangelogsView)
-CreateParagraph("v2.0.8 - Discovery and Interface Update", "Version 2.0.8 makes Discover more compact with a quick switch between recommendations and saved favorites, expandable sections, clearer icons, and navigation that finds and highlights the exact catalog entry selected. Popup menus stay within the hub's usable content area, scaled windows retain safe viewport margins, and the Games/Utilities catalog uses a restrained light outline. The Help guide now matches the navigation, while catalog data, compatibility behavior, refresh systems, key-system logic, and executor fallbacks remain intact.", ChangelogsView)
+CreateParagraph("v2.0.8 - Horizontal Discovery and UI Refresh", "Version 2.0.8 refreshes the Velox Hub interface with a consistent indigo visual style, compact horizontal Discover shelves, clearer catalog cards, and more balanced spacing. Games and Utilities keep their separate identity, while recommendations, saved favorites, categories, and recently updated entries are easier to browse without long vertical lists. The update also refines the catalog search controls and navigation feedback while preserving catalog data, compatibility behavior, refresh systems, key-system logic, and executor fallbacks.", ChangelogsView)
 function _VH_HowToCard(parent, title, desc, order, iconAsset)
 	local block = Instance.new("Frame", parent)
 	block.Size = UDim2.new(1, -2, 0, 0)
@@ -6198,36 +6275,51 @@ local function _VH_CreateDiscoveryEntryRow(parent, entry, reason, order, favorit
     local category = entry.CatalogCategory or "Games"
     local data = entry.Data or {}
     local id = tostring(entry.Id or StableScriptId(data) or "")
+    local width = IsMobile and 218 or 244
+    local height = IsMobile and 86 or 90
     local row = Instance.new("Frame", parent)
     row.Name = (favoriteMode and "Favorite_" or "Discover_") .. id:gsub("[^%w]", "_")
-    row.Size = UDim2.new(1, 0, 0, IsMobile and 50 or 54)
-    row.BackgroundColor3 = Color3.fromRGB(17, 25, 43)
-    row.BackgroundTransparency = 0.05
+    row.Size = UDim2.new(0, width, 0, height)
+    row.BackgroundColor3 = Color3.fromRGB(17, 24, 45)
+    row.BackgroundTransparency = 0.02
     row.BorderSizePixel = 0
     row.LayoutOrder = order
-    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
+    row.ClipsDescendants = true
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 9)
     local stroke = Instance.new("UIStroke", row)
-    stroke.Color = category == "Utilities" and Color3.fromRGB(34, 211, 238) or Color3.fromRGB(94, 100, 202)
-    stroke.Transparency = 0.55; stroke.Thickness = 0.8
+    stroke.Color = category == "Utilities" and Color3.fromRGB(56, 189, 248) or Theme.Accent
+    stroke.Transparency = 0.48; stroke.Thickness = 0.85
     local openButton = Instance.new("TextButton", row)
-    openButton.Name = "OpenCatalogEntry"; openButton.Size = UDim2.new(1, -68, 1, 0)
+    openButton.Name = "OpenCatalogEntry"
+    openButton.Size = UDim2.new(1, -59, 1, 0)
     openButton.BackgroundTransparency = 1; openButton.BorderSizePixel = 0; openButton.AutoButtonColor = false; openButton.Text = ""
     openButton.ZIndex = 2
     local image = Instance.new("ImageLabel", openButton)
-    image.Size = UDim2.new(0, IsMobile and 36 or 38, 0, IsMobile and 36 or 38)
-    image.Position = UDim2.new(0, 7, 0.5, -(IsMobile and 18 or 19))
+    image.Name = "EntryThumbnail"
+    image.Size = UDim2.new(0, IsMobile and 38 or 42, 0, IsMobile and 38 or 42)
+    image.Position = UDim2.new(0, 7, 0, 7)
     image.BackgroundColor3 = Theme.BackgroundMain; image.BorderSizePixel = 0
     image.Image = type(data.ImageAssetId) == "string" and data.ImageAssetId or ""
     image.ScaleType = Enum.ScaleType.Crop; image.ZIndex = 3
-    Instance.new("UICorner", image).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", image).CornerRadius = UDim.new(0, 7)
     local title = Instance.new("TextLabel", openButton)
-    title.Size = UDim2.new(1, -(IsMobile and 78 or 90), 0, 18); title.Position = UDim2.new(0, IsMobile and 49 or 53, 0, 5)
+    title.Name = "EntryTitle"
+    title.Size = UDim2.new(1, -57, 0, 17); title.Position = UDim2.new(0, IsMobile and 50 or 54, 0, 7)
     title.BackgroundTransparency = 1; title.Text = tostring(data.Name or entry.ExactName or "Unnamed entry")
     title.TextColor3 = Theme.TextPrimary; title.Font = Enum.Font.GothamBold
-    title.TextSize = IsMobile and 8 or 10; title.TextWrapped = false; title.TextTruncate = Enum.TextTruncate.AtEnd
+    title.TextSize = IsMobile and 8 or 9; title.TextWrapped = false; title.TextTruncate = Enum.TextTruncate.AtEnd
     title.TextXAlignment = Enum.TextXAlignment.Left; title.ZIndex = 3
+    local desc = Instance.new("TextLabel", openButton)
+    desc.Name = "EntryDescription"
+    desc.Size = UDim2.new(1, -57, 0, 26); desc.Position = UDim2.new(0, IsMobile and 50 or 54, 0, 26)
+    desc.BackgroundTransparency = 1
+    desc.Text = tostring(data.Description or "No description provided.")
+    desc.TextColor3 = Theme.TextSecondary; desc.Font = Enum.Font.Gotham
+    desc.TextSize = IsMobile and 7 or 8; desc.TextWrapped = true; desc.TextTruncate = Enum.TextTruncate.AtEnd
+    desc.TextXAlignment = Enum.TextXAlignment.Left; desc.TextYAlignment = Enum.TextYAlignment.Top; desc.ZIndex = 3
     local meta = Instance.new("TextLabel", openButton)
-    meta.Size = UDim2.new(1, -(IsMobile and 78 or 90), 0, 15); meta.Position = UDim2.new(0, IsMobile and 49 or 53, 0, 25)
+    meta.Name = "EntryMetadata"
+    meta.Size = UDim2.new(1, -57, 0, 13); meta.Position = UDim2.new(0, IsMobile and 50 or 54, 0, height - 25)
     meta.BackgroundTransparency = 1
     local displayReason = tostring(reason or "")
     if string.sub(displayReason, 1, 7) == "Tagged " then
@@ -6235,21 +6327,22 @@ local function _VH_CreateDiscoveryEntryRow(parent, entry, reason, order, favorit
     elseif displayReason ~= "" then
         displayReason = L(displayReason)
     end
-    local categoryText = string.upper(category)
-    meta.Text = categoryText .. (displayReason ~= "" and ("  ·  " .. displayReason) or "")
+    meta.Text = string.upper(category) .. (displayReason ~= "" and ("  ·  " .. displayReason) or "")
     meta.TextColor3 = category == "Utilities" and Color3.fromRGB(103, 232, 249) or Color3.fromRGB(165, 180, 252)
-    meta.Font = Enum.Font.GothamMedium; meta.TextSize = IsMobile and 7 or 8
+    meta.Font = Enum.Font.GothamMedium; meta.TextSize = IsMobile and 6 or 7
     meta.TextTruncate = Enum.TextTruncate.AtEnd; meta.TextXAlignment = Enum.TextXAlignment.Left; meta.ZIndex = 3
     local details = Instance.new("TextButton", row)
-    details.Name = "DetailsButton"; details.Size = UDim2.new(0, 24, 0, 22); details.Position = UDim2.new(1, -56, 0.5, -11)
-    details.BackgroundColor3 = Theme.BackgroundSecondary; details.BorderSizePixel = 0; details.AutoButtonColor = false; details.Text = "i"
-    details.TextColor3 = Theme.TextPrimary; details.Font = Enum.Font.GothamBold; details.TextSize = 12; details.ZIndex = 5
+    details.Name = "DetailsButton"; details.Size = UDim2.new(0, 22, 0, 22); details.Position = UDim2.new(1, -54, 0, 7)
+    details.BackgroundColor3 = Theme.CardHover; details.BorderSizePixel = 0; details.AutoButtonColor = false; details.Text = ""
+    details.ZIndex = 5
     Instance.new("UICorner", details).CornerRadius = UDim.new(0, 6)
+    CreateVeloxIcon(details, VeloxIcons.Info, 12, Theme.TextPrimary, UDim2.new(0.5, -6, 0.5, -6), nil, 6, "DetailsIcon")
     local fav = Instance.new("TextButton", row)
-    fav.Name = "FavoriteButton"; fav.Size = UDim2.new(0, 24, 0, 22); fav.Position = UDim2.new(1, -29, 0.5, -11)
-    fav.BackgroundColor3 = Theme.BackgroundSecondary; fav.BorderSizePixel = 0; fav.AutoButtonColor = false
-    fav.Text = SavedData.Favorites[id] and "★" or "☆"; fav.TextColor3 = SavedData.Favorites[id] and Color3.fromRGB(250, 204, 21) or Theme.TextSecondary
-    fav.Font = Enum.Font.GothamBold; fav.TextSize = 14; fav.ZIndex = 5
+    fav.Name = "FavoriteButton"; fav.Size = UDim2.new(0, 22, 0, 22); fav.Position = UDim2.new(1, -28, 0, 7)
+    fav.BackgroundColor3 = SavedData.Favorites[id] and Color3.fromRGB(75, 62, 31) or Theme.CardHover
+    fav.BorderSizePixel = 0; fav.AutoButtonColor = false; fav.Text = SavedData.Favorites[id] and "★" or "☆"
+    fav.TextColor3 = SavedData.Favorites[id] and Color3.fromRGB(250, 204, 21) or Theme.TextSecondary
+    fav.Font = Enum.Font.GothamBold; fav.TextSize = 13; fav.ZIndex = 5
     Instance.new("UICorner", fav).CornerRadius = UDim.new(0, 6)
     DiscoveryConnections[#DiscoveryConnections + 1] = openButton.Activated:Connect(function()
         if isDestroying then return end
@@ -6263,18 +6356,19 @@ local function _VH_CreateDiscoveryEntryRow(parent, entry, reason, order, favorit
         if isDestroying then return end
         if SavedData.Favorites[id] then
             SavedData.Favorites[id] = nil
-            fav.Text = "☆"; fav.TextColor3 = Theme.TextSecondary
+            fav.Text = "☆"; fav.TextColor3 = Theme.TextSecondary; fav.BackgroundColor3 = Theme.CardHover
         else
             SavedData.Favorites[id] = true
-            fav.Text = "★"; fav.TextColor3 = Color3.fromRGB(250, 204, 21)
+            fav.Text = "★"; fav.TextColor3 = Color3.fromRGB(250, 204, 21); fav.BackgroundColor3 = Color3.fromRGB(75, 62, 31)
         end
         _VH_ScheduleFavoriteRecommendationRefresh()
     end)
     ApplyInteractiveAnimations(openButton, nil, nil, nil, nil, nil, nil, DiscoveryConnections)
-    ApplyInteractiveAnimations(details, Theme.BackgroundSecondary, Theme.CardHover, Theme.BackgroundMain, nil, nil, nil, DiscoveryConnections)
-    ApplyInteractiveAnimations(fav, Theme.BackgroundSecondary, Theme.CardHover, Theme.BackgroundMain, nil, nil, nil, DiscoveryConnections)
+    ApplyInteractiveAnimations(details, Theme.CardHover, Theme.BackgroundSecondary, Theme.BackgroundMain, nil, nil, nil, DiscoveryConnections)
+    ApplyInteractiveAnimations(fav, Theme.CardHover, Theme.BackgroundSecondary, Theme.BackgroundMain, nil, nil, nil, DiscoveryConnections)
     return row
 end
+
 local function _VH_AddDiscoveryEmpty(section, message)
     if not section or not section.Content then return end
     section.Empty.Text = message or L("No entries yet. Refresh the catalogs to populate Discover.")
@@ -6326,13 +6420,6 @@ function _VH_RebuildDiscoveryViews()
     renderList("RecentlyUpdated", recent, 3)
     renderList("Featured", featured, 2)
     local categorySection = DiscoverySections.Categories
-    local grid = Instance.new("Frame", categorySection.Content)
-    grid.Name = "CategoryChips"; grid.Size = UDim2.new(1, 0, 0, 0); grid.AutomaticSize = Enum.AutomaticSize.Y
-    grid.BackgroundTransparency = 1; grid.LayoutOrder = 1
-    local gridLayout = Instance.new("UIGridLayout", grid)
-    gridLayout.CellSize = UDim2.new(0, IsMobile and 94 or 120, 0, IsMobile and 27 or 30)
-    gridLayout.CellPadding = UDim2.new(0, 6, 0, 6); gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     local catCount = 0
     local categoryLimit = DiscoveryExpandedSections.Categories and #categories or 12
     if categorySection.ViewButton then
@@ -6343,17 +6430,22 @@ function _VH_RebuildDiscoveryViews()
     for _, item in ipairs(categories) do
         if catCount >= categoryLimit then break end
         catCount = catCount + 1
-        local button = Instance.new("TextButton", grid)
-        button.Name = "Category_" .. tostring(catCount); button.Size = gridLayout.CellSize
-        button.BackgroundColor3 = Color3.fromRGB(33, 40, 74); button.BorderSizePixel = 0; button.AutoButtonColor = false
+        local button = Instance.new("TextButton", categorySection.Content)
+        button.Name = "Category_" .. tostring(catCount)
+        button.Size = UDim2.new(0, 0, 0, IsMobile and 27 or 29)
+        button.AutomaticSize = Enum.AutomaticSize.X
+        button.BackgroundColor3 = Color3.fromRGB(34, 41, 77)
+        button.BorderSizePixel = 0; button.AutoButtonColor = false
         button.Text = item.Name .. " · " .. tostring(item.Count); button.TextColor3 = Theme.TextPrimary
         button.Font = Enum.Font.GothamMedium; button.TextSize = IsMobile and 7 or 9; button.TextTruncate = Enum.TextTruncate.AtEnd
-        button.LayoutOrder = catCount; Instance.new("UICorner", button).CornerRadius = UDim.new(0, 6)
-        local catStroke = Instance.new("UIStroke", button); catStroke.Color = Theme.Stroke; catStroke.Transparency = 0.3; catStroke.Thickness = 0.8
+        button.LayoutOrder = catCount; Instance.new("UICorner", button).CornerRadius = UDim.new(0, 7)
+        local chipPad = Instance.new("UIPadding", button)
+        chipPad.PaddingLeft = UDim.new(0, 10); chipPad.PaddingRight = UDim.new(0, 10)
+        local catStroke = Instance.new("UIStroke", button); catStroke.Color = Theme.Stroke; catStroke.Transparency = 0.22; catStroke.Thickness = 0.8
         DiscoveryConnections[#DiscoveryConnections + 1] = button.Activated:Connect(function()
             _VH_OpenCatalogFromDiscover("All", "", item.Name)
         end)
-        ApplyInteractiveAnimations(button, Color3.fromRGB(33, 40, 74), Color3.fromRGB(47, 58, 105), Color3.fromRGB(23, 28, 53), catStroke, catStroke.Color, Theme.Accent, DiscoveryConnections)
+        ApplyInteractiveAnimations(button, Color3.fromRGB(34, 41, 77), Color3.fromRGB(48, 58, 104), Color3.fromRGB(24, 30, 58), catStroke, catStroke.Color, Theme.Accent, DiscoveryConnections)
     end
     if catCount == 0 then _VH_AddDiscoveryEmpty(categorySection, L("No entries yet. Refresh the catalogs to populate Discover.")) else categorySection.Empty.Visible = false end
     local favoriteSection = DiscoverySections.SavedEntries
@@ -6668,22 +6760,22 @@ function CreateScriptCard(data, renderParent, registerImmediately, originalIndex
 	card.Size = UDim2.new(1, 0, 0, 0); card.AutomaticSize = Enum.AutomaticSize.Y
 	card.BackgroundColor3 = tagConfig.CardColor; card.Text = ""
 	card.AutoButtonColor = false; card.ClipsDescendants = true
-	Instance.new("UICorner", card).CornerRadius = UDim.new(0, 8)
+	Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
 	local cardStroke = GetOrCreateCardStroke(card)
 	ApplyTagBorder(card, tagType, cardStroke)
 	if isRecommended then
 		card.BackgroundColor3 = Color3.fromRGB(31, 42, 55)
 	end
-    card.BackgroundTransparency = 0.06
-    cardStroke.Transparency = tagType == "NONE" and 0.28 or 0.12
+    card.BackgroundTransparency = 0.025
+    cardStroke.Transparency = tagType == "NONE" and 0.38 or 0.18
 	local pad = Instance.new("UIPadding", card)
-	pad.PaddingLeft = UDim.new(0, 10); pad.PaddingRight = UDim.new(0, 10)
-	pad.PaddingTop = UDim.new(0, 10); pad.PaddingBottom = UDim.new(0, 10)
+	pad.PaddingLeft = UDim.new(0, 12); pad.PaddingRight = UDim.new(0, 12)
+	pad.PaddingTop = UDim.new(0, 11); pad.PaddingBottom = UDim.new(0, 11)
 	local img = Instance.new("ImageLabel", card)
-	img.Size = UDim2.new(0, IsMobile and 54 or 62, 0, IsMobile and 54 or 62); img.BackgroundColor3 = Theme.BackgroundMain
+	img.Size = UDim2.new(0, IsMobile and 52 or 60, 0, IsMobile and 52 or 60); img.BackgroundColor3 = Theme.BackgroundMain
 	img.BorderSizePixel = 0; img.Image = safeImageAssetId
 	img.ScaleType = Enum.ScaleType.Crop
-	Instance.new("UICorner", img).CornerRadius = UDim.new(0, 8)
+	Instance.new("UICorner", img).CornerRadius = UDim.new(0, 9)
 	local content = Instance.new("Frame", card)
 	content.Size = UDim2.new(1, -(IsMobile and 62 or 70), 0, 0); content.Position = UDim2.new(0, IsMobile and 62 or 70, 0, 0)
 	content.AutomaticSize = Enum.AutomaticSize.Y; content.BackgroundTransparency = 1
