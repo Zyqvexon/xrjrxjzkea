@@ -212,6 +212,12 @@ CatalogDiagnosticsByCategory = {
 	Utilities = { Outcome = "Not loaded", ValidationIssues = 0, EntryCount = 0, LastError = nil, Changes = "No refresh recorded" }
 }
 RecommendationGeneration = 0
+CatalogSearchScope = "Selected"
+SearchScopeButton = nil
+SearchScopeDropdown = nil
+SearchScopeOptionButtons = {}
+DiscoveryConnections = {}
+DiscoverySections = {}
 RecommendationItems = {}
 RecommendationConnections = {}
 RecommendationPanel = nil
@@ -225,6 +231,35 @@ FavoriteRecommendationLimit = 8
 FavoriteRecommendationMaxBoost = 12
 FavoriteRecommendationRefreshDelay = 0.35
 FavoriteRecommendationRefreshGeneration = 0
+function _VH_GetCatalogEntriesForScope(scope)
+    scope = scope or CatalogSearchScope or "Selected"
+    local categories = {}
+    if scope == "All" then
+        categories = { "Games", "Utilities" }
+    elseif scope == "Games" or scope == "Utilities" then
+        categories = { scope }
+    else
+        categories = { (SelectedCatalogCategory == "Utilities" or currentScriptCategory == "Utilities") and "Utilities" or "Games" }
+    end
+    local entries, seen = {}, {}
+    for _, category in ipairs(categories) do
+        local state = CategoryCatalogStates and CategoryCatalogStates[category]
+        for _, entry in ipairs(state and state.Entries or {}) do
+            if entry and entry.Data and entry.Instance and entry.Instance.Parent then
+                entry.CatalogCategory = category
+                local key = category .. "\31" .. tostring(entry.Id or entry.ExactName or "")
+                if not seen[key] then
+                    seen[key] = true
+                    entries[#entries + 1] = entry
+                end
+            end
+        end
+    end
+    return entries
+end
+function _VH_GetAllCatalogEntries()
+    return _VH_GetCatalogEntriesForScope("All")
+end
 InteractiveElements = setmetatable({}, { __mode = "k" })
 isDestroying = false
 isMinimized = false
@@ -433,7 +468,7 @@ SavedData = {
 		UIScale = 1,
 		Language = "English",
 		Catalog = "Games",
-		SortMode = "Most Relevant",
+		SortMode = "Best Match",
 		Filters = { Favorites = false, Categories = {}, Tags = {}, Status = {} }
 	}
 }
@@ -542,7 +577,7 @@ function _VH_BuildConfigurationData()
 	if savedLanguage ~= "English" and savedLanguage ~= "Filipino" and savedLanguage ~= "Chinese" then savedLanguage = "English" end
 	local savedSettings = type(SavedData.Settings) == "table" and SavedData.Settings or {}
 	local savedCatalog = savedSettings.Catalog == "Utilities" and "Utilities" or "Games"
-	local savedSort = type(SortMode) == "string" and SortMode or (type(savedSettings.SortMode) == "string" and savedSettings.SortMode or "Most Relevant")
+	local savedSort = type(SortMode) == "string" and SortMode or (type(savedSettings.SortMode) == "string" and savedSettings.SortMode or "Best Match")
 	local savedFilters = { Favorites = false, Categories = {}, Tags = {}, Status = {} }
 	local sourceFilters = type(FilterState) == "table" and FilterState or savedSettings.Filters
 	if type(sourceFilters) == "table" then
@@ -686,6 +721,23 @@ SupportedLanguages = { "English", "Filipino", "Chinese" }
 LanguageTranslations = {
 	English = {
 		["Changelog"] = "Changelog", ["Scripts"] = "Scripts", ["Settings"] = "Settings", ["How to Use"] = "How to Use",
+        ["Discover"] = "Discover", ["Catalog"] = "Catalog", ["Favorites"] = "Favorites", ["Help"] = "Help",
+        ["Selected catalog"] = "Selected catalog", ["All catalogs"] = "All catalogs",
+        ["Best Match"] = "Best Match", ["Favorites First"] = "Favorites First", ["Featured First"] = "Featured First",
+        ["Only direct compatibility matches are shown here."] = "Only direct compatibility matches are shown here.",
+        ["Recommendations are based on available catalog metadata and saved favorites."] = "Recommendations are based on available catalog metadata and saved favorites.",
+        ["Entries with valid update timestamps appear first."] = "Entries with valid update timestamps appear first.",
+        ["Choose a category to filter entries across both catalogs."] = "Choose a category to filter entries across both catalogs.",
+        ["Uses the catalog's existing HOT, NEW, UPDATED, and FEATURED labels."] = "Uses the catalog's existing HOT, NEW, UPDATED, and FEATURED labels.",
+        ["Your saved Games and Utilities entries stay separately identified."] = "Your saved Games and Utilities entries stay separately identified.",
+        ["Saved entries"] = "Saved entries", ["Date unavailable"] = "Date unavailable", ["saved entries across Games and Utilities"] = "saved entries across Games and Utilities",
+        ["Matches your current game"] = "Matches your current game", ["Similar to your current game"] = "Similar to your current game", ["Similar to your favorites"] = "Similar to your favorites", ["Recently updated"] = "Recently updated", ["Explore this catalog entry"] = "Explore this catalog entry", ["Saved favorite"] = "Saved favorite", ["Tagged"] = "Tagged", ["Save favorites or explore categories to improve recommendations."] = "Save favorites or explore categories to improve recommendations.", ["results"] = "results", ["filters"] = "filters",
+        ["Matched to Your Current Game"] = "Matched to Your Current Game", ["Recommended for You"] = "Recommended for You",
+        ["Recently Updated"] = "Recently Updated", ["Explore Categories"] = "Explore Categories", ["Featured Entries"] = "Featured Entries",
+        ["Find something useful"] = "Find something useful", ["Browse the catalog by game, category, or tag."] = "Browse the catalog by game, category, or tag.",
+        ["No entries yet. Refresh the catalogs to populate Discover."] = "No entries yet. Refresh the catalogs to populate Discover.",
+        ["No matching entries are loaded for this game yet."] = "No matching entries are loaded for this game yet.",
+        ["Save catalog entries to see them here."] = "Save catalog entries to see them here.", ["Open Catalog"] = "Open Catalog", ["Browse Games"] = "Browse Games", ["Browse Utilities"] = "Browse Utilities", ["Search All"] = "Search All", ["View Details"] = "View Details",
 		["Updates"] = "Updates", ["Scripts Catalog"] = "Scripts Catalog", ["Settings Hub"] = "Settings Hub",
 		["Games"] = "Games", ["Utilities"] = "Utilities", ["Search scripts, games, tags..."] = "Search scripts, games, tags...",
 		["Recommended for You"] = "Recommended for You", ["Based on your current game"] = "Based on your current game",
@@ -710,6 +762,23 @@ LanguageTranslations = {
 	},
 	Filipino = {
 		["Changelog"] = "Mga Update", ["Scripts"] = "Scripts", ["Settings"] = "Mga Setting", ["How to Use"] = "Paano Gamitin",
+        ["Discover"] = "Tuklasin", ["Catalog"] = "Catalog", ["Favorites"] = "Mga Paborito", ["Help"] = "Tulong",
+        ["Selected catalog"] = "Napiling catalog", ["All catalogs"] = "Lahat ng catalog",
+        ["Best Match"] = "Pinakamainam na Tugma", ["Favorites First"] = "Unahin ang Paborito", ["Featured First"] = "Unahin ang Tampok",
+        ["Only direct compatibility matches are shown here."] = "Mga direktang tugma lamang ang ipinapakita rito.",
+        ["Recommendations are based on available catalog metadata and saved favorites."] = "Batay ang mga rekomendasyon sa metadata ng catalog at mga paborito.",
+        ["Entries with valid update timestamps appear first."] = "Nauuna ang mga entry na may wastong oras ng update.",
+        ["Choose a category to filter entries across both catalogs."] = "Pumili ng kategorya para salain ang dalawang catalog.",
+        ["Uses the catalog's existing HOT, NEW, UPDATED, and FEATURED labels."] = "Ginagamit ang mga label na HOT, NEW, UPDATED, at FEATURED ng catalog.",
+        ["Your saved Games and Utilities entries stay separately identified."] = "Magkakahiwalay pa ring nakikilala ang mga paboritong Games at Utilities.",
+        ["Saved entries"] = "Mga naka-save na entry", ["Date unavailable"] = "Hindi available ang petsa", ["saved entries across Games and Utilities"] = "naka-save na entry sa Games at Utilities",
+        ["Matches your current game"] = "Tugma sa kasalukuyan mong laro", ["Similar to your current game"] = "Katulad ng kasalukuyan mong laro", ["Similar to your favorites"] = "Katulad ng iyong mga paborito", ["Recently updated"] = "Kamakailang na-update", ["Explore this catalog entry"] = "Tuklasin ang catalog entry na ito", ["Saved favorite"] = "Naka-save na paborito", ["Tagged"] = "May tag na", ["Save favorites or explore categories to improve recommendations."] = "Mag-save ng mga paborito o mag-explore ng kategorya para mapahusay ang mga rekomendasyon.", ["results"] = "resulta", ["filters"] = "filter",
+        ["Matched to Your Current Game"] = "Tugma sa Kasalukuyang Laro", ["Recommended for You"] = "Inirerekomenda Para sa Iyo",
+        ["Recently Updated"] = "Kamakailang Na-update", ["Explore Categories"] = "Mag-explore ng Kategorya", ["Featured Entries"] = "Mga Tampok na Entry",
+        ["Find something useful"] = "Maghanap ng kapaki-pakinabang", ["Browse the catalog by game, category, or tag."] = "Mag-browse ayon sa laro, kategorya, o tag.",
+        ["No entries yet. Refresh the catalogs to populate Discover."] = "Wala pang entry. I-refresh ang mga catalog.",
+        ["No matching entries are loaded for this game yet."] = "Wala pang naka-load na entry para sa larong ito.",
+        ["Save catalog entries to see them here."] = "I-save ang mga entry para makita rito.", ["Open Catalog"] = "Buksan ang Catalog", ["Browse Games"] = "Mag-browse ng Laro", ["Browse Utilities"] = "Mag-browse ng Utilities", ["Search All"] = "Hanapin Lahat", ["View Details"] = "Tingnan ang Detalye",
 		["Updates"] = "Mga Update", ["Scripts Catalog"] = "Script Catalog", ["Settings Hub"] = "Settings Hub",
 		["Games"] = "Mga Laro", ["Utilities"] = "Utilities", ["Search scripts, games, tags..."] = "Maghanap ng scripts, laro, tags...",
 		["Recommended for You"] = "Inirerekomenda Para sa Iyo", ["Based on your current game"] = "Batay sa kasalukuyan mong laro",
@@ -734,6 +803,23 @@ LanguageTranslations = {
 	},
 	Chinese = {
 		["Changelog"] = "更新日志", ["Scripts"] = "脚本", ["Settings"] = "设置", ["How to Use"] = "使用方法",
+        ["Discover"] = "发现", ["Catalog"] = "目录", ["Favorites"] = "收藏", ["Help"] = "帮助",
+        ["Selected catalog"] = "当前目录", ["All catalogs"] = "所有目录",
+        ["Best Match"] = "最佳匹配", ["Favorites First"] = "优先收藏", ["Featured First"] = "优先精选",
+        ["Only direct compatibility matches are shown here."] = "这里只显示直接兼容的游戏条目。",
+        ["Recommendations are based on available catalog metadata and saved favorites."] = "推荐依据可用目录元数据和已收藏条目生成。",
+        ["Entries with valid update timestamps appear first."] = "有效更新时间较新的条目优先显示。",
+        ["Choose a category to filter entries across both catalogs."] = "选择分类以筛选两个目录中的条目。",
+        ["Uses the catalog's existing HOT, NEW, UPDATED, and FEATURED labels."] = "依据目录现有的 HOT、NEW、UPDATED 和 FEATURED 标签。",
+        ["Your saved Games and Utilities entries stay separately identified."] = "已收藏的 Games 和 Utilities 条目会分别标识。",
+        ["Saved entries"] = "已收藏条目", ["Date unavailable"] = "日期不可用", ["saved entries across Games and Utilities"] = "个 Games 和 Utilities 收藏条目",
+        ["Matches your current game"] = "匹配当前游戏", ["Similar to your current game"] = "与当前游戏相似", ["Similar to your favorites"] = "与你收藏的条目相似", ["Recently updated"] = "最近更新", ["Explore this catalog entry"] = "探索此目录条目", ["Saved favorite"] = "已收藏", ["Tagged"] = "标签：", ["Save favorites or explore categories to improve recommendations."] = "收藏条目或浏览分类以改善推荐。", ["results"] = "个结果", ["filters"] = "个筛选",
+        ["Matched to Your Current Game"] = "匹配当前游戏", ["Recommended for You"] = "为你推荐",
+        ["Recently Updated"] = "最近更新", ["Explore Categories"] = "浏览分类", ["Featured Entries"] = "精选条目",
+        ["Find something useful"] = "查找有用内容", ["Browse the catalog by game, category, or tag."] = "按游戏、分类或标签浏览目录。",
+        ["No entries yet. Refresh the catalogs to populate Discover."] = "暂无条目，请刷新目录。",
+        ["No matching entries are loaded for this game yet."] = "尚未加载匹配此游戏的条目。",
+        ["Save catalog entries to see them here."] = "收藏条目后会显示在这里。", ["Open Catalog"] = "打开目录", ["Browse Games"] = "浏览游戏", ["Browse Utilities"] = "浏览工具", ["Search All"] = "搜索全部", ["View Details"] = "查看详情",
 		["Updates"] = "更新", ["Scripts Catalog"] = "脚本目录", ["Settings Hub"] = "设置中心",
 		["Games"] = "游戏", ["Utilities"] = "工具", ["Search scripts, games, tags..."] = "搜索脚本、游戏、标签...",
 		["Recommended for You"] = "为你推荐", ["Based on your current game"] = "根据你当前的游戏",
@@ -792,11 +878,12 @@ function _VH_ApplyTranslations(root)
 	end
 end
 function GetLocalizedTabName(name)
-	return L(name)
+    local map = { Changelog = "Updates", Scripts = "Catalog", Favorites = "Favorites", ["How to Use"] = "Help" }
+    return L(map[name] or name)
 end
 function GetLocalizedSectionHeader(name)
-	local map = { Changelog = "Updates", Scripts = "Scripts Catalog", Settings = "Settings Hub", ["How to Use"] = "How to Use" }
-	return L(map[name] or name)
+    local map = { Changelog = "Updates", Updates = "Updates", Scripts = "Catalog", Discover = "Discover", Favorites = "Favorites", Settings = "Settings", ["How to Use"] = "Help" }
+    return L(map[name] or name)
 end
 
 function UniversalHttpGet(url)
@@ -1119,7 +1206,9 @@ function GetRelativeTime(timestamp)
 end
 function FormatLastUpdatedLabel(value)
 	local compact = nil
-	if type(value) == "number" or tonumber(value) then
+	local numericValue = tonumber(value)
+	if numericValue and numericValue > os.time() + 300 then return L("Date unavailable") end
+	if type(value) == "number" or numericValue then
 		compact = GetRelativeTime(value)
 	else
 		local text = tostring(value or "")
@@ -1239,7 +1328,7 @@ function GetPanelSize()
 	local camera = workspace.CurrentCamera
 	local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
 	local maxWidth = IsMobile and 600 or 1120
-	local maxHeight = IsMobile and 360 or 580
+	local maxHeight = IsMobile and 470 or 580
 	local width = math.max(180, math.min(maxWidth, viewport.X - 12))
 	local height = math.max(220, math.min(maxHeight, viewport.Y - 12))
 	return UDim2.fromOffset(width, height)
@@ -1345,6 +1434,11 @@ MainPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainPanel.AnchorPoint = Vector2.new(0.5, 0.5)
 MainPanel.BackgroundColor3 = Theme.BackgroundMain
 MainPanel.BorderSizePixel = 0
+Instance.new("UICorner", MainPanel).CornerRadius = UDim.new(0, 12)
+MainPanelOutline = Instance.new("UIStroke", MainPanel)
+MainPanelOutline.Color = Color3.fromRGB(99, 102, 241)
+MainPanelOutline.Transparency = 0.52
+MainPanelOutline.Thickness = 1
 MainPanel.ClipsDescendants = true
 MainPanel.Visible = true
 MainPanel.Active = true
@@ -2890,10 +2984,15 @@ _VH_RegConn(RunService.Heartbeat:Connect(function(deltaTime)
 	end
 	fpsCount = 0
 end))
-TabContainer = Instance.new("Frame", Sidebar)
-TabContainer.Size = UDim2.new(1, -20, 0, IsMobile and 180 or 212)
+TabContainer = Instance.new("ScrollingFrame", Sidebar)
+TabContainer.Size = UDim2.new(1, -20, 1, -(IsMobile and 190 or 238))
 TabContainer.Position = UDim2.new(0, 10, 0, IsMobile and 58 or 86)
 TabContainer.BackgroundTransparency = 1
+TabContainer.BorderSizePixel = 0
+TabContainer.ScrollBarThickness = IsMobile and 2 or 3
+TabContainer.ScrollBarImageColor3 = Theme.Accent
+TabContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
+TabContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
 TabContainer.Active = true
 TabContainer.ClipsDescendants = true
 TabContainer.ZIndex = 10
@@ -2901,13 +3000,13 @@ SectionHeaderLabel = Instance.new("TextLabel", MainContent)
 SectionHeaderLabel.Size = UDim2.new(1, -28, 0, IsMobile and 18 or 22)
 SectionHeaderLabel.Position = UDim2.new(0, 14, 0, IsMobile and 72 or 82)
 SectionHeaderLabel.BackgroundTransparency = 1
-SectionHeaderLabel.Text = "Updates"
+SectionHeaderLabel.Text = "Discover"
 SectionHeaderLabel.TextColor3 = Theme.TextPrimary
 SectionHeaderLabel.Font = Enum.Font.GothamBold
 SectionHeaderLabel.TextSize = IsMobile and 14 or 18
 SectionHeaderLabel.TextXAlignment = Enum.TextXAlignment.Left
 TabViews = {}
-currentTab = "Changelog"
+currentTab = "Discover"
 function CreateCanvas(name)
 	local scroll = Instance.new("ScrollingFrame", MainContent)
 	scroll.Size = UDim2.new(1, -28, 1, IsMobile and -112 or -120)
@@ -2923,8 +3022,10 @@ function CreateCanvas(name)
 	TabViews[name] = scroll
 	return scroll
 end
-ChangelogsView = CreateCanvas("Changelog")
+DiscoverView = CreateCanvas("Discover")
+ChangelogsView = CreateCanvas("Updates")
 ScriptsView = CreateCanvas("Scripts")
+FavoritesView = CreateCanvas("Favorites")
 SettingsView = CreateCanvas("Settings")
 HowToUseView = CreateCanvas("How to Use")
 
@@ -2981,8 +3082,20 @@ end
 ScriptCategoryRow = Instance.new("Frame", MainContent)
 ScriptCategoryRow.Name = "ScriptCategoryTabs"
 ScriptCategoryRow.AnchorPoint = Vector2.new(0, 0)
-ScriptCategoryRow.Size = UDim2.new(1, -28, 0, IsMobile and 28 or 32)
+ScriptCategoryRow.Size = UDim2.new(0.67, -28, 0, IsMobile and 28 or 32)
 ScriptCategoryRow.Position = UDim2.new(0, 14, 0, IsMobile and 98 or 112)
+CatalogResultCountLabel = Instance.new("TextLabel", MainContent)
+CatalogResultCountLabel.Name = "CatalogResultCount"
+CatalogResultCountLabel.Size = UDim2.new(0.33, -16, 0, IsMobile and 28 or 32)
+CatalogResultCountLabel.Position = UDim2.new(0.67, 0, 0, IsMobile and 98 or 112)
+CatalogResultCountLabel.BackgroundTransparency = 1
+CatalogResultCountLabel.Text = "0 results"
+CatalogResultCountLabel.Visible = false
+CatalogResultCountLabel.TextColor3 = Theme.TextSecondary
+CatalogResultCountLabel.Font = Enum.Font.GothamMedium
+CatalogResultCountLabel.TextSize = IsMobile and 8 or 10
+CatalogResultCountLabel.TextXAlignment = Enum.TextXAlignment.Right
+CatalogResultCountLabel.TextTruncate = Enum.TextTruncate.AtEnd
 ScriptCategoryRow.BackgroundTransparency = 1
 ScriptCategoryRow.BorderSizePixel = 0
 ScriptCategoryRow.Visible = false
@@ -2998,6 +3111,7 @@ ScriptCategoryLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 ScriptCategoryButtons = {}
 
 local function UpdateScriptCategoryButtons()
+    if type(_VH_UpdateSearchScopeButton) == "function" then _VH_UpdateSearchScopeButton() end
 	for category, button in pairs(ScriptCategoryButtons) do
 		if button and button.Parent then
 			local active = category == currentScriptCategory
@@ -3027,6 +3141,7 @@ local function _VH_SelectCatalogCategory(category, shouldLoad)
 		SaveActiveCatalogState()
 		currentScriptCategory = category
 		SelectedCatalogCategory = category
+        if type(_VH_UpdateSearchScopeButton) == "function" then _VH_UpdateSearchScopeButton() end
 		_VH_SaveBrowsingPreferences()
 		UpdateScriptCategoryButtons()
 		for _, connection in ipairs(RecommendationConnections) do
@@ -3133,6 +3248,8 @@ local function CreateScriptCategoryButton(category, layoutOrder)
 	_VH_RegConn(button.Activated:Connect(function()
 		if isDestroying or currentTab ~= "Scripts" then return end
 		if currentScriptCategory == category then return end
+        if CatalogSearchScope ~= "All" then CatalogSearchScope = "Selected" end
+        if type(_VH_UpdateSearchScopeButton) == "function" then _VH_UpdateSearchScopeButton() end
 		if dbRefreshing or CatalogBatchRefreshing then
 			local includedInBatch = CatalogBatchRefreshing and CatalogBatchCategories[category] == true
 			local categoryState = GetCategoryCatalogState(category)
@@ -3162,8 +3279,35 @@ filterBtnWidth = IsMobile and 38 or 42
 sortBtnWidth = IsMobile and 30 or 34
 gap = IsMobile and 6 or 8
 
+scopeBtnWidth = IsMobile and 58 or 78
+SearchScopeButton = Instance.new("TextButton", SearchRow)
+SearchScopeButton.Name = "SearchScopeButton"
+SearchScopeButton.Size = UDim2.new(0, scopeBtnWidth, 1, 0)
+SearchScopeButton.Position = UDim2.new(0, 0, 0, 0)
+SearchScopeButton.BackgroundColor3 = Color3.fromRGB(35, 43, 75)
+SearchScopeButton.BorderSizePixel = 0
+SearchScopeButton.AutoButtonColor = false
+SearchScopeButton.Text = ""
+SearchScopeButton.ZIndex = 52
+Instance.new("UICorner", SearchScopeButton).CornerRadius = UDim.new(0, 8)
+SearchScopeStroke = Instance.new("UIStroke", SearchScopeButton)
+SearchScopeStroke.Color = Theme.Stroke
+SearchScopeStroke.Transparency = 0.18
+SearchScopeStroke.Thickness = 1
+SearchScopeLabel = Instance.new("TextLabel", SearchScopeButton)
+SearchScopeLabel.Size = UDim2.new(1, -8, 1, 0)
+SearchScopeLabel.Position = UDim2.new(0, 4, 0, 0)
+SearchScopeLabel.BackgroundTransparency = 1
+SearchScopeLabel.Text = "Games ▾"
+SearchScopeLabel.TextColor3 = Theme.TextPrimary
+SearchScopeLabel.Font = Enum.Font.GothamBold
+SearchScopeLabel.TextSize = IsMobile and 7 or 9
+SearchScopeLabel.TextXAlignment = Enum.TextXAlignment.Center
+SearchScopeLabel.TextTruncate = Enum.TextTruncate.AtEnd
+SearchScopeLabel.Active = false
+SearchScopeLabel.ZIndex = 53
 SearchContainer = Instance.new("Frame", SearchRow)
-SearchContainer.Size = UDim2.new(1, -(filterBtnWidth + sortBtnWidth + gap * 2), 1, 0); SearchContainer.BackgroundColor3 = Color3.fromRGB(27, 37, 58)
+SearchContainer.Size = UDim2.new(1, -(scopeBtnWidth + filterBtnWidth + sortBtnWidth + gap * 3), 1, 0); SearchContainer.Position = UDim2.new(0, scopeBtnWidth + gap, 0, 0); SearchContainer.BackgroundColor3 = Color3.fromRGB(27, 37, 58)
 SearchContainer.ClipsDescendants = true; SearchContainer.ZIndex = 51
 Instance.new("UICorner", SearchContainer).CornerRadius = UDim.new(0, 8)
 SearchStroke = Instance.new("UIStroke", SearchContainer); SearchStroke.Color = Theme.Stroke; SearchStroke.Thickness = 0.8
@@ -3195,6 +3339,76 @@ ClearSearchIcon.Size = UDim2.new(0, 13, 0, 13); ClearSearchIcon.Position = UDim2
 ClearSearchIcon.BackgroundTransparency = 1; ClearSearchIcon.Image = VeloxIcons.Close; ClearSearchIcon.ImageColor3 = Theme.TextSecondary; ClearSearchIcon.ScaleType = Enum.ScaleType.Fit
 ClearSearchBtn.ZIndex = 53
 ClearSearchBtn.Visible = (SearchInput.Text ~= "")
+
+SearchScopeDropdown = Instance.new("Frame", ScreenGui)
+SearchScopeDropdown.Name = "CatalogSearchScopeMenu"
+SearchScopeDropdown.Size = UDim2.new(0, IsMobile and 154 or 174, 0, 156)
+SearchScopeDropdown.BackgroundColor3 = Color3.fromRGB(13, 20, 38)
+SearchScopeDropdown.BorderSizePixel = 0
+SearchScopeDropdown.Visible = false
+SearchScopeDropdown.ZIndex = 1700
+Instance.new("UICorner", SearchScopeDropdown).CornerRadius = UDim.new(0, 9)
+SearchScopeDropdownStroke = Instance.new("UIStroke", SearchScopeDropdown)
+SearchScopeDropdownStroke.Color = Color3.fromRGB(112, 118, 245)
+SearchScopeDropdownStroke.Transparency = 0.22
+SearchScopeDropdownStroke.Thickness = 1
+SearchScopeDropdownLayout = Instance.new("UIListLayout", SearchScopeDropdown)
+SearchScopeDropdownLayout.SortOrder = Enum.SortOrder.LayoutOrder
+SearchScopeDropdownLayout.Padding = UDim.new(0, 4)
+SearchScopeDropdownPadding = Instance.new("UIPadding", SearchScopeDropdown)
+SearchScopeDropdownPadding.PaddingTop = UDim.new(0, 7); SearchScopeDropdownPadding.PaddingBottom = UDim.new(0, 7)
+SearchScopeDropdownPadding.PaddingLeft = UDim.new(0, 7); SearchScopeDropdownPadding.PaddingRight = UDim.new(0, 7)
+function _VH_UpdateSearchScopeButton()
+    if not SearchScopeLabel or not SearchScopeLabel.Parent then return end
+    local caption = CatalogSearchScope == "Selected" and (currentScriptCategory or "Games") or CatalogSearchScope
+    SearchScopeLabel.Text = caption .. " ▾"
+    SearchScopeLabel:SetAttribute("VeloxTranslationKey", nil)
+    SearchScopeButton:SetAttribute("SearchScope", CatalogSearchScope)
+    if SearchScopeStroke then SearchScopeStroke.Color = CatalogSearchScope == "All" and Theme.Accent or Theme.Stroke end
+end
+for scopeIndex, scopeValue in ipairs({ "Selected", "Games", "Utilities", "All" }) do
+    local option = Instance.new("TextButton", SearchScopeDropdown)
+    option.Name = "SearchScope_" .. scopeValue
+    option.Size = UDim2.new(1, 0, 0, 31)
+    option.BackgroundColor3 = Theme.BackgroundSecondary
+    option.BackgroundTransparency = 0.25
+    option.BorderSizePixel = 0
+    option.AutoButtonColor = false
+    option.Text = ""
+    option.LayoutOrder = scopeIndex
+    option.ZIndex = 1701
+    Instance.new("UICorner", option).CornerRadius = UDim.new(0, 6)
+    local label = Instance.new("TextLabel", option)
+    label.Size = UDim2.new(1, -16, 1, 0); label.Position = UDim2.new(0, 8, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = scopeValue == "Selected" and "Selected catalog" or (scopeValue == "All" and "All catalogs" or scopeValue)
+    label:SetAttribute("VeloxTranslationKey", scopeValue == "Selected" and "Selected catalog" or (scopeValue == "All" and "All catalogs" or scopeValue))
+    label.TextColor3 = Theme.TextPrimary; label.Font = Enum.Font.GothamMedium; label.TextSize = IsMobile and 9 or 10
+    label.TextXAlignment = Enum.TextXAlignment.Left; label.ZIndex = 1702; label.Active = false
+    SearchScopeOptionButtons[scopeValue] = option
+    _VH_RegConn(option.Activated:Connect(function()
+        if isDestroying then return end
+        CatalogSearchScope = scopeValue
+        if scopeValue == "Games" or scopeValue == "Utilities" then
+            _VH_SelectCatalogCategory(scopeValue, false)
+        end
+        SearchScopeDropdown.Visible = false
+        _VH_UpdateSearchScopeButton()
+        if FilterPanel then FilterPanel.Visible = false end
+        if DropdownContainer then DropdownContainer.Visible = false end
+        UpdateFilter()
+    end))
+end
+_VH_UpdateSearchScopeButton()
+_VH_RegConn(SearchScopeButton.Activated:Connect(function()
+    if isDestroying then return end
+    if DropdownContainer then DropdownContainer.Visible = false end
+    if FilterPanel then FilterPanel.Visible = false end
+    SearchScopeDropdown.Visible = not SearchScopeDropdown.Visible
+    if SearchScopeDropdown.Visible then
+        _VH_SetPopupPosition(SearchScopeDropdown, SearchScopeButton, IsMobile and 154 or 174, 156, 10)
+    end
+end))
 
 FilterBtn = Instance.new("TextButton", SearchRow)
 FilterBtn.Size = UDim2.new(0, filterBtnWidth, 1, 0); FilterBtn.Position = UDim2.new(1, -(filterBtnWidth + sortBtnWidth + gap), 0, 0)
@@ -3602,7 +3816,7 @@ function _VH_GetFilterOptions()
 		map[key] = true
 		labels[key] = value
 	end
-	for _, scr in ipairs(RegisteredScripts) do
+	for _, scr in ipairs(_VH_GetCatalogEntriesForScope(CatalogSearchScope)) do
 		local data = scr and scr.Data
 		if type(data) == "table" then
 			add(categories, categoryLabels, data.Category)
@@ -3857,6 +4071,9 @@ function _VH_SetPopupPosition(panel, anchor, preferredWidth, preferredHeight, ma
 end
 
 function PositionOpenPanels()
+    if SearchScopeDropdown and SearchScopeDropdown.Visible then
+        _VH_SetPopupPosition(SearchScopeDropdown, SearchScopeButton, IsMobile and 154 or 174, 156, 10)
+    end
 	if DropdownContainer and DropdownContainer.Visible then
 		_VH_SetPopupPosition(DropdownContainer, SortDropdownBtn, 220, 302, 10)
 	end
@@ -3911,10 +4128,10 @@ BindCamera()
 RefreshViewportLayout()
 filterVersion = 0
 SortOptions = {
-	"Most Relevant", "A-Z", "Z-A", "Newest", "Oldest",
-	"Updated Today", "Updated This Week", "Updated This Month"
+    "Best Match", "Most Relevant", "Recently Updated", "A-Z", "Z-A", "Favorites First", "Featured First",
+    "Newest", "Oldest", "Updated Today", "Updated This Week", "Updated This Month"
 }
-SortMode = "Most Relevant"
+SortMode = "Best Match"
 if type(SavedData.Settings.SortMode) == "string" then
 	for _, savedSortMode in ipairs(SortOptions) do
 		if savedSortMode == SavedData.Settings.SortMode then SortMode = savedSortMode; break end
@@ -4020,76 +4237,111 @@ function _VH_SortPriority(scr, mode)
 end
 
 function UpdateFilter()
-	if isDestroying then return end
-	filterVersion = filterVersion + 1
-	local currentVersion = filterVersion
-	task.defer(function()
-		if isDestroying or currentVersion ~= filterVersion then return end
-		local query = _VH_NormalizeSearchText(SearchInput.Text or "")
-		if RecommendationPanel and RecommendationPanel.Parent then
-			RecommendationPanel.Visible = #RecommendationItems > 0 and currentTab == "Scripts" and currentScriptCategory == "Games" and query == "" and _VH_GetFilterCount() == 0
-		end
-
-		local matches = {}
-		local currentSort = SortMode
-
-		for _, scr in ipairs(RegisteredScripts) do
-			if currentVersion ~= filterVersion then return end
-			local relevance, searchMatch = _VH_SearchRelevance(scr, query)
-			local filterPass = _VH_ScriptPassesFilters(scr)
-			local visible = searchMatch and filterPass
-			scr.SearchRelevance = relevance
-			if scr.Instance.Visible ~= visible then scr.Instance.Visible = visible end
-			if visible then matches[#matches + 1] = scr end
-		end
-
-		if currentVersion ~= filterVersion then return end
-
-		table.sort(matches, function(a, b)
-			if currentSort == "Most Relevant" and query ~= "" then
-				if a.SearchRelevance ~= b.SearchRelevance then return a.SearchRelevance > b.SearchRelevance end
-			end
-
-			if currentSort == "Most Relevant" then
-				if a.Recommended ~= b.Recommended then return a.Recommended == true end
-				if a.RecommendationScore ~= b.RecommendationScore then return a.RecommendationScore > b.RecommendationScore end
-				if a.RecommendationRank ~= b.RecommendationRank then return a.RecommendationRank < b.RecommendationRank end
-				if a.TagPriority ~= b.TagPriority then return a.TagPriority > b.TagPriority end
-				if a.LastUpdatedNumber ~= b.LastUpdatedNumber then return a.LastUpdatedNumber > b.LastUpdatedNumber end
-			elseif currentSort == "A-Z" then
-				if a.SearchTitle ~= b.SearchTitle then return a.SearchTitle < b.SearchTitle end
-			elseif currentSort == "Z-A" then
-				if a.SearchTitle ~= b.SearchTitle then return a.SearchTitle > b.SearchTitle end
-			elseif currentSort == "Oldest" then
-				if a.LastUpdatedNumber ~= b.LastUpdatedNumber then return a.LastUpdatedNumber < b.LastUpdatedNumber end
-			elseif currentSort == "Updated Today" or currentSort == "Updated This Week" or currentSort == "Updated This Month" then
-				local aWindow = _VH_SortPriority(a, currentSort)
-				local bWindow = _VH_SortPriority(b, currentSort)
-				if aWindow ~= bWindow then return aWindow > bWindow end
-				if a.LastUpdatedNumber ~= b.LastUpdatedNumber then return a.LastUpdatedNumber > b.LastUpdatedNumber end
-			else
-				if a.LastUpdatedNumber ~= b.LastUpdatedNumber then return a.LastUpdatedNumber > b.LastUpdatedNumber end
-			end
-
-			if a.SearchTitle ~= b.SearchTitle then return a.SearchTitle < b.SearchTitle end
-			return a.Id < b.Id
-		end)
-
-		for order, scr in ipairs(matches) do scr.Instance.LayoutOrder = order end
-		local shouldShowEmpty = #matches == 0
-		if dbRefreshing then
-			HideScriptEmptyState()
-		elseif shouldShowEmpty then
-			if #RegisteredScripts > 0 then
-				SetScriptEmptyState("no_matches", currentScriptCategory)
-			else
-				SetScriptEmptyState("blank", currentScriptCategory)
-			end
-		else
-			HideScriptEmptyState()
-		end
-		EmptyStateMessage.Text = shouldShowEmpty and "No scripts matched your search or filters." or ""
-	end)
+    if isDestroying then return end
+    filterVersion = filterVersion + 1
+    local currentVersion = filterVersion
+    task.defer(function()
+        if isDestroying or currentVersion ~= filterVersion then return end
+        local query = _VH_NormalizeSearchText(SearchInput.Text or "")
+        local scopeEntries = _VH_GetCatalogEntriesForScope(CatalogSearchScope)
+        local allEntries = _VH_GetAllCatalogEntries()
+        local included = {}
+        for _, entry in ipairs(scopeEntries) do included[entry] = true end
+        for _, entry in ipairs(allEntries) do
+            if entry.Instance and entry.Instance.Parent and not included[entry] and entry.Instance.Visible then
+                entry.Instance.Visible = false
+            end
+        end
+        if RecommendationPanel and RecommendationPanel.Parent then RecommendationPanel.Visible = false end
+        local matches = {}
+        local currentSort = SortMode or "Best Match"
+        local timestampNow = os.time()
+        local function sortTimestamp(entry)
+            local value = tonumber(entry and entry.LastUpdatedNumber) or 0
+            if value <= 0 or value > timestampNow then return 0 end
+            return value
+        end
+        for _, scr in ipairs(scopeEntries) do
+            if currentVersion ~= filterVersion then return end
+            if scr.Instance and scr.Instance.Parent then
+                scr.CatalogCategory = scr.CatalogCategory or currentScriptCategory
+                local relevance, searchMatch = _VH_SearchRelevance(scr, query)
+                local filterPass = _VH_ScriptPassesFilters(scr)
+                local visible = searchMatch and filterPass
+                scr.SearchRelevance = relevance
+                if scr.Instance.Visible ~= visible then scr.Instance.Visible = visible end
+                if visible then matches[#matches + 1] = scr end
+            end
+        end
+        if currentVersion ~= filterVersion then return end
+        table.sort(matches, function(a, b)
+            local aUpdated = sortTimestamp(a)
+            local bUpdated = sortTimestamp(b)
+            local aFav = SavedData.Favorites[a.Id] == true
+            local bFav = SavedData.Favorites[b.Id] == true
+            local aFeatured = NormalizeTagType(a.TagType) == "HOT" or NormalizeTagType(a.TagType) == "NEW" or NormalizeTagType(a.TagType) == "UPDATED" or NormalizeTagType(a.TagType) == "FEATURED"
+            local bFeatured = NormalizeTagType(b.TagType) == "HOT" or NormalizeTagType(b.TagType) == "NEW" or NormalizeTagType(b.TagType) == "UPDATED" or NormalizeTagType(b.TagType) == "FEATURED"
+            if currentSort == "A-Z" then
+                if a.SearchTitle ~= b.SearchTitle then return a.SearchTitle < b.SearchTitle end
+            elseif currentSort == "Z-A" then
+                if a.SearchTitle ~= b.SearchTitle then return a.SearchTitle > b.SearchTitle end
+            elseif currentSort == "Favorites First" then
+                if aFav ~= bFav then return aFav end
+                if a.SearchTitle ~= b.SearchTitle then return a.SearchTitle < b.SearchTitle end
+            elseif currentSort == "Featured First" then
+                if aFeatured ~= bFeatured then return aFeatured end
+                if aUpdated ~= bUpdated then return aUpdated > bUpdated end
+            elseif currentSort == "Recently Updated" or currentSort == "Newest" then
+                if (aUpdated > 0) ~= (bUpdated > 0) then return aUpdated > 0 end
+                if aUpdated ~= bUpdated then return aUpdated > bUpdated end
+            elseif currentSort == "Oldest" then
+                if (aUpdated > 0) ~= (bUpdated > 0) then return aUpdated > 0 end
+                if aUpdated ~= bUpdated then return aUpdated < bUpdated end
+            elseif currentSort == "Updated Today" or currentSort == "Updated This Week" or currentSort == "Updated This Month" then
+                local aWindow = _VH_SortPriority(a, currentSort)
+                local bWindow = _VH_SortPriority(b, currentSort)
+                if aWindow ~= bWindow then return aWindow > bWindow end
+                if aUpdated ~= bUpdated then return aUpdated > bUpdated end
+            elseif currentSort == "Best Match" and query ~= "" then
+                if a.SearchRelevance ~= b.SearchRelevance then return a.SearchRelevance > b.SearchRelevance end
+            elseif currentSort == "Most Relevant" then
+                local aCategory = a.CatalogCategory or currentScriptCategory
+                local bCategory = b.CatalogCategory or currentScriptCategory
+                local aCurrent = aCategory == "Games" and IsRecommendedForCurrentPlace(a.Data)
+                local bCurrent = bCategory == "Games" and IsRecommendedForCurrentPlace(b.Data)
+                if aCurrent ~= bCurrent then return aCurrent end
+                if a.RecommendationScore ~= b.RecommendationScore then return (a.RecommendationScore or 0) > (b.RecommendationScore or 0) end
+                if a.TagPriority ~= b.TagPriority then return (a.TagPriority or 0) > (b.TagPriority or 0) end
+                if aUpdated ~= bUpdated then return aUpdated > bUpdated end
+            else
+                if a.SearchRelevance ~= b.SearchRelevance then return a.SearchRelevance > b.SearchRelevance end
+                if a.RecommendationScore ~= b.RecommendationScore then return (a.RecommendationScore or 0) > (b.RecommendationScore or 0) end
+                if aUpdated ~= bUpdated then return aUpdated > bUpdated end
+            end
+            if a.SearchTitle ~= b.SearchTitle then return a.SearchTitle < b.SearchTitle end
+            if tostring(a.CatalogCategory or "") ~= tostring(b.CatalogCategory or "") then return tostring(a.CatalogCategory or "") < tostring(b.CatalogCategory or "") end
+            return tostring(a.Id or "") < tostring(b.Id or "")
+        end)
+        for order, scr in ipairs(matches) do
+            if scr.Instance and scr.Instance.Parent then scr.Instance.LayoutOrder = order end
+        end
+        if CatalogResultCountLabel and CatalogResultCountLabel.Parent then
+            local scopeLabel = CatalogSearchScope == "All" and L("All catalogs") or (CatalogSearchScope == "Selected" and L(currentScriptCategory) or L(CatalogSearchScope))
+            CatalogResultCountLabel.Text = tostring(#matches) .. " " .. L("results") .. " · " .. scopeLabel .. (_VH_GetFilterCount() > 0 and (" · " .. tostring(_VH_GetFilterCount()) .. " " .. L("filters")) or "")
+        end
+        local shouldShowEmpty = #matches == 0
+        if shouldShowEmpty then
+            if #scopeEntries > 0 then
+                SetScriptEmptyState("no_matches", currentScriptCategory)
+            elseif dbRefreshing then
+                SetScriptEmptyState("loading", currentScriptCategory)
+            else
+                SetScriptEmptyState("blank", currentScriptCategory)
+            end
+        else
+            HideScriptEmptyState()
+        end
+    end)
 end
 
 _VH_RegConn(SearchInput:GetPropertyChangedSignal("Text"):Connect(function()
@@ -4105,6 +4357,7 @@ end))
 
 _VH_RegConn(FilterBtn.Activated:Connect(function()
 	if isDestroying then return end
+    if SearchScopeDropdown then SearchScopeDropdown.Visible = false end
 	if DropdownContainer then DropdownContainer.Visible = false end
 	if FilterPanel and FilterPanel.Visible then
 		FilterPanel.Visible = false
@@ -4169,7 +4422,8 @@ for order, opt in ipairs(SortOptions) do
 	label.Size = UDim2.new(1, -40, 1, 0)
 	label.Position = UDim2.new(0, 10, 0, 0)
 	label.BackgroundTransparency = 1
-	label.Text = opt
+	label.Text = L(opt)
+    label:SetAttribute("VeloxTranslationKey", opt)
 	label.TextColor3 = Theme.TextPrimary
 	label.Font = Enum.Font.GothamMedium
 	label.TextSize = 9
@@ -4192,6 +4446,7 @@ _VH_RefreshSortButtons()
 
 _VH_RegConn(SortDropdownBtn.Activated:Connect(function()
 	if isDestroying then return end
+    if SearchScopeDropdown then SearchScopeDropdown.Visible = false end
 	if FilterPanel then FilterPanel.Visible = false end
 	if DropdownContainer.Visible then
 		DropdownContainer.Visible = false
@@ -4204,6 +4459,13 @@ end))
 _VH_RegConn(UserInputService.InputBegan:Connect(function(input)
 	if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
 	local pos = input.Position
+    if SearchScopeDropdown and SearchScopeDropdown.Visible then
+        local p, z = SearchScopeDropdown.AbsolutePosition, SearchScopeDropdown.AbsoluteSize
+        local b, bz = SearchScopeButton.AbsolutePosition, SearchScopeButton.AbsoluteSize
+        local inMenu = pos.X >= p.X and pos.X <= p.X + z.X and pos.Y >= p.Y and pos.Y <= p.Y + z.Y
+        local inButton = pos.X >= b.X and pos.X <= b.X + bz.X and pos.Y >= b.Y and pos.Y <= b.Y + bz.Y
+        if not inMenu and not inButton then SearchScopeDropdown.Visible = false end
+    end
 	local closed = false
 	if DropdownContainer and DropdownContainer.Visible then
 		local dPos, dSize = DropdownContainer.AbsolutePosition, DropdownContainer.AbsoluteSize
@@ -4229,17 +4491,17 @@ _VH_RegConn(UserInputService.InputBegan:Connect(function(input)
 end))
 
 TabIndicator = Instance.new("Frame", TabContainer)
-TabIndicator.Size = UDim2.new(0, 3, 0, IsMobile and 26 or 30)
+TabIndicator.Size = UDim2.new(0, 3, 0, IsMobile and 21 or 27)
 TabIndicator.Position = UDim2.new(0, 0, 0, 5)
 TabIndicator.BackgroundColor3 = Theme.Accent
 TabIndicator.BorderSizePixel = 0
 TabIndicator.ZIndex = 8
 Instance.new("UICorner", TabIndicator).CornerRadius = UDim.new(1, 0)
-TabIconAssetIds = { Changelog = VeloxIcons.Changelog, Scripts = VeloxIcons.Scripts, Settings = VeloxIcons.Settings, ["How to Use"] = VeloxIcons.HowToUse }
+TabIconAssetIds = { Discover = VeloxIcons.Sparkles, Scripts = VeloxIcons.Scripts, Favorites = VeloxIcons.Favorite, Updates = VeloxIcons.Changelog, Settings = VeloxIcons.Settings, ["How to Use"] = VeloxIcons.HowToUse }
 TabButtonCache = {}
 function CreateTab(name, index)
-	local tabHeight = IsMobile and 36 or 40
-	local tabStep = tabHeight + (IsMobile and 4 or 6)
+	local tabHeight = IsMobile and 25 or 34
+	local tabStep = tabHeight + (IsMobile and 4 or 5)
 	local yOffset = (index - 1) * tabStep
 	local btn = Instance.new("TextButton", TabContainer)
 	btn.Size = UDim2.new(1, -10, 0, tabHeight)
@@ -4261,8 +4523,8 @@ function CreateTab(name, index)
 
 	local icon = Instance.new("ImageLabel", btn)
 	icon.Name = "TabIcon"
-	icon.Size = UDim2.new(0, IsMobile and 18 or 20, 0, IsMobile and 18 or 20)
-	icon.Position = UDim2.new(0, IsMobile and 10 or 12, 0.5, -(IsMobile and 9 or 10))
+	icon.Size = UDim2.new(0, IsMobile and 15 or 18, 0, IsMobile and 15 or 18)
+	icon.Position = UDim2.new(0, IsMobile and 8 or 11, 0.5, -(IsMobile and 7.5 or 9))
 	icon.BackgroundTransparency = 1
 	icon.BorderSizePixel = 0
 	icon.Image = TabIconAssetIds[name] or ""
@@ -4273,8 +4535,8 @@ function CreateTab(name, index)
 
 	local label = Instance.new("TextLabel", btn)
 	label.Name = "TabLabel"
-	label.Size = UDim2.new(1, -(IsMobile and 40 or 46), 1, 0)
-	label.Position = UDim2.new(0, IsMobile and 36 or 40, 0, 0)
+	label.Size = UDim2.new(1, -(IsMobile and 35 or 42), 1, 0)
+	label.Position = UDim2.new(0, IsMobile and 29 or 36, 0, 0)
 	label.BackgroundTransparency = 1
 	label.Text = GetLocalizedTabName(name)
 	label:SetAttribute("VeloxTranslationKey", name)
@@ -4297,14 +4559,17 @@ function CreateTab(name, index)
 		currentTab = name
 		DropdownContainer.Visible = false
 		if FilterPanel then FilterPanel.Visible = false end
-		TabIndicator.Size = UDim2.new(0, 3, 0, IsMobile and 26 or 30)
+		TabIndicator.Size = UDim2.new(0, 3, 0, IsMobile and 21 or 27)
 		_VH_SafeTween(TabIndicator, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = UDim2.new(0, 0, 0, yOffset + 5) })
 		SectionHeaderLabel.Text = GetLocalizedSectionHeader(name)
 		SectionHeaderLabel.Visible = true
 		ScriptCategoryRow.Visible = (name == "Scripts")
+        CatalogResultCountLabel.Visible = (name == "Scripts")
 		SearchRow.Visible = (name == "Scripts")
+        if SearchScopeDropdown then SearchScopeDropdown.Visible = false end
 		if name == "Scripts" then
 			UpdateScriptCategoryButtons()
+            if type(_VH_UpdateSearchScopeButton) == "function" then _VH_UpdateSearchScopeButton() end
 			UpdateFilter()
 			SearchRow.BackgroundTransparency = 1
 			_VH_SafeTween(SearchRow, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
@@ -4315,6 +4580,8 @@ function CreateTab(name, index)
 			view.Visible = (tName == name)
 			if view.Visible then view.CanvasPosition = Vector2.new(0, 0) end
 		end
+        if name == "Discover" and type(_VH_RebuildDiscoveryViews) == "function" then _VH_RebuildDiscoveryViews() end
+        if name == "Favorites" and type(_VH_RebuildDiscoveryViews) == "function" then _VH_RebuildDiscoveryViews() end
 		for tName, tBtn in pairs(TabButtonCache) do
 			local active = tName == currentTab
 			local activeColor = active and Theme.TextPrimary or Theme.TextSecondary
@@ -4332,9 +4599,150 @@ function CreateTab(name, index)
 		end
 	end))
 end
-CreateTab("Changelog", 1); CreateTab("Scripts", 2); CreateTab("Settings", 3); CreateTab("How to Use", 4)
+CreateTab("Discover", 1); CreateTab("Scripts", 2); CreateTab("Favorites", 3); CreateTab("Updates", 4); CreateTab("Settings", 5); CreateTab("How to Use", 6)
 _VH_UpdateFilterControl()
 TabIndicator.Position = UDim2.new(0, 0, 0, 5)
+
+local function _VH_CreateDiscoverSection(parent, key, titleText, subtitleText, order)
+    local panel = Instance.new("Frame", parent)
+    panel.Name = key .. "Section"
+    panel.Size = UDim2.new(1, -4, 0, 0)
+    panel.AutomaticSize = Enum.AutomaticSize.Y
+    panel.BackgroundColor3 = Theme.BackgroundSecondary
+    panel.BackgroundTransparency = 0.18
+    panel.BorderSizePixel = 0
+    panel.LayoutOrder = order
+    panel.ClipsDescendants = false
+    Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 9)
+    local stroke = Instance.new("UIStroke", panel)
+    stroke.Color = Theme.Stroke; stroke.Transparency = 0.45; stroke.Thickness = 0.8
+    local pad = Instance.new("UIPadding", panel)
+    pad.PaddingTop = UDim.new(0, 9); pad.PaddingBottom = UDim.new(0, 9)
+    pad.PaddingLeft = UDim.new(0, 10); pad.PaddingRight = UDim.new(0, 10)
+    local title = Instance.new("TextLabel", panel)
+    title.Name = "SectionTitle"
+    title.Size = UDim2.new(1, 0, 0, 17)
+    title.BackgroundTransparency = 1; title.Text = L(titleText)
+    title:SetAttribute("VeloxTranslationKey", titleText)
+    title.TextColor3 = Theme.TextPrimary; title.Font = Enum.Font.GothamBold
+    title.TextSize = IsMobile and 11 or 13; title.TextXAlignment = Enum.TextXAlignment.Left
+    local subtitle = Instance.new("TextLabel", panel)
+    subtitle.Name = "SectionSubtitle"
+    subtitle.Size = UDim2.new(1, 0, 0, 0); subtitle.AutomaticSize = Enum.AutomaticSize.Y
+    subtitle.Position = UDim2.new(0, 0, 0, 18); subtitle.BackgroundTransparency = 1
+    subtitle.Text = L(subtitleText or ""); subtitle:SetAttribute("VeloxTranslationKey", subtitleText or ""); subtitle.TextColor3 = Theme.TextSecondary
+    subtitle.Font = Enum.Font.Gotham; subtitle.TextSize = IsMobile and 8 or 9
+    subtitle.TextWrapped = true; subtitle.TextXAlignment = Enum.TextXAlignment.Left
+    local content = Instance.new("Frame", panel)
+    content.Name = "SectionContent"
+    content.Size = UDim2.new(1, 0, 0, 0); content.AutomaticSize = Enum.AutomaticSize.Y
+    content.Position = UDim2.new(0, 0, 0, 38); content.BackgroundTransparency = 1
+    local layout = Instance.new("UIListLayout", content)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.Padding = UDim.new(0, 5)
+    local empty = Instance.new("TextLabel", content)
+    empty.Name = "EmptyMessage"
+    empty.Size = UDim2.new(1, 0, 0, 30)
+    empty.BackgroundTransparency = 1
+    empty.Text = L("No entries yet. Refresh the catalogs to populate Discover.")
+    empty:SetAttribute("VeloxTranslationKey", "No entries yet. Refresh the catalogs to populate Discover.")
+    empty.TextColor3 = Theme.TextSecondary; empty.Font = Enum.Font.Gotham
+    empty.TextSize = IsMobile and 9 or 10; empty.TextWrapped = true
+    empty.TextXAlignment = Enum.TextXAlignment.Left; empty.TextYAlignment = Enum.TextYAlignment.Center
+    DiscoverySections[key] = { Panel = panel, Content = content, Empty = empty, Title = title, Subtitle = subtitle }
+    return panel
+end
+
+DiscoverHero = Instance.new("Frame", DiscoverView)
+DiscoverHero.Name = "DiscoverHero"
+DiscoverHero.Size = UDim2.new(1, -4, 0, IsMobile and 112 or 116)
+DiscoverHero.BackgroundColor3 = Color3.fromRGB(22, 28, 58)
+DiscoverHero.BackgroundTransparency = 0.04
+DiscoverHero.BorderSizePixel = 0
+DiscoverHero.LayoutOrder = 0
+DiscoverHero.ClipsDescendants = true
+Instance.new("UICorner", DiscoverHero).CornerRadius = UDim.new(0, 11)
+DiscoverHeroStroke = Instance.new("UIStroke", DiscoverHero)
+DiscoverHeroStroke.Color = Color3.fromRGB(99, 102, 241); DiscoverHeroStroke.Transparency = 0.22; DiscoverHeroStroke.Thickness = 1
+DiscoverHeroGradient = Instance.new("UIGradient", DiscoverHero)
+DiscoverHeroGradient.Rotation = 15
+DiscoverHeroGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 39, 89)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 23, 42))
+})
+DiscoverHeroIcon = Instance.new("Frame", DiscoverHero)
+DiscoverHeroIcon.Size = UDim2.new(0, IsMobile and 28 or 32, 0, IsMobile and 28 or 32)
+DiscoverHeroIcon.Position = UDim2.new(0, 12, 0, 12)
+DiscoverHeroIcon.BackgroundColor3 = Color3.fromRGB(50, 54, 130); DiscoverHeroIcon.BorderSizePixel = 0
+Instance.new("UICorner", DiscoverHeroIcon).CornerRadius = UDim.new(0, 8)
+CreateVeloxIcon(DiscoverHeroIcon, VeloxIcons.Sparkles, IsMobile and 16 or 18, Color3.fromRGB(224, 231, 255), UDim2.new(0.5, -(IsMobile and 8 or 9), 0.5, -(IsMobile and 8 or 9)), nil, 5, "DiscoverHeroIcon")
+DiscoverHeroTitle = Instance.new("TextLabel", DiscoverHero)
+DiscoverHeroTitle.Size = UDim2.new(1, -64, 0, 22); DiscoverHeroTitle.Position = UDim2.new(0, IsMobile and 48 or 54, 0, 12)
+DiscoverHeroTitle.BackgroundTransparency = 1; DiscoverHeroTitle.Text = L("Find something useful")
+DiscoverHeroTitle:SetAttribute("VeloxTranslationKey", "Find something useful")
+DiscoverHeroTitle.TextColor3 = Theme.TextPrimary; DiscoverHeroTitle.Font = Enum.Font.GothamBold
+DiscoverHeroTitle.TextSize = IsMobile and 13 or 16; DiscoverHeroTitle.TextXAlignment = Enum.TextXAlignment.Left
+DiscoverHeroDescription = Instance.new("TextLabel", DiscoverHero)
+DiscoverHeroDescription.Size = UDim2.new(1, -64, 0, 28); DiscoverHeroDescription.Position = UDim2.new(0, IsMobile and 48 or 54, 0, 34)
+DiscoverHeroDescription.BackgroundTransparency = 1; DiscoverHeroDescription.Text = L("Browse the catalog by game, category, or tag.")
+DiscoverHeroDescription:SetAttribute("VeloxTranslationKey", "Browse the catalog by game, category, or tag.")
+DiscoverHeroDescription.TextColor3 = Theme.TextSecondary; DiscoverHeroDescription.Font = Enum.Font.Gotham
+DiscoverHeroDescription.TextSize = IsMobile and 8 or 10; DiscoverHeroDescription.TextWrapped = true
+DiscoverHeroDescription.TextXAlignment = Enum.TextXAlignment.Left; DiscoverHeroDescription.TextYAlignment = Enum.TextYAlignment.Top
+DiscoverActionRow = Instance.new("Frame", DiscoverHero)
+DiscoverActionRow.Size = UDim2.new(1, -20, 0, IsMobile and 23 or 25); DiscoverActionRow.Position = UDim2.new(0, 10, 1, -(IsMobile and 31 or 34))
+DiscoverActionRow.BackgroundTransparency = 1
+DiscoverActionLayout = Instance.new("UIListLayout", DiscoverActionRow)
+DiscoverActionLayout.FillDirection = Enum.FillDirection.Horizontal; DiscoverActionLayout.SortOrder = Enum.SortOrder.LayoutOrder
+DiscoverActionLayout.Padding = UDim.new(0, 6); DiscoverActionLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+local function _VH_CreateDiscoverAction(name, order, width)
+    local button = Instance.new("TextButton", DiscoverActionRow)
+    button.Name = name:gsub("%s+", "") .. "Action"
+    button.Size = UDim2.new(0, width, 1, 0); button.BackgroundColor3 = Color3.fromRGB(44, 49, 112)
+    button.BorderSizePixel = 0; button.AutoButtonColor = false; button.Text = L(name)
+    button:SetAttribute("VeloxTranslationKey", name)
+    button.TextColor3 = Theme.TextPrimary; button.Font = Enum.Font.GothamBold
+    button.TextSize = IsMobile and 7 or 9; button.LayoutOrder = order
+    Instance.new("UICorner", button).CornerRadius = UDim.new(0, 6)
+    local stroke = Instance.new("UIStroke", button)
+    stroke.Color = Color3.fromRGB(99, 102, 241); stroke.Transparency = 0.5; stroke.Thickness = 0.8
+    ApplyInteractiveAnimations(button, Color3.fromRGB(44, 49, 112), Color3.fromRGB(58, 65, 140), Color3.fromRGB(31, 35, 83), stroke, stroke.Color, Theme.Accent)
+    return button
+end
+DiscoverGamesButton = _VH_CreateDiscoverAction("Browse Games", 1, IsMobile and 86 or 108)
+DiscoverUtilitiesButton = _VH_CreateDiscoverAction("Browse Utilities", 2, IsMobile and 94 or 116)
+DiscoverAllButton = _VH_CreateDiscoverAction("Search All", 3, IsMobile and 72 or 88)
+_VH_CreateDiscoverSection(DiscoverView, "CurrentGame", "Matched to Your Current Game", "Only direct compatibility matches are shown here.", 1)
+_VH_CreateDiscoverSection(DiscoverView, "Recommended", "Recommended for You", "Recommendations are based on available catalog metadata and saved favorites.", 2)
+_VH_CreateDiscoverSection(DiscoverView, "RecentlyUpdated", "Recently Updated", "Entries with valid update timestamps appear first.", 3)
+_VH_CreateDiscoverSection(DiscoverView, "Categories", "Explore Categories", "Choose a category to filter entries across both catalogs.", 4)
+_VH_CreateDiscoverSection(DiscoverView, "Featured", "Featured Entries", "Uses the catalog's existing HOT, NEW, UPDATED, and FEATURED labels.", 5)
+FavoritesHeader = Instance.new("Frame", FavoritesView)
+FavoritesHeader.Name = "FavoritesHeader"; FavoritesHeader.Size = UDim2.new(1, -4, 0, IsMobile and 64 or 72)
+FavoritesHeader.BackgroundColor3 = Theme.BackgroundSecondary; FavoritesHeader.BackgroundTransparency = 0.15
+FavoritesHeader.BorderSizePixel = 0; FavoritesHeader.LayoutOrder = 0
+Instance.new("UICorner", FavoritesHeader).CornerRadius = UDim.new(0, 9)
+FavoritesHeaderStroke = Instance.new("UIStroke", FavoritesHeader)
+FavoritesHeaderStroke.Color = Theme.Stroke; FavoritesHeaderStroke.Transparency = 0.35; FavoritesHeaderStroke.Thickness = 0.8
+FavoritesHeaderTitle = Instance.new("TextLabel", FavoritesHeader)
+FavoritesHeaderTitle.Size = UDim2.new(1, -20, 0, 20); FavoritesHeaderTitle.Position = UDim2.new(0, 10, 0, 9)
+FavoritesHeaderTitle.BackgroundTransparency = 1; FavoritesHeaderTitle.Text = L("Favorites")
+FavoritesHeaderTitle:SetAttribute("VeloxTranslationKey", "Favorites")
+FavoritesHeaderTitle.TextColor3 = Theme.TextPrimary; FavoritesHeaderTitle.Font = Enum.Font.GothamBold
+FavoritesHeaderTitle.TextSize = IsMobile and 13 or 16; FavoritesHeaderTitle.TextXAlignment = Enum.TextXAlignment.Left
+FavoritesHeaderSubtitle = Instance.new("TextLabel", FavoritesHeader)
+FavoritesHeaderSubtitle.Size = UDim2.new(1, -20, 0, 28); FavoritesHeaderSubtitle.Position = UDim2.new(0, 10, 0, 31)
+FavoritesHeaderSubtitle.BackgroundTransparency = 1; FavoritesHeaderSubtitle.Text = L("Save catalog entries to see them here.")
+FavoritesHeaderSubtitle:SetAttribute("VeloxTranslationKey", "Save catalog entries to see them here.")
+FavoritesHeaderSubtitle.TextColor3 = Theme.TextSecondary; FavoritesHeaderSubtitle.Font = Enum.Font.Gotham
+FavoritesHeaderSubtitle.TextSize = IsMobile and 8 or 9; FavoritesHeaderSubtitle.TextWrapped = true
+FavoritesHeaderSubtitle.TextXAlignment = Enum.TextXAlignment.Left
+FavoriteEntriesPanel = _VH_CreateDiscoverSection(FavoritesView, "SavedEntries", "Saved entries", "Your saved Games and Utilities entries stay separately identified.", 1)
+FavoriteEntriesPanel.Name = "FavoriteEntriesSection"
+
+_VH_RegConn(DiscoverGamesButton.Activated:Connect(function() if type(_VH_OpenCatalogFromDiscover) == "function" then _VH_OpenCatalogFromDiscover("Games", "", nil) end end))
+_VH_RegConn(DiscoverUtilitiesButton.Activated:Connect(function() if type(_VH_OpenCatalogFromDiscover) == "function" then _VH_OpenCatalogFromDiscover("Utilities", "", nil) end end))
+_VH_RegConn(DiscoverAllButton.Activated:Connect(function() if type(_VH_OpenCatalogFromDiscover) == "function" then _VH_OpenCatalogFromDiscover("All", "", nil) end end))
+
 SidebarCredits = Instance.new("Frame", Sidebar)
 SidebarCredits.Size = UDim2.new(1, -20, 0, IsMobile and 126 or 142)
 SidebarCredits.AnchorPoint = Vector2.new(0.5, 1)
@@ -4469,7 +4877,7 @@ function CreateParagraph(title, desc, parentView, order)
 	dLbl.TextWrapped = true; dLbl.LayoutOrder = 2
 end
 CreateParagraph("Found a Bug?", "If you run into any bugs, issues, or anything that doesn't seem right, please report it on our Discord. It really helps me figure out what's going wrong and fix it faster. Even small details can be useful, so don't hesitate to report anything you notice!", ChangelogsView)
-CreateParagraph("v2.0.8 - Catalog Reliability & Quality-of-Life Update", "Version 2.0.8 gives the Games and Utilities status indicators a cleaner layout and keeps the main header tied to the selected catalog. Refresh handling is more reliable, with clearer connection and data-error states, safer queued requests, and protection against stale callbacks. The update also fixes catalog-state issues, preserves usable data when refreshes fail, and avoids unnecessary refreshes when switching to an already-loaded catalog, while keeping the catalog data and existing compatibility fallbacks unchanged.", ChangelogsView)
+CreateParagraph("v2.0.8 - Discovery and Interface Update", "Version 2.0.8 introduces a redesigned discovery experience with dedicated Discover, Catalog, Favorites, Updates, Settings, and Help sections. Search now supports selected-catalog, Games, Utilities, and cross-catalog scopes, while improved sorting, clearer catalog labels, compatibility-aware recommendations, and better empty states make entries easier to find. The update also refines navigation and card styling, keeps cached catalog state separate, and improves refresh and status reliability without changing the supplied catalog data or existing key-system and executor fallback logic.", ChangelogsView)
 function _VH_HowToCard(parent, title, desc, order, iconAsset)
 	local block = Instance.new("Frame", parent)
 	block.Size = UDim2.new(1, -2, 0, 0)
@@ -4649,7 +5057,7 @@ function CreateHowToUseContent()
 		"The How to Use tab is a built-in guide. It does not change your current Scripts, Filters, Sort, or Settings.",
 		"Scroll from top to bottom. Each section explains what a control means and then shows the same control style you will see in the live hub.")
 
-	local tabs = _VH_HowToCard(HowToUseView, "Navigation Tabs", "These four tabs are the main sections of Velox Hub.", 2, VeloxIcons.AppBadge)
+	local tabs = _VH_HowToCard(HowToUseView, "Navigation Tabs", "Discover helps you find relevant entries, Catalog contains Games and Utilities, Favorites stores saved entries, Updates shows the changelog, Settings contains preferences and diagnostics, and Help explains the controls.", 2, VeloxIcons.AppBadge)
 	_VH_HowToExplain(tabs,
 		"Changelog shows recent updates. Scripts is the main catalog. Settings contains preferences and actions. How to Use is this guide.",
 		"Tap a tab once to open it. The active tab uses indigo so you can quickly see where you are.")
@@ -4699,7 +5107,7 @@ function CreateHowToUseContent()
 		l.TextYAlignment = Enum.TextYAlignment.Center
 	end
 
-	local search = _VH_HowToCard(HowToUseView, "Search", "Search is for finding scripts naturally. You do not need special commands or search prefixes.", 3, VeloxIcons.Search)
+	local search = _VH_HowToCard(HowToUseView, "Search", "Search looks across titles, game names, descriptions, tags, and categories. Use the scope menu to search the selected catalog, Games, Utilities, or All catalogs. You do not need special commands or search prefixes.", 3, VeloxIcons.Search)
 	_VH_HowToExplain(search,
 		"Search checks the script name, game name, description, category, and tags, then ranks closer matches higher.",
 		"Tap the search box and type normal words such as auto farm coins or esp. The catalog updates as you type. Clear the text to return to the normal catalog order.")
@@ -5043,7 +5451,7 @@ function _VH_GetRecommendationReason(reasonType, overlapCount, favoriteOverlap, 
 	if favoriteTopicOverlap and favoriteTopicOverlap > 0 then return "Related to your favorites" end
 	if favoriteOverlap and favoriteOverlap > 0 then return "Similar to your favorites" end
 	if overlapCount and overlapCount > 0 then return "Shares similar game details" end
-	if tagType == "HOT" or tagType == "FEATURED" then return "Featured in Velox Hub" end
+	if tagType == "HOT" or tagType == "NEW" or tagType == "UPDATED" or tagType == "FEATURED" then return "Tagged " .. tagType end
 	if isRecent then return "Recently updated" end
 	return "More games in Velox Hub"
 end
@@ -5412,6 +5820,323 @@ function _VH_RefreshRecommendations()
 	end
 	_VH_RefreshRecommendationPanel(items, currentCount)
 end
+local function _VH_DisconnectDiscoveryConnections()
+    for _, connection in ipairs(DiscoveryConnections) do
+        if typeof(connection) == "RBXScriptConnection" and connection.Connected then pcall(function() connection:Disconnect() end) end
+    end
+    table.clear(DiscoveryConnections)
+end
+local function _VH_ClearDiscoveryContent()
+    _VH_DisconnectDiscoveryConnections()
+    for _, section in pairs(DiscoverySections) do
+        if section and section.Content then
+            local listLayout = section.Content:FindFirstChildOfClass("UIListLayout")
+            for _, child in ipairs(section.Content:GetChildren()) do
+                if child ~= listLayout and child ~= section.Empty then child:Destroy() end
+            end
+            section.Empty.Visible = false
+        end
+    end
+end
+local function _VH_BuildDiscoveryRows()
+    local allEntries = _VH_GetAllCatalogEntries()
+    local currentTokens, currentTopics = {}, {}
+    local favoriteTokensByCategory = { Games = {}, Utilities = {} }
+    local favoriteTopicsByCategory = { Games = {}, Utilities = {} }
+    local favoriteCategories = { Games = {}, Utilities = {} }
+    local currentMatches, featured, recent, recommended = {}, {}, {}, {}
+    local categories = {}
+    local now = os.time()
+    for _, entry in ipairs(allEntries) do
+        local data = entry.Data or {}
+        local category = entry.CatalogCategory or "Games"
+        local tokens = _VH_GetRecommendationTokenSet(data)
+        local topics = _VH_GetRecommendationTopicSet(data)
+        local isFavorite = SavedData.Favorites[entry.Id] == true
+        if category == "Games" and IsRecommendedForCurrentPlace(data) then
+            currentMatches[#currentMatches + 1] = { Entry = entry, Score = 1000, Reason = "Matches your current game" }
+            for token in pairs(tokens) do currentTokens[token] = true end
+            for topic in pairs(topics) do currentTopics[topic] = true end
+        end
+        if isFavorite then
+            favoriteCategories[category][_VH_NormalizeFilterKey(data.Category)] = true
+            for token in pairs(tokens) do favoriteTokensByCategory[category][token] = true end
+            for topic in pairs(topics) do favoriteTopicsByCategory[category][topic] = true end
+        end
+        local categoryName = type(data.Category) == "string" and string.gsub(data.Category, "^%s*(.-)%s*$", "%1") or ""
+        if categoryName ~= "" then
+            local categoryKey = _VH_NormalizeFilterKey(categoryName)
+            if categoryKey ~= "" then
+                if not categories[categoryKey] then categories[categoryKey] = { Name = categoryName, Count = 0 } end
+                categories[categoryKey].Count = categories[categoryKey].Count + 1
+            end
+        end
+        local tagType = NormalizeTagType(data.TagType)
+        if tagType == "HOT" or tagType == "NEW" or tagType == "UPDATED" or tagType == "FEATURED" then
+            featured[#featured + 1] = { Entry = entry, Score = (tagType == "FEATURED" and 4 or tagType == "HOT" and 3 or tagType == "NEW" and 2 or 1), Reason = "Tagged " .. tagType }
+        end
+        local updated = tonumber(entry.LastUpdatedNumber) or GetSafeTimestamp(data.LastUpdated) or 0
+        if updated > 0 and updated <= now then recent[#recent + 1] = { Entry = entry, Updated = updated, Reason = "Recently updated" } end
+    end
+    local seenRecommended = {}
+    for _, entry in ipairs(allEntries) do
+        local data = entry.Data or {}
+        local category = entry.CatalogCategory or "Games"
+        local idKey = category .. "\\31" .. tostring(entry.Id or "")
+        if not seenRecommended[idKey] and SavedData.Favorites[entry.Id] ~= true and not (category == "Games" and IsRecommendedForCurrentPlace(data)) then
+            seenRecommended[idKey] = true
+            local tokens = _VH_GetRecommendationTokenSet(data)
+            local topics = _VH_GetRecommendationTopicSet(data)
+            local score, reason = 0, "Explore this catalog entry"
+            if category == "Games" then
+                local topicOverlap = _VH_CountTopicOverlap(topics, currentTopics)
+                local tokenOverlap = _VH_CountTokenOverlap(tokens, currentTokens)
+                local favoriteOverlap = _VH_CountTokenOverlap(tokens, favoriteTokensByCategory.Games)
+                local favoriteTopicOverlap = _VH_CountTopicOverlap(topics, favoriteTopicsByCategory.Games)
+                score = math.min(topicOverlap * 36, 108) + math.min(tokenOverlap * 8, 64) + math.min(favoriteOverlap * 14, 84) + math.min(favoriteTopicOverlap * 28, 84)
+                if topicOverlap > 0 or tokenOverlap > 0 then reason = "Similar to your current game"
+                elseif favoriteTopicOverlap > 0 or favoriteOverlap > 0 then reason = "Similar to your favorites" end
+            else
+                local favoriteOverlap = _VH_CountTokenOverlap(tokens, favoriteTokensByCategory.Utilities)
+                local favoriteTopicOverlap = _VH_CountTopicOverlap(topics, favoriteTopicsByCategory.Utilities)
+                local cat = _VH_NormalizeFilterKey(data.Category)
+                local categoryMatch = cat ~= "" and favoriteCategories.Utilities[cat] == true
+                score = math.min(favoriteOverlap * 16, 112) + math.min(favoriteTopicOverlap * 34, 102) + (categoryMatch and 24 or 0)
+                if favoriteTopicOverlap > 0 or favoriteOverlap > 0 or categoryMatch then reason = "Similar to your favorites" end
+            end
+            local tagType = NormalizeTagType(data.TagType)
+            if tagType == "FEATURED" then score = score + 22
+            elseif tagType == "HOT" then score = score + 16
+            elseif tagType == "NEW" or tagType == "UPDATED" then score = score + 10 end
+            local updated = tonumber(entry.LastUpdatedNumber) or GetSafeTimestamp(data.LastUpdated) or 0
+            if updated > 0 and updated <= now and now - updated <= 30 * 86400 then
+                score = score + 8
+                if reason == "Explore this catalog entry" then reason = "Recently updated" end
+            end
+            if score > 0 then
+                if reason == "Explore this catalog entry" then
+                    local tagType = NormalizeTagType(data.TagType)
+                    if tagType == "HOT" or tagType == "NEW" or tagType == "UPDATED" or tagType == "FEATURED" then
+                        reason = "Tagged " .. tagType
+                    end
+                end
+                recommended[#recommended + 1] = { Entry = entry, Score = score, Reason = reason }
+            end
+        end
+    end
+    local function stableName(item)
+        return string.lower(tostring(item.Entry and (item.Entry.ExactName or item.Entry.Name) or ""))
+    end
+    table.sort(currentMatches, function(a, b) return stableName(a) < stableName(b) end)
+    table.sort(recommended, function(a, b) if a.Score ~= b.Score then return a.Score > b.Score end return stableName(a) < stableName(b) end)
+    table.sort(recent, function(a, b) if a.Updated ~= b.Updated then return a.Updated > b.Updated end return stableName(a) < stableName(b) end)
+    table.sort(featured, function(a, b) if a.Score ~= b.Score then return a.Score > b.Score end return stableName(a) < stableName(b) end)
+    local categoryList = {}
+    for _, value in pairs(categories) do categoryList[#categoryList + 1] = value end
+    table.sort(categoryList, function(a, b) if a.Count ~= b.Count then return a.Count > b.Count end return string.lower(a.Name) < string.lower(b.Name) end)
+    return allEntries, currentMatches, recommended, recent, categoryList, featured
+end
+function _VH_OpenCatalogFromDiscover(scope, query, categoryFilter)
+    if isDestroying then return end
+    if scope == "Games" or scope == "Utilities" then
+        CatalogSearchScope = scope
+        _VH_SelectCatalogCategory(scope, true)
+    elseif scope == "All" then
+        CatalogSearchScope = "All"
+    else
+        CatalogSearchScope = "Selected"
+    end
+    FilterState.Favorites = false
+    table.clear(FilterState.Categories); table.clear(FilterState.Tags); table.clear(FilterState.Status)
+    if type(categoryFilter) == "string" and categoryFilter ~= "" then
+        FilterState.Categories[_VH_NormalizeFilterKey(categoryFilter)] = true
+        query = ""
+    end
+    if SearchInput and SearchInput.Parent then SearchInput.Text = query or "" end
+    if SearchScopeDropdown then SearchScopeDropdown.Visible = false end
+    if FilterPanel then FilterPanel.Visible = false end
+    if DropdownContainer then DropdownContainer.Visible = false end
+    _VH_UpdateSearchScopeButton()
+    _VH_UpdateFilterControl()
+    _VH_SaveBrowsingPreferences()
+    RebuildFilterPanel()
+    local nav = TabButtonCache and TabButtonCache.Scripts
+    if nav then pcall(function() nav:Activate() end) end
+    UpdateFilter()
+end
+local function _VH_CreateDiscoveryEntryRow(parent, entry, reason, order, favoriteMode)
+    local category = entry.CatalogCategory or "Games"
+    local data = entry.Data or {}
+    local id = tostring(entry.Id or StableScriptId(data) or "")
+    local row = Instance.new("Frame", parent)
+    row.Name = (favoriteMode and "Favorite_" or "Discover_") .. id:gsub("[^%w]", "_")
+    row.Size = UDim2.new(1, 0, 0, IsMobile and 58 or 62)
+    row.BackgroundColor3 = Color3.fromRGB(17, 25, 43)
+    row.BackgroundTransparency = 0.05
+    row.BorderSizePixel = 0
+    row.LayoutOrder = order
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
+    local stroke = Instance.new("UIStroke", row)
+    stroke.Color = category == "Utilities" and Color3.fromRGB(34, 211, 238) or Color3.fromRGB(94, 100, 202)
+    stroke.Transparency = 0.55; stroke.Thickness = 0.8
+    local openButton = Instance.new("TextButton", row)
+    openButton.Name = "OpenCatalogEntry"; openButton.Size = UDim2.new(1, -68, 1, 0)
+    openButton.BackgroundTransparency = 1; openButton.BorderSizePixel = 0; openButton.AutoButtonColor = false; openButton.Text = ""
+    openButton.ZIndex = 2
+    local image = Instance.new("ImageLabel", openButton)
+    image.Size = UDim2.new(0, IsMobile and 40 or 44, 0, IsMobile and 40 or 44)
+    image.Position = UDim2.new(0, 8, 0.5, -(IsMobile and 20 or 22))
+    image.BackgroundColor3 = Theme.BackgroundMain; image.BorderSizePixel = 0
+    image.Image = type(data.ImageAssetId) == "string" and data.ImageAssetId or ""
+    image.ScaleType = Enum.ScaleType.Crop; image.ZIndex = 3
+    Instance.new("UICorner", image).CornerRadius = UDim.new(0, 6)
+    local title = Instance.new("TextLabel", openButton)
+    title.Size = UDim2.new(1, -(IsMobile and 82 or 94), 0, 20); title.Position = UDim2.new(0, IsMobile and 55 or 61, 0, 7)
+    title.BackgroundTransparency = 1; title.Text = tostring(data.Name or entry.ExactName or "Unnamed entry")
+    title.TextColor3 = Theme.TextPrimary; title.Font = Enum.Font.GothamBold
+    title.TextSize = IsMobile and 8 or 10; title.TextWrapped = false; title.TextTruncate = Enum.TextTruncate.AtEnd
+    title.TextXAlignment = Enum.TextXAlignment.Left; title.ZIndex = 3
+    local meta = Instance.new("TextLabel", openButton)
+    meta.Size = UDim2.new(1, -(IsMobile and 82 or 94), 0, 18); meta.Position = UDim2.new(0, IsMobile and 55 or 61, 0, 29)
+    meta.BackgroundTransparency = 1
+    local displayReason = tostring(reason or "")
+    if string.sub(displayReason, 1, 7) == "Tagged " then
+        displayReason = L("Tagged") .. " " .. string.sub(displayReason, 8)
+    elseif displayReason ~= "" then
+        displayReason = L(displayReason)
+    end
+    local categoryText = string.upper(category)
+    meta.Text = categoryText .. (displayReason ~= "" and ("  ·  " .. displayReason) or "")
+    meta.TextColor3 = category == "Utilities" and Color3.fromRGB(103, 232, 249) or Color3.fromRGB(165, 180, 252)
+    meta.Font = Enum.Font.GothamMedium; meta.TextSize = IsMobile and 7 or 8
+    meta.TextTruncate = Enum.TextTruncate.AtEnd; meta.TextXAlignment = Enum.TextXAlignment.Left; meta.ZIndex = 3
+    local details = Instance.new("TextButton", row)
+    details.Name = "DetailsButton"; details.Size = UDim2.new(0, 26, 0, 24); details.Position = UDim2.new(1, -60, 0.5, -12)
+    details.BackgroundColor3 = Theme.BackgroundSecondary; details.BorderSizePixel = 0; details.AutoButtonColor = false; details.Text = "i"
+    details.TextColor3 = Theme.TextPrimary; details.Font = Enum.Font.GothamBold; details.TextSize = 12; details.ZIndex = 5
+    Instance.new("UICorner", details).CornerRadius = UDim.new(0, 6)
+    local fav = Instance.new("TextButton", row)
+    fav.Name = "FavoriteButton"; fav.Size = UDim2.new(0, 26, 0, 24); fav.Position = UDim2.new(1, -30, 0.5, -12)
+    fav.BackgroundColor3 = Theme.BackgroundSecondary; fav.BorderSizePixel = 0; fav.AutoButtonColor = false
+    fav.Text = SavedData.Favorites[id] and "★" or "☆"; fav.TextColor3 = SavedData.Favorites[id] and Color3.fromRGB(250, 204, 21) or Theme.TextSecondary
+    fav.Font = Enum.Font.GothamBold; fav.TextSize = 14; fav.ZIndex = 5
+    Instance.new("UICorner", fav).CornerRadius = UDim.new(0, 6)
+    DiscoveryConnections[#DiscoveryConnections + 1] = openButton.Activated:Connect(function()
+        if isDestroying then return end
+        _VH_OpenCatalogFromDiscover(category, tostring(entry.ExactName or data.Name or entry.SearchTitle or ""), nil)
+    end)
+    DiscoveryConnections[#DiscoveryConnections + 1] = details.Activated:Connect(function()
+        if isDestroying then return end
+        _VH_OpenScriptDetails(data, entry)
+    end)
+    DiscoveryConnections[#DiscoveryConnections + 1] = fav.Activated:Connect(function()
+        if isDestroying then return end
+        if SavedData.Favorites[id] then
+            SavedData.Favorites[id] = nil
+            fav.Text = "☆"; fav.TextColor3 = Theme.TextSecondary
+        else
+            SavedData.Favorites[id] = true
+            fav.Text = "★"; fav.TextColor3 = Color3.fromRGB(250, 204, 21)
+        end
+        _VH_ScheduleFavoriteRecommendationRefresh()
+    end)
+    ApplyInteractiveAnimations(openButton, nil, nil, nil, nil, nil, nil, DiscoveryConnections)
+    ApplyInteractiveAnimations(details, Theme.BackgroundSecondary, Theme.CardHover, Theme.BackgroundMain, nil, nil, nil, DiscoveryConnections)
+    ApplyInteractiveAnimations(fav, Theme.BackgroundSecondary, Theme.CardHover, Theme.BackgroundMain, nil, nil, nil, DiscoveryConnections)
+    return row
+end
+local function _VH_AddDiscoveryEmpty(section, message)
+    if not section or not section.Content then return end
+    section.Empty.Text = message or L("No entries yet. Refresh the catalogs to populate Discover.")
+    section.Empty.Visible = true
+end
+function _VH_RebuildDiscoveryViews()
+    if isDestroying or not DiscoverView or not FavoritesView then return end
+    _VH_ClearDiscoveryContent()
+    local allEntries, currentMatches, recommended, recent, categories, featured = _VH_BuildDiscoveryRows()
+    local seenAcrossSections = {}
+    local function renderList(sectionKey, list, maxCount, reasonField)
+        local section = DiscoverySections[sectionKey]
+        local displayed = 0
+        for _, item in ipairs(list or {}) do
+            if displayed >= maxCount then break end
+            local entry = item.Entry or item
+            local reason = item.Reason or (reasonField and item[reasonField]) or ""
+            if entry and entry.Instance then
+                local identity = tostring(entry.CatalogCategory or "Games") .. "\31" .. tostring(entry.Id or entry.ExactName or "")
+                if not seenAcrossSections[identity] then
+                    seenAcrossSections[identity] = true
+                    displayed = displayed + 1
+                    _VH_CreateDiscoveryEntryRow(section.Content, entry, reason, displayed, false)
+                end
+            end
+        end
+        if displayed == 0 then
+            local message
+            if sectionKey == "CurrentGame" then
+                message = L("No matching entries are loaded for this game yet.")
+            elseif sectionKey == "Recommended" then
+                message = L("Save favorites or explore categories to improve recommendations.")
+            else
+                message = L("No entries yet. Refresh the catalogs to populate Discover.")
+            end
+            _VH_AddDiscoveryEmpty(section, message)
+        end
+    end
+    renderList("CurrentGame", currentMatches, 4)
+    renderList("Recommended", recommended, 5)
+    renderList("RecentlyUpdated", recent, 4)
+    renderList("Featured", featured, 4)
+    local categorySection = DiscoverySections.Categories
+    local grid = Instance.new("Frame", categorySection.Content)
+    grid.Name = "CategoryChips"; grid.Size = UDim2.new(1, 0, 0, 0); grid.AutomaticSize = Enum.AutomaticSize.Y
+    grid.BackgroundTransparency = 1; grid.LayoutOrder = 1
+    local gridLayout = Instance.new("UIGridLayout", grid)
+    gridLayout.CellSize = UDim2.new(0, IsMobile and 94 or 120, 0, IsMobile and 27 or 30)
+    gridLayout.CellPadding = UDim2.new(0, 6, 0, 6); gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    local catCount = 0
+    for _, item in ipairs(categories) do
+        if catCount >= 20 then break end
+        catCount = catCount + 1
+        local button = Instance.new("TextButton", grid)
+        button.Name = "Category_" .. tostring(catCount); button.Size = gridLayout.CellSize
+        button.BackgroundColor3 = Color3.fromRGB(33, 40, 74); button.BorderSizePixel = 0; button.AutoButtonColor = false
+        button.Text = item.Name .. " · " .. tostring(item.Count); button.TextColor3 = Theme.TextPrimary
+        button.Font = Enum.Font.GothamMedium; button.TextSize = IsMobile and 7 or 9; button.TextTruncate = Enum.TextTruncate.AtEnd
+        button.LayoutOrder = catCount; Instance.new("UICorner", button).CornerRadius = UDim.new(0, 6)
+        local catStroke = Instance.new("UIStroke", button); catStroke.Color = Theme.Stroke; catStroke.Transparency = 0.3; catStroke.Thickness = 0.8
+        DiscoveryConnections[#DiscoveryConnections + 1] = button.Activated:Connect(function()
+            _VH_OpenCatalogFromDiscover("All", "", item.Name)
+        end)
+        ApplyInteractiveAnimations(button, Color3.fromRGB(33, 40, 74), Color3.fromRGB(47, 58, 105), Color3.fromRGB(23, 28, 53), catStroke, catStroke.Color, Theme.Accent, DiscoveryConnections)
+    end
+    if catCount == 0 then _VH_AddDiscoveryEmpty(categorySection, L("No entries yet. Refresh the catalogs to populate Discover.")) else categorySection.Empty.Visible = false end
+    local favoriteSection = DiscoverySections.SavedEntries
+    local favEntries = {}
+    for _, entry in ipairs(allEntries) do
+        if SavedData.Favorites[entry.Id] == true then favEntries[#favEntries + 1] = entry end
+    end
+    table.sort(favEntries, function(a, b)
+        local an = string.lower(tostring(a.ExactName or a.Name or "")); local bn = string.lower(tostring(b.ExactName or b.Name or ""))
+        if an ~= bn then return an < bn end
+        return tostring(a.CatalogCategory or "") < tostring(b.CatalogCategory or "")
+    end)
+    for index, entry in ipairs(favEntries) do _VH_CreateDiscoveryEntryRow(favoriteSection.Content, entry, "Saved favorite", index, true) end
+    if #favEntries == 0 then _VH_AddDiscoveryEmpty(favoriteSection, L("Save catalog entries to see them here.")) else favoriteSection.Empty.Visible = false end
+    if FavoritesHeaderSubtitle and FavoritesHeaderSubtitle.Parent then
+        local favoriteCountText
+        if CurrentLanguage == "Filipino" then
+            favoriteCountText = tostring(#favEntries) .. " naka-save na entry sa Games at Utilities."
+        elseif CurrentLanguage == "Chinese" then
+            favoriteCountText = "已收藏 " .. tostring(#favEntries) .. " 个 Games 和 Utilities 条目。"
+        else
+            favoriteCountText = tostring(#favEntries) .. " " .. L("saved entries across Games and Utilities") .. "."
+        end
+        FavoritesHeaderSubtitle.Text = favoriteCountText
+    end
+end
+
 function _VH_NormalizeAutoExecuteName(value)
 	if type(value) ~= "string" then return "" end
 	return string.lower(string.gsub(value, "^%s*(.-)%s*$", "%1"))
@@ -5432,7 +6157,7 @@ end
 function _VH_SaveBrowsingPreferences()
 	if type(SavedData) ~= "table" or type(SavedData.Settings) ~= "table" then return end
 	SavedData.Settings.Catalog = currentScriptCategory == "Utilities" and "Utilities" or "Games"
-	SavedData.Settings.SortMode = SortMode or "Most Relevant"
+	SavedData.Settings.SortMode = SortMode or "Best Match"
 	local filters = { Favorites = false, Categories = {}, Tags = {}, Status = {} }
 	if type(FilterState) == "table" then
 		filters.Favorites = FilterState.Favorites == true
@@ -5515,8 +6240,9 @@ function _VH_IsAutoExecuteActive(scriptId)
 end
 function IsCalendarDay(timestamp)
 	local value = tonumber(timestamp)
-	if not value or value <= 0 then return false end
-	local nowDate = os.date("*t", os.time())
+	local now = os.time()
+	if not value or value <= 0 or value > now then return false end
+	local nowDate = os.date("*t", now)
 	local valueDate = os.date("*t", value)
 	return nowDate.year == valueDate.year and nowDate.month == valueDate.month and nowDate.day == valueDate.day
 end
@@ -5545,6 +6271,7 @@ function _VH_ScheduleFavoriteRecommendationRefresh()
 		_VH_RefreshRecommendations()
 		RefreshAllCardStates()
 		UpdateFilter()
+        if type(_VH_RebuildDiscoveryViews) == "function" then _VH_RebuildDiscoveryViews() end
 	end)
 end
 function MigrateSavedEntries(entries)
@@ -5574,21 +6301,22 @@ function MigrateSavedEntries(entries)
 	return changed
 end
 function RefreshAllCardStates()
-	for _, scrData in ipairs(RegisteredScripts) do
-		if currentScriptCategory ~= "Games" and scrData.Recommended then
-			if type(scrData.SetRecommendation) == "function" then
-				scrData.SetRecommendation(false, "", "OTHER", 0)
-			else
-				scrData.Recommended = false
-				if type(scrData.UpdateUI) == "function" then scrData.UpdateUI() end
-			end
-		elseif type(scrData.UpdateUI) == "function" then
-			scrData.UpdateUI()
-		end
-		if scrData.TimeLabel and scrData.TimeLabel.Parent then
-			scrData.TimeLabel.Text = FormatLastUpdatedLabel(scrData.LastUpdatedNumber)
-		end
-	end
+    local entries = _VH_GetAllCatalogEntries()
+    for _, scrData in ipairs(entries) do
+        if scrData.CatalogCategory ~= "Games" and scrData.Recommended then
+            if type(scrData.SetRecommendation) == "function" then
+                scrData.SetRecommendation(false, "", "OTHER", 0)
+            else
+                scrData.Recommended = false
+                if type(scrData.UpdateUI) == "function" then scrData.UpdateUI() end
+            end
+        elseif type(scrData.UpdateUI) == "function" then
+            scrData.UpdateUI()
+        end
+        if scrData.TimeLabel and scrData.TimeLabel.Parent then
+            scrData.TimeLabel.Text = FormatLastUpdatedLabel(scrData.LastUpdatedNumber)
+        end
+    end
 end
 local VELOX_LAUNCH_CONTEXT_KEY = "__VELOX_HUB_AUTH"
 local VELOX_LAUNCH_CONTEXT_TTL = 30
@@ -5673,11 +6401,12 @@ function ExecuteSandboxed(code, scriptName, suppressSuccessNotification, scriptI
 	ShowNotification("Compile failed [" .. tostring(scriptName) .. "]: " .. detail, "Error")
 	return false, detail
 end
-function CreateScriptCard(data, renderParent, registerImmediately, originalIndex)
+function CreateScriptCard(data, renderParent, registerImmediately, originalIndex, catalogCategory)
+	catalogCategory = catalogCategory == "Utilities" and "Utilities" or (catalogCategory == "Games" and "Games" or currentScriptCategory or "Games")
 	local tagType = NormalizeTagType(data and data.TagType)
 	local tagConfig = TagTypeConfig[tagType]
 	local exactName = type(data.Name) == "string" and data.Name or "Unnamed Script"
-	local isRecommended = currentScriptCategory == "Games" and IsRecommendedForCurrentPlace(data)
+	local isRecommended = catalogCategory == "Games" and IsRecommendedForCurrentPlace(data)
 	local recommendationReason = isRecommended and "Matches your current game" or ""
 	local recommendationType = isRecommended and "CURRENT" or "OTHER"
 	local recommendationScore = isRecommended and 1000 or 0
@@ -5699,16 +6428,18 @@ function CreateScriptCard(data, renderParent, registerImmediately, originalIndex
 	if isRecommended then
 		card.BackgroundColor3 = Color3.fromRGB(31, 42, 55)
 	end
+    card.BackgroundTransparency = 0.06
+    cardStroke.Transparency = tagType == "NONE" and 0.28 or 0.12
 	local pad = Instance.new("UIPadding", card)
 	pad.PaddingLeft = UDim.new(0, 10); pad.PaddingRight = UDim.new(0, 10)
 	pad.PaddingTop = UDim.new(0, 10); pad.PaddingBottom = UDim.new(0, 10)
 	local img = Instance.new("ImageLabel", card)
-	img.Size = UDim2.new(0, 68, 0, 68); img.BackgroundColor3 = Theme.BackgroundMain
+	img.Size = UDim2.new(0, IsMobile and 54 or 62, 0, IsMobile and 54 or 62); img.BackgroundColor3 = Theme.BackgroundMain
 	img.BorderSizePixel = 0; img.Image = safeImageAssetId
 	img.ScaleType = Enum.ScaleType.Crop
 	Instance.new("UICorner", img).CornerRadius = UDim.new(0, 8)
 	local content = Instance.new("Frame", card)
-	content.Size = UDim2.new(1, -76, 0, 0); content.Position = UDim2.new(0, 76, 0, 0)
+	content.Size = UDim2.new(1, -(IsMobile and 62 or 70), 0, 0); content.Position = UDim2.new(0, IsMobile and 62 or 70, 0, 0)
 	content.AutomaticSize = Enum.AutomaticSize.Y; content.BackgroundTransparency = 1
 	local cLay = Instance.new("UIListLayout", content)
 	cLay.SortOrder = Enum.SortOrder.LayoutOrder; cLay.Padding = UDim.new(0, 4)
@@ -5801,6 +6532,26 @@ function CreateScriptCard(data, renderParent, registerImmediately, originalIndex
 		tag.ZIndex = 4
 	end
 
+    local catalogPill = Instance.new("Frame", badgeRow)
+    catalogPill.Name = "CatalogIdentityPill"
+    catalogPill.AutomaticSize = Enum.AutomaticSize.X
+    catalogPill.Size = UDim2.new(0, 0, 0, 20)
+    catalogPill.BackgroundColor3 = catalogCategory == "Utilities" and Color3.fromRGB(20, 74, 95) or Color3.fromRGB(43, 48, 105)
+    catalogPill.BorderSizePixel = 0
+    catalogPill.LayoutOrder = 3
+    catalogPill.ZIndex = 4
+    Instance.new("UICorner", catalogPill).CornerRadius = UDim.new(0, 6)
+    local catalogPillPad = Instance.new("UIPadding", catalogPill)
+    catalogPillPad.PaddingLeft = UDim.new(0, 7); catalogPillPad.PaddingRight = UDim.new(0, 7)
+    local catalogPillLabel = Instance.new("TextLabel", catalogPill)
+    catalogPillLabel.AutomaticSize = Enum.AutomaticSize.X; catalogPillLabel.Size = UDim2.new(0, 0, 1, 0)
+    catalogPillLabel.BackgroundTransparency = 1; catalogPillLabel.Text = string.upper(catalogCategory)
+    catalogPillLabel.TextColor3 = Color3.fromRGB(224, 231, 255); catalogPillLabel.Font = Enum.Font.GothamBold
+    catalogPillLabel.TextSize = IsMobile and 7 or 8; catalogPillLabel.ZIndex = 5
+    local catalogPillStroke = Instance.new("UIStroke", catalogPill)
+    catalogPillStroke.Color = catalogCategory == "Utilities" and Color3.fromRGB(34, 211, 238) or Color3.fromRGB(129, 140, 248)
+    catalogPillStroke.Transparency = 0.55; catalogPillStroke.Thickness = 0.75
+
 	local metaRightContainer = Instance.new("Frame", topRow)
 	metaRightContainer.Size = UDim2.new(0, metaWidth, 0, 18); metaRightContainer.BackgroundTransparency = 1; metaRightContainer.LayoutOrder = 2
 	local mrLay = Instance.new("UIListLayout", metaRightContainer)
@@ -5823,7 +6574,7 @@ function CreateScriptCard(data, renderParent, registerImmediately, originalIndex
 		titleLine.Size = UDim2.new(1, 0, 0, 0)
 		titleLbl.Size = UDim2.new(1, 0, 0, 0)
 		recommendBadge.Visible = isRecommended
-		badgeRow.Visible = isRecommended or tagType ~= "NONE"
+		badgeRow.Visible = isRecommended or tagType ~= "NONE" or catalogCategory ~= ""
 	end
 	RegEntryConn(topRow:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateCardMetaLayout))
 	UpdateCardMetaLayout()
@@ -5889,7 +6640,7 @@ function CreateScriptCard(data, renderParent, registerImmediately, originalIndex
 		SearchGame = _VH_NormalizeSearchText(gameName), SearchDesc = _VH_NormalizeSearchText(description),
 		SearchCategory = _VH_NormalizeSearchText(categorySearch), SearchTags = _VH_NormalizeSearchText(tagsSearch),
 		Data = data,
-		Id = scriptId, ExactName = exactName, PlaceId = tonumber(data.PlaceId) or 0, GameId = tonumber(data.GameId) or 0, Compatible = compatibleAtCreate, Recommended = isRecommended, RecommendationReason = recommendationReason, RecommendationType = recommendationType, RecommendationScore = recommendationScore, RecommendationRank = 999, LastUpdated = data.LastUpdated, LastUpdatedNumber = GetSafeTimestamp(data.LastUpdated), TagType = tagType, TagPriority = tagConfig.Priority, OriginalIndex = originalIndex or (#RegisteredScripts + 1), EntryFingerprint = table.concat({ tostring(data.Id or StableScriptId(data) or ""), tostring(data.Name or ""), tostring(data.Description or ""), tostring(data.RawUrl or ""), tostring(data.ImageAssetId or ""), tostring(data.GameName or data.GameTitle or data.ExperienceName or data.Game or data.PlaceName or ""), tostring(NormalizeTagType(data.TagType)), tostring(GetSafeTimestamp(data.LastUpdated)), tostring(tonumber(data.PlaceId) or 0), tostring(tonumber(data.GameId) or 0), tostring(data.Category or ""), tostring(data.Author or ""), _VH_RecommendationListFingerprint(data.Tags) }, "\31"), TimeLabel = dateLbl
+		Id = scriptId, ExactName = exactName, CatalogCategory = catalogCategory, PlaceId = tonumber(data.PlaceId) or 0, GameId = tonumber(data.GameId) or 0, Compatible = compatibleAtCreate, Recommended = isRecommended, RecommendationReason = recommendationReason, RecommendationType = recommendationType, RecommendationScore = recommendationScore, RecommendationRank = 999, LastUpdated = data.LastUpdated, LastUpdatedNumber = GetSafeTimestamp(data.LastUpdated), TagType = tagType, TagPriority = tagConfig.Priority, OriginalIndex = originalIndex or (#RegisteredScripts + 1), EntryFingerprint = table.concat({ tostring(data.Id or StableScriptId(data) or ""), tostring(data.Name or ""), tostring(data.Description or ""), tostring(data.RawUrl or ""), tostring(data.ImageAssetId or ""), tostring(data.GameName or data.GameTitle or data.ExperienceName or data.Game or data.PlaceName or ""), tostring(NormalizeTagType(data.TagType)), tostring(GetSafeTimestamp(data.LastUpdated)), tostring(tonumber(data.PlaceId) or 0), tostring(tonumber(data.GameId) or 0), tostring(data.Category or ""), tostring(data.Author or ""), _VH_RecommendationListFingerprint(data.Tags) }, "\31"), TimeLabel = dateLbl
 	}
 	scriptEntry.DisconnectConnections = function()
 		for i = #entryConnections, 1, -1 do
@@ -5913,7 +6664,7 @@ function CreateScriptCard(data, renderParent, registerImmediately, originalIndex
 		if isRecommended then cardStroke.Color = Color3.fromRGB(129, 140, 248) end
 		recommendBadge.Visible = isRecommended
 		recommendText.Text = recommendationType == "SMART" and "YOU MAY LIKE" or "FOR YOU"
-		badgeRow.Visible = isRecommended or tagType ~= "NONE"
+		badgeRow.Visible = isRecommended or tagType ~= "NONE" or catalogCategory ~= ""
 		scriptEntry.Compatible = compatible
 		starBtn.Text = isFav and "★" or "☆"; starBtn.TextColor3 = isFav and Color3.fromRGB(250, 204, 21) or Theme.TextSecondary
 		aeLbl.Text = compatible and "Auto Execute" or "Wrong Game"
@@ -6471,6 +7222,7 @@ PendingTasks.__LoadCatalog = function(force, isAutoRefresh, expectedCategory, le
 				if refreshCategory == currentScriptCategory then
 					if resolvedKey == "Empty" then SetScriptEmptyState("blank", refreshCategory) elseif resolvedKey == "Catalog Error" and #RegisteredScripts == 0 then SetScriptEmptyState("error", refreshCategory, L("Catalog Error")) else HideScriptEmptyState() end
 				end
+                if type(_VH_RebuildDiscoveryViews) == "function" then task.defer(_VH_RebuildDiscoveryViews) end
 				if not isAutoRefresh and not CatalogBatchRefreshing then
 					ShowNotification(refreshCategory .. " catalog is already up to date.", "Info")
 				end
@@ -6511,11 +7263,12 @@ PendingTasks.__LoadCatalog = function(force, isAutoRefresh, expectedCategory, le
 					entry.OriginalIndex = index
 				else
 					if existing then replacedEntries[#replacedEntries + 1] = existing end
-					entry = CreateScriptCard(scriptData, activeBuildFolder, false, index)
+					entry = CreateScriptCard(scriptData, activeBuildFolder, false, index, refreshCategory)
 					if entry and entry.Instance then
 						entry.Instance.Visible = false
 					end
 					entry.EntryFingerprint = entryFingerprint
+                entry.CatalogCategory = refreshCategory
 					entry.OriginalIndex = index
 					activeNewEntries[#activeNewEntries + 1] = entry
 				end
@@ -6612,6 +7365,7 @@ PendingTasks.__LoadCatalog = function(force, isAutoRefresh, expectedCategory, le
 				elseif finalKey == "Catalog Error" and #RegisteredScripts == 0 then SetScriptEmptyState("error", refreshCategory, L("Catalog Error"))
 				else HideScriptEmptyState() end
 			end
+            if type(_VH_RebuildDiscoveryViews) == "function" then task.defer(_VH_RebuildDiscoveryViews) end
 			if not CatalogBatchRefreshing then
 				if validationIssueCount > 0 then
 					ShowNotification(refreshCategory .. " catalog loaded with validation issues.", "Warning")
@@ -6633,6 +7387,7 @@ PendingTasks.__LoadCatalog = function(force, isAutoRefresh, expectedCategory, le
 			if IsRefreshCurrent() then RestoreCatalogCardsAfterRefreshFailure(refreshCategory) end
 		end
 		if not taskOk and not isDestroying and IsRefreshCurrent() then
+            if type(_VH_RebuildDiscoveryViews) == "function" then task.defer(_VH_RebuildDiscoveryViews) end
 			_VH_SetCatalogDiagnostic(refreshCategory, { Outcome = "Catalog Error", LastError = tostring(taskError or "An unexpected error occurred while processing the catalog") }, requestToken)
 			CatalogRefreshResults[refreshCategory] = false
 			SetHubStatus("Catalog Error", Theme.Error, refreshCategory, requestToken)
@@ -6669,11 +7424,17 @@ function _VH_RestoreSelectedCategoryState(category)
 	local state = _VH_LoadRuntimeCategoryState(category)
 	UpdateScriptCategoryButtons()
 	for name, categoryState in pairs(CategoryCatalogStates) do
-		if name ~= category then _VH_HideCategoryEntries(categoryState.Entries) end
-	end
-	for _, entry in ipairs(RegisteredScripts) do
-		if entry and entry.Instance and entry.Instance.Parent then entry.Instance.Visible = true end
-	end
+        local shouldInclude = CatalogSearchScope == "All" or (CatalogSearchScope == "Selected" and name == category) or CatalogSearchScope == name
+        if not shouldInclude then _VH_HideCategoryEntries(categoryState.Entries) end
+    end
+    for _, entry in ipairs(RegisteredScripts) do
+        if entry and entry.Instance and entry.Instance.Parent then
+            entry.CatalogCategory = category
+            local shouldShow = CatalogSearchScope == "All" or CatalogSearchScope == "Selected" or CatalogSearchScope == category
+            entry.Instance.Visible = shouldShow
+        end
+    end
+    if type(_VH_UpdateSearchScopeButton) == "function" then _VH_UpdateSearchScopeButton() end
 	local catalogUrl = GetActiveCatalogUrl(category)
 	local refreshActive = dbRefreshing and ActiveCatalogRefreshCategory == category
 	local refreshQueued = _VH_IsCatalogQueued(category) or (CatalogBatchRefreshing and CatalogBatchCategories[category] and CatalogRefreshResults[category] == nil)
