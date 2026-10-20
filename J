@@ -137,6 +137,9 @@ VeloxIcons = {
 	Search = "rbxassetid://110668972393459",
 	Filter = "rbxassetid://107670284051546",
 	Favorite = "rbxassetid://106060923892368",
+    GameController = "rbxassetid://90287169568964",
+    CategoryGrid = "rbxassetid://137146389676408",
+    Recent = "rbxassetid://118044516008298",
 	Sort = "rbxassetid://75323379119979",
 	Close = "rbxassetid://104914974782570",
 	Check = "rbxassetid://98454659316573",
@@ -218,6 +221,13 @@ SearchScopeDropdown = nil
 SearchScopeOptionButtons = {}
 DiscoveryConnections = {}
 DiscoverySections = {}
+DiscoveryMode = "ForYou"
+DiscoveryExpandedSections = {}
+ActiveDiscoverHighlight = nil
+DiscoverFavoritesButton = nil
+DiscoverForYouButton = nil
+PendingDiscoverTarget = nil
+DiscoverTargetFocusGeneration = 0
 RecommendationItems = {}
 RecommendationConnections = {}
 RecommendationPanel = nil
@@ -742,7 +752,7 @@ LanguageTranslations = {
 		["Games"] = "Games", ["Utilities"] = "Utilities", ["Search scripts, games, tags..."] = "Search scripts, games, tags...",
 		["Recommended for You"] = "Recommended for You", ["Based on your current game"] = "Based on your current game",
 		["Discover other games in Velox Hub"] = "Discover other games in Velox Hub", ["No other recommendations found yet"] = "No other recommendations found yet",
-		["See More"] = "See More", ["Filters"] = "Filters", ["Refine your script results"] = "Refine your script results", ["Clear"] = "Clear",
+		["For You"] = "For You", ["See More"] = "See More", ["Show Less"] = "Show Less", ["Filters"] = "Filters", ["Refine your script results"] = "Refine your script results", ["Clear"] = "Clear",
 		["Favorites"] = "Favorites", ["Categories"] = "Categories", ["Tags"] = "Tags", ["Status"] = "Status", ["Compatible"] = "Compatible", ["Game Only"] = "Game Only",
 		["Auto Execute ON"] = "Auto Execute ON", ["Auto Execute OFF"] = "Auto Execute OFF", ["Sort Scripts"] = "Sort Scripts", ["Choose how scripts are ordered"] = "Choose how scripts are ordered",
 		["Most Relevant"] = "Most Relevant", ["A-Z"] = "A-Z", ["Z-A"] = "Z-A", ["Newest"] = "Newest", ["Oldest"] = "Oldest",
@@ -783,7 +793,7 @@ LanguageTranslations = {
 		["Games"] = "Mga Laro", ["Utilities"] = "Utilities", ["Search scripts, games, tags..."] = "Maghanap ng scripts, laro, tags...",
 		["Recommended for You"] = "Inirerekomenda Para sa Iyo", ["Based on your current game"] = "Batay sa kasalukuyan mong laro",
 		["Discover other games in Velox Hub"] = "Tumuklas ng iba pang laro sa Velox Hub", ["No other recommendations found yet"] = "Wala pang ibang rekomendasyon",
-		["See More"] = "Tingnan Pa", ["Filters"] = "Mga Filter", ["Refine your script results"] = "Ayusin ang resulta ng scripts", ["Clear"] = "I-clear",
+		["For You"] = "Para sa Iyo", ["See More"] = "Tingnan Pa", ["Show Less"] = "Mas Kaunti", ["Filters"] = "Mga Filter", ["Refine your script results"] = "Ayusin ang resulta ng scripts", ["Clear"] = "I-clear",
 		["Favorites"] = "Mga Paborito", ["Categories"] = "Mga Kategorya", ["Tags"] = "Mga Tag", ["Status"] = "Status", ["Compatible"] = "Compatible", ["Game Only"] = "Laro Lamang",
 		["Auto Execute ON"] = "Auto Execute NAKA-ON", ["Auto Execute OFF"] = "Auto Execute NAKA-OFF", ["Sort Scripts"] = "Ayusin ang Scripts", ["Choose how scripts are ordered"] = "Piliin kung paano aayusin ang scripts",
 		["Most Relevant"] = "Pinakaangkop", ["A-Z"] = "A-Z", ["Z-A"] = "Z-A", ["Newest"] = "Pinakabago", ["Oldest"] = "Pinakaluma",
@@ -824,7 +834,7 @@ LanguageTranslations = {
 		["Games"] = "游戏", ["Utilities"] = "工具", ["Search scripts, games, tags..."] = "搜索脚本、游戏、标签...",
 		["Recommended for You"] = "为你推荐", ["Based on your current game"] = "根据你当前的游戏",
 		["Discover other games in Velox Hub"] = "发现 Velox Hub 中的其他游戏", ["No other recommendations found yet"] = "暂时没有其他推荐",
-		["See More"] = "查看更多", ["Filters"] = "筛选", ["Refine your script results"] = "筛选脚本结果", ["Clear"] = "清除",
+		["For You"] = "为你推荐", ["See More"] = "查看更多", ["Show Less"] = "收起", ["Filters"] = "筛选", ["Refine your script results"] = "筛选脚本结果", ["Clear"] = "清除",
 		["Favorites"] = "收藏", ["Categories"] = "分类", ["Tags"] = "标签", ["Status"] = "状态", ["Compatible"] = "兼容", ["Game Only"] = "仅游戏",
 		["Auto Execute ON"] = "自动执行 开启", ["Auto Execute OFF"] = "自动执行 关闭", ["Sort Scripts"] = "排序脚本", ["Choose how scripts are ordered"] = "选择脚本排序方式",
 		["Most Relevant"] = "最相关", ["A-Z"] = "A-Z", ["Z-A"] = "Z-A", ["Newest"] = "最新", ["Oldest"] = "最旧",
@@ -1325,13 +1335,16 @@ GlobalEnv[_G_Identifier] = function()
 	if ScreenGui and ScreenGui.Parent then ScreenGui:Destroy() end
 end
 function GetPanelSize()
-	local camera = workspace.CurrentCamera
-	local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
-	local maxWidth = IsMobile and 600 or 1120
-	local maxHeight = IsMobile and 470 or 580
-	local width = math.max(180, math.min(maxWidth, viewport.X - 12))
-	local height = math.max(220, math.min(maxHeight, viewport.Y - 12))
-	return UDim2.fromOffset(width, height)
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
+    local uiScale = math.clamp(tonumber(SavedData and SavedData.Settings and SavedData.Settings.UIScale) or 1, 0.8, 1.2)
+    local maxWidth = IsMobile and 600 or 1120
+    local maxHeight = IsMobile and 470 or 580
+    local usableWidth = math.max(140, viewport.X - 20)
+    local usableHeight = math.max(180, viewport.Y - 20)
+    local width = math.min(maxWidth, usableWidth / uiScale)
+    local height = math.min(maxHeight, usableHeight / uiScale)
+    return UDim2.fromOffset(math.max(140, width), math.max(180, height))
 end
 function ApplyInteractiveAnimations(gui, originalColor, hoverColor, clickColor, strokeObj, originalStroke, hoverStroke, connectionRegistry)
 	if not gui:IsA("GuiObject") then return end
@@ -1516,17 +1529,20 @@ function ApplyPanelUIScale(scaleValue)
 	end
 	task.delay(0.24, function()
 		if isDestroying or not MainPanel or not MainPanel.Parent then return end
+        MainPanel.Size = GetPanelSize()
 		local camera = workspace.CurrentCamera
 		local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
-		local baseWidth, baseHeight = MainPanel.AbsoluteSize.X, MainPanel.AbsoluteSize.Y
+		local baseWidth = MainPanel.Size.X.Offset
+        local baseHeight = MainPanel.Size.Y.Offset
 		local visualWidth, visualHeight = baseWidth * nextScale, baseHeight * nextScale
 		local halfX, halfY = visualWidth * MainPanel.AnchorPoint.X, visualHeight * MainPanel.AnchorPoint.Y
 		local position = MainPanel.Position
 		local currentX = position.X.Scale * viewport.X + position.X.Offset
 		local currentY = position.Y.Scale * viewport.Y + position.Y.Offset
-		local minX, minY = halfX, halfY
-		local maxX = math.max(minX, viewport.X - (visualWidth - halfX))
-		local maxY = math.max(minY, viewport.Y - (visualHeight - halfY))
+		local margin = 8
+		local minX, minY = halfX + margin, halfY + margin
+		local maxX = math.max(minX, viewport.X - margin - (visualWidth - halfX))
+		local maxY = math.max(minY, viewport.Y - margin - (visualHeight - halfY))
 		MainPanel.Position = UDim2.new(0, math.clamp(currentX, minX, maxX), 0, math.clamp(currentY, minY, maxY))
 		if PositionOpenPanels then PositionOpenPanels() end
 	end)
@@ -2748,10 +2764,11 @@ _VH_RegConn(HeaderContainer.InputBegan:Connect(function(input)
 				local viewport = camera and camera.ViewportSize or Vector2.new(1920, 1080)
 				local targetX = mainStartPos.X.Scale * viewport.X + mainStartPos.X.Offset + delta.X
 				local targetY = mainStartPos.Y.Scale * viewport.Y + mainStartPos.Y.Offset + delta.Y
-				local halfX = MainPanel.AbsoluteSize.X * MainPanel.AnchorPoint.X
-				local halfY = MainPanel.AbsoluteSize.Y * MainPanel.AnchorPoint.Y
-				targetX = math.max(halfX, math.min(targetX, math.max(halfX, viewport.X - (MainPanel.AbsoluteSize.X - halfX))))
-				targetY = math.max(halfY, math.min(targetY, math.max(halfY, viewport.Y - (MainPanel.AbsoluteSize.Y - halfY))))
+                local renderedSize = _VH_GetRenderedGuiSize(MainPanel)
+                local halfX = renderedSize.X * MainPanel.AnchorPoint.X
+                local halfY = renderedSize.Y * MainPanel.AnchorPoint.Y
+                targetX = math.max(halfX + 8, math.min(targetX, math.max(halfX + 8, viewport.X - 8 - (renderedSize.X - halfX))))
+                targetY = math.max(halfY + 8, math.min(targetY, math.max(halfY + 8, viewport.Y - 8 - (renderedSize.Y - halfY))))
 				MainPanel.Position = UDim2.new(0, targetX, 0, targetY)
 			end
 		end))
@@ -2773,10 +2790,11 @@ _VH_RegConn(SidebarDragHandle.InputBegan:Connect(function(input)
 			local viewport = camera and camera.ViewportSize or Vector2.new(1920, 1080)
 			local targetX = mainStartPos.X.Scale * viewport.X + mainStartPos.X.Offset + delta.X
 			local targetY = mainStartPos.Y.Scale * viewport.Y + mainStartPos.Y.Offset + delta.Y
-			local halfX = MainPanel.AbsoluteSize.X * MainPanel.AnchorPoint.X
-			local halfY = MainPanel.AbsoluteSize.Y * MainPanel.AnchorPoint.Y
-			targetX = math.max(halfX, math.min(targetX, math.max(halfX, viewport.X - (MainPanel.AbsoluteSize.X - halfX))))
-			targetY = math.max(halfY, math.min(targetY, math.max(halfY, viewport.Y - (MainPanel.AbsoluteSize.Y - halfY))))
+            local renderedSize = _VH_GetRenderedGuiSize(MainPanel)
+            local halfX = renderedSize.X * MainPanel.AnchorPoint.X
+            local halfY = renderedSize.Y * MainPanel.AnchorPoint.Y
+            targetX = math.max(halfX + 8, math.min(targetX, math.max(halfX + 8, viewport.X - 8 - (renderedSize.X - halfX))))
+            targetY = math.max(halfY + 8, math.min(targetY, math.max(halfY + 8, viewport.Y - 8 - (renderedSize.Y - halfY))))
 			MainPanel.Position = UDim2.new(0, targetX, 0, targetY)
 		end
 	end))
@@ -3025,7 +3043,6 @@ end
 DiscoverView = CreateCanvas("Discover")
 ChangelogsView = CreateCanvas("Updates")
 ScriptsView = CreateCanvas("Scripts")
-FavoritesView = CreateCanvas("Favorites")
 SettingsView = CreateCanvas("Settings")
 HowToUseView = CreateCanvas("How to Use")
 
@@ -3034,6 +3051,16 @@ HowToUseView:FindFirstChildOfClass("UIPadding").PaddingTop = UDim.new(0, IsMobil
 ScriptsView.AnchorPoint = Vector2.new(0, 0)
 ScriptsView.Position = IsMobile and UDim2.new(0, 14, 0, 172) or UDim2.new(0, 14, 0, 190)
 ScriptsView.Size = IsMobile and UDim2.new(1, -28, 1, -180) or UDim2.new(1, -28, 1, -200)
+ScriptsView.BackgroundColor3 = Color3.fromRGB(10, 16, 30)
+ScriptsView.BackgroundTransparency = 0.68
+ScriptsView.ClipsDescendants = true
+Instance.new("UICorner", ScriptsView).CornerRadius = UDim.new(0, 8)
+ScriptsViewOutline = Instance.new("UIStroke", ScriptsView)
+ScriptsViewOutline.Name = "CatalogViewportOutline"
+ScriptsViewOutline.Color = Color3.fromRGB(203, 213, 225)
+ScriptsViewOutline.Transparency = 0.78
+ScriptsViewOutline.Thickness = 0.8
+pcall(function() ScriptsViewOutline.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
 EmptyStateMessage = Instance.new("TextLabel", ScriptsView)
 EmptyStateMessage.Name = "EmptyStateMessage"
 EmptyStateMessage.Size = UDim2.new(1, 0, 0, 40)
@@ -3291,8 +3318,8 @@ SearchScopeButton.Text = ""
 SearchScopeButton.ZIndex = 52
 Instance.new("UICorner", SearchScopeButton).CornerRadius = UDim.new(0, 8)
 SearchScopeStroke = Instance.new("UIStroke", SearchScopeButton)
-SearchScopeStroke.Color = Theme.Stroke
-SearchScopeStroke.Transparency = 0.18
+SearchScopeStroke.Color = Color3.fromRGB(203, 213, 225)
+SearchScopeStroke.Transparency = 0.72
 SearchScopeStroke.Thickness = 1
 SearchScopeLabel = Instance.new("TextLabel", SearchScopeButton)
 SearchScopeLabel.Size = UDim2.new(1, -8, 1, 0)
@@ -3310,7 +3337,7 @@ SearchContainer = Instance.new("Frame", SearchRow)
 SearchContainer.Size = UDim2.new(1, -(scopeBtnWidth + filterBtnWidth + sortBtnWidth + gap * 3), 1, 0); SearchContainer.Position = UDim2.new(0, scopeBtnWidth + gap, 0, 0); SearchContainer.BackgroundColor3 = Color3.fromRGB(27, 37, 58)
 SearchContainer.ClipsDescendants = true; SearchContainer.ZIndex = 51
 Instance.new("UICorner", SearchContainer).CornerRadius = UDim.new(0, 8)
-SearchStroke = Instance.new("UIStroke", SearchContainer); SearchStroke.Color = Theme.Stroke; SearchStroke.Thickness = 0.8
+SearchStroke = Instance.new("UIStroke", SearchContainer); SearchStroke.Color = Color3.fromRGB(203, 213, 225); SearchStroke.Transparency = 0.76; SearchStroke.Thickness = 0.8
 pcall(function() SearchStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
 
 SearchIcon = Instance.new("ImageLabel", SearchContainer)
@@ -3415,7 +3442,7 @@ FilterBtn.Size = UDim2.new(0, filterBtnWidth, 1, 0); FilterBtn.Position = UDim2.
 FilterBtn.BackgroundColor3 = Color3.fromRGB(30, 41, 59); FilterBtn.Text = ""
 FilterBtn.ZIndex = 51; FilterBtn.AutoButtonColor = false
 Instance.new("UICorner", FilterBtn).CornerRadius = UDim.new(0, 8)
-FilterBtnStroke = Instance.new("UIStroke", FilterBtn); FilterBtnStroke.Color = Theme.Stroke; FilterBtnStroke.Thickness = 1
+FilterBtnStroke = Instance.new("UIStroke", FilterBtn); FilterBtnStroke.Color = Color3.fromRGB(203, 213, 225); FilterBtnStroke.Transparency = 0.76; FilterBtnStroke.Thickness = 1
 
 FilterIcon = CreateVeloxIcon(FilterBtn, VeloxIcons.Filter, 16, Theme.TextSecondary, UDim2.new(0.5, -8, 0.5, -8), nil, 52, "FilterIcon")
 
@@ -3436,7 +3463,7 @@ SortIcon.Name = "SortIcon"
 SortIcon.Size = UDim2.new(0, 15, 0, 15); SortIcon.Position = UDim2.new(0.5, -7.5, 0.5, -7.5)
 SortIcon.BackgroundTransparency = 1; SortIcon.Image = VeloxIcons.Sort; SortIcon.ImageColor3 = Theme.TextSecondary; SortIcon.ScaleType = Enum.ScaleType.Fit
 Instance.new("UICorner", SortDropdownBtn).CornerRadius = UDim.new(0, 8)
-SortBtnStroke = Instance.new("UIStroke", SortDropdownBtn); SortBtnStroke.Color = Theme.Stroke; SortBtnStroke.Thickness = 0.8
+SortBtnStroke = Instance.new("UIStroke", SortDropdownBtn); SortBtnStroke.Color = Color3.fromRGB(203, 213, 225); SortBtnStroke.Transparency = 0.76; SortBtnStroke.Thickness = 0.8
 pcall(function() SortBtnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
 ApplyInteractiveAnimations(SortDropdownBtn, Color3.fromRGB(38, 51, 74), Color3.fromRGB(50, 68, 96), Theme.BackgroundSecondary, SortBtnStroke, Theme.Stroke, Theme.Accent)
 
@@ -4042,62 +4069,90 @@ function RebuildFilterPanel()
 end
 
 function _VH_SetPopupPosition(panel, anchor, preferredWidth, preferredHeight, margin)
-	if not panel or not panel.Parent or not anchor or not anchor.Parent then return end
-	local camera = workspace.CurrentCamera
-	local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
-	margin = margin or 10
-	local width = math.min(preferredWidth, math.max(160, viewport.X - margin * 2))
-	local height = math.min(preferredHeight, math.max(150, viewport.Y - margin * 2))
-	if viewport.X - margin * 2 < 160 then width = math.max(120, viewport.X - margin * 2) end
-	if viewport.Y - margin * 2 < 150 then height = math.max(110, viewport.Y - margin * 2) end
-	panel.Size = UDim2.new(0, width, 0, height)
-	local absPos = anchor.AbsolutePosition
-	local absSize = anchor.AbsoluteSize
-	local posX = absPos.X + absSize.X - width
-	if posX < margin then posX = margin end
-	if posX + width > viewport.X - margin then posX = viewport.X - width - margin end
-
-	local belowY = absPos.Y + absSize.Y + 6
-	local aboveY = absPos.Y - height - 6
-	local posY = belowY
-	if belowY + height > viewport.Y - margin and aboveY >= margin then
-		posY = aboveY
-	elseif belowY + height > viewport.Y - margin then
-		posY = math.max(margin, viewport.Y - height - margin)
-	end
-	posX = math.max(margin, math.min(posX, math.max(margin, viewport.X - width - margin)))
-	posY = math.max(margin, math.min(posY, math.max(margin, viewport.Y - height - margin)))
-	panel.Position = UDim2.new(0, posX, 0, posY)
+    if not panel or not panel.Parent or not anchor or not anchor.Parent then return end
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
+    margin = margin or 8
+    local scale = math.clamp(tonumber(PanelUIScale and PanelUIScale.Scale) or 1, 0.8, 1.2)
+    local desiredWidth = math.floor((tonumber(preferredWidth) or 180) * scale)
+    local desiredHeight = math.floor((tonumber(preferredHeight) or 180) * scale)
+    local left, top, right, bottom = margin, margin, viewport.X - margin, viewport.Y - margin
+    local boundsOwner = nil
+    if MainContent and MainContent.Parent and anchor:IsDescendantOf(MainContent) then
+        boundsOwner = MainContent
+    elseif MainPanel and MainPanel.Parent and anchor:IsDescendantOf(MainPanel) then
+        boundsOwner = MainPanel
+    end
+    if boundsOwner then
+        local boundsPos, boundsSize = boundsOwner.AbsolutePosition, boundsOwner.AbsoluteSize
+        left = math.max(left, boundsPos.X + margin)
+        top = math.max(top, boundsPos.Y + margin)
+        right = math.min(right, boundsPos.X + boundsSize.X - margin)
+        bottom = math.min(bottom, boundsPos.Y + boundsSize.Y - margin)
+    end
+    if not boundsOwner then
+        left, top, right, bottom = margin, margin, viewport.X - margin, viewport.Y - margin
+    end
+    local availableWidth = math.max(64, right - left)
+    local availableHeight = math.max(72, bottom - top)
+    local width = math.min(desiredWidth, availableWidth)
+    local height = math.min(desiredHeight, availableHeight)
+    panel.Size = UDim2.fromOffset(width, height)
+    local absPos, absSize = anchor.AbsolutePosition, anchor.AbsoluteSize
+    local posX = absPos.X + absSize.X - width
+    posX = math.clamp(posX, left, math.max(left, right - width))
+    local belowY = absPos.Y + absSize.Y + 5
+    local aboveY = absPos.Y - height - 5
+    local posY = belowY
+    if belowY + height > bottom and aboveY >= top then
+        posY = aboveY
+    elseif belowY + height > bottom then
+        posY = bottom - height
+    end
+    posY = math.clamp(posY, top, math.max(top, bottom - height))
+    panel.Position = UDim2.fromOffset(posX, posY)
 end
 
 function PositionOpenPanels()
     if SearchScopeDropdown and SearchScopeDropdown.Visible then
-        _VH_SetPopupPosition(SearchScopeDropdown, SearchScopeButton, IsMobile and 154 or 174, 156, 10)
+        _VH_SetPopupPosition(SearchScopeDropdown, SearchScopeButton, IsMobile and 154 or 174, 156, 8)
     end
 	if DropdownContainer and DropdownContainer.Visible then
-		_VH_SetPopupPosition(DropdownContainer, SortDropdownBtn, 220, 302, 10)
+		_VH_SetPopupPosition(DropdownContainer, SortDropdownBtn, 220, 302, 8)
 	end
 	if FilterPanel and FilterPanel.Visible then
-		_VH_SetPopupPosition(FilterPanel, FilterBtn, IsMobile and 236 or 250, IsMobile and 318 or 330, 10)
+		_VH_SetPopupPosition(FilterPanel, FilterBtn, IsMobile and 236 or 250, IsMobile and 318 or 330, 8)
 	end
 	if PositionManualRefreshDropdown and ManualRefreshDropdown and ManualRefreshDropdown.Visible then
 		PositionManualRefreshDropdown()
 	end
+    if PositionLanguageDropdown and LanguageDropdown and LanguageDropdown.Visible then
+        PositionLanguageDropdown()
+    end
 end
 
-function _VH_ClampGuiToViewport(gui, viewport)
-	if not gui or not gui.Parent then return end
-	local size = gui.AbsoluteSize
-	local anchor = gui.AnchorPoint or Vector2.new(0.5, 0.5)
-	local halfX = size.X * anchor.X
-	local halfY = size.Y * anchor.Y
-	local currentX = gui.Position.X.Scale * viewport.X + gui.Position.X.Offset
-	local currentY = gui.Position.Y.Scale * viewport.Y + gui.Position.Y.Offset
-	local minX = halfX
-	local maxX = math.max(minX, viewport.X - (size.X - halfX))
-	local minY = halfY
-	local maxY = math.max(minY, viewport.Y - (size.Y - halfY))
-	gui.Position = UDim2.new(0, math.clamp(currentX, minX, maxX), 0, math.clamp(currentY, minY, maxY))
+function _VH_GetRenderedGuiSize(gui)
+    if gui and MainPanel and gui == MainPanel and PanelUIScale then
+        local scale = math.clamp(tonumber(PanelUIScale.Scale) or 1, 0.8, 1.2)
+        return Vector2.new((gui.Size.X.Offset or gui.AbsoluteSize.X) * scale, (gui.Size.Y.Offset or gui.AbsoluteSize.Y) * scale)
+    end
+    return gui and gui.AbsoluteSize or Vector2.new(0, 0)
+end
+
+function _VH_ClampGuiToViewport(gui, viewport, margin)
+    if not gui or not gui.Parent then return end
+    margin = tonumber(margin) or 8
+    local size = _VH_GetRenderedGuiSize(gui)
+    local anchor = gui.AnchorPoint or Vector2.new(0.5, 0.5)
+    local halfX = size.X * anchor.X
+    local halfY = size.Y * anchor.Y
+    local currentX = gui.Position.X.Scale * viewport.X + gui.Position.X.Offset
+    local currentY = gui.Position.Y.Scale * viewport.Y + gui.Position.Y.Offset
+    local minX = halfX + margin
+    local minY = halfY + margin
+    local maxX = math.max(minX, viewport.X - margin - (size.X - halfX))
+    local maxY = math.max(minY, viewport.Y - margin - (size.Y - halfY))
+    gui.Position = UDim2.new(0, math.clamp(currentX, minX, maxX), 0, math.clamp(currentY, minY, maxY))
 end
 
 function RefreshViewportLayout()
@@ -4105,7 +4160,7 @@ function RefreshViewportLayout()
 	MainPanel.Size = GetPanelSize()
 	local camera = workspace.CurrentCamera
 	local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
-	_VH_ClampGuiToViewport(MainPanel, viewport)
+	_VH_ClampGuiToViewport(MainPanel, viewport, 8)
 	if PositionOpenPanels then PositionOpenPanels() end
 end
 
@@ -4117,8 +4172,8 @@ function BindCamera()
 	viewportConn = _VH_RegConn(cam:GetPropertyChangedSignal("ViewportSize"):Connect(function()
 		if isDestroying then return end
 		local viewport = cam.ViewportSize
-		_VH_ClampGuiToViewport(MainPanel, viewport)
-		_VH_ClampGuiToViewport(FloatingBtn, viewport)
+		_VH_ClampGuiToViewport(MainPanel, viewport, 8)
+		_VH_ClampGuiToViewport(FloatingBtn, viewport, 4)
 		RefreshViewportLayout()
 		PositionOpenPanels()
 	end))
@@ -4236,6 +4291,73 @@ function _VH_SortPriority(scr, mode)
 	return _VH_IsInSortWindow(scr.LastUpdatedNumber, mode) and 1 or 0
 end
 
+function _VH_FocusPendingDiscoverTarget()
+    local target = PendingDiscoverTarget
+    if not target or target.Focusing or currentTab ~= "Scripts" then return end
+    if os.clock() - (tonumber(target.CreatedAt) or os.clock()) > 8 then
+        PendingDiscoverTarget = nil
+        return
+    end
+    local entries = _VH_GetCatalogEntriesForScope(target.Category)
+    local targetEntry = nil
+    for _, entry in ipairs(entries) do
+        if entry and entry.CatalogCategory == target.Category and tostring(entry.Id or "") == tostring(target.EntryId) then
+            targetEntry = entry
+            break
+        end
+    end
+    if not targetEntry or not targetEntry.Instance or not targetEntry.Instance.Parent or not targetEntry.Instance.Visible then return end
+    target.Focusing = true
+    local requestGeneration = target.Generation
+    local card = targetEntry.Instance
+    task.defer(function()
+        if isDestroying or PendingDiscoverTarget ~= target or requestGeneration ~= DiscoverTargetFocusGeneration then return end
+        if currentTab ~= "Scripts" or not card.Parent or not ScriptsView or not ScriptsView.Parent then
+            target.Focusing = false
+            return
+        end
+        local y = card.AbsolutePosition.Y - ScriptsView.AbsolutePosition.Y + ScriptsView.CanvasPosition.Y
+        ScriptsView.CanvasPosition = Vector2.new(ScriptsView.CanvasPosition.X, math.max(0, y - 8))
+        task.defer(function()
+            if isDestroying or PendingDiscoverTarget ~= target or requestGeneration ~= DiscoverTargetFocusGeneration then return end
+            if not card.Parent then PendingDiscoverTarget = nil; return end
+            local stroke = GetOrCreateCardStroke(card)
+            if stroke then
+                local previousHighlight = ActiveDiscoverHighlight
+                if previousHighlight and previousHighlight.Stroke and previousHighlight.Stroke.Parent then
+                    pcall(function()
+                        previousHighlight.Stroke.Color = previousHighlight.Color
+                        previousHighlight.Stroke.Transparency = previousHighlight.Transparency
+                        previousHighlight.Stroke.Thickness = previousHighlight.Thickness
+                    end)
+                end
+                local highlight = {
+                    Stroke = stroke,
+                    Color = stroke.Color,
+                    Transparency = stroke.Transparency,
+                    Thickness = stroke.Thickness
+                }
+                ActiveDiscoverHighlight = highlight
+                stroke.Color = Color3.fromRGB(224, 231, 255)
+                stroke.Transparency = 0.04
+                stroke.Thickness = 2
+                PendingDiscoverTarget = nil
+                task.delay(1.15, function()
+                    if isDestroying or ActiveDiscoverHighlight ~= highlight then return end
+                    if stroke and stroke.Parent then
+                        stroke.Color = highlight.Color
+                        stroke.Transparency = highlight.Transparency
+                        stroke.Thickness = highlight.Thickness
+                    end
+                    ActiveDiscoverHighlight = nil
+                end)
+            else
+                PendingDiscoverTarget = nil
+            end
+        end)
+    end)
+end
+
 function UpdateFilter()
     if isDestroying then return end
     filterVersion = filterVersion + 1
@@ -4325,6 +4447,7 @@ function UpdateFilter()
         for order, scr in ipairs(matches) do
             if scr.Instance and scr.Instance.Parent then scr.Instance.LayoutOrder = order end
         end
+        if PendingDiscoverTarget then _VH_FocusPendingDiscoverTarget() end
         if CatalogResultCountLabel and CatalogResultCountLabel.Parent then
             local scopeLabel = CatalogSearchScope == "All" and L("All catalogs") or (CatalogSearchScope == "Selected" and L(currentScriptCategory) or L(CatalogSearchScope))
             CatalogResultCountLabel.Text = tostring(#matches) .. " " .. L("results") .. " · " .. scopeLabel .. (_VH_GetFilterCount() > 0 and (" · " .. tostring(_VH_GetFilterCount()) .. " " .. L("filters")) or "")
@@ -4497,7 +4620,7 @@ TabIndicator.BackgroundColor3 = Theme.Accent
 TabIndicator.BorderSizePixel = 0
 TabIndicator.ZIndex = 8
 Instance.new("UICorner", TabIndicator).CornerRadius = UDim.new(1, 0)
-TabIconAssetIds = { Discover = VeloxIcons.Sparkles, Scripts = VeloxIcons.Scripts, Favorites = VeloxIcons.Favorite, Updates = VeloxIcons.Changelog, Settings = VeloxIcons.Settings, ["How to Use"] = VeloxIcons.HowToUse }
+TabIconAssetIds = { Discover = VeloxIcons.Sparkles, Scripts = VeloxIcons.Scripts, Updates = VeloxIcons.Changelog, Settings = VeloxIcons.Settings, ["How to Use"] = VeloxIcons.HowToUse }
 TabButtonCache = {}
 function CreateTab(name, index)
 	local tabHeight = IsMobile and 25 or 34
@@ -4581,7 +4704,10 @@ function CreateTab(name, index)
 			if view.Visible then view.CanvasPosition = Vector2.new(0, 0) end
 		end
         if name == "Discover" and type(_VH_RebuildDiscoveryViews) == "function" then _VH_RebuildDiscoveryViews() end
-        if name == "Favorites" and type(_VH_RebuildDiscoveryViews) == "function" then _VH_RebuildDiscoveryViews() end
+        if name ~= "Scripts" and PendingDiscoverTarget then
+            PendingDiscoverTarget = nil
+            DiscoverTargetFocusGeneration = DiscoverTargetFocusGeneration + 1
+        end
 		for tName, tBtn in pairs(TabButtonCache) do
 			local active = tName == currentTab
 			local activeColor = active and Theme.TextPrimary or Theme.TextSecondary
@@ -4599,7 +4725,7 @@ function CreateTab(name, index)
 		end
 	end))
 end
-CreateTab("Discover", 1); CreateTab("Scripts", 2); CreateTab("Favorites", 3); CreateTab("Updates", 4); CreateTab("Settings", 5); CreateTab("How to Use", 6)
+CreateTab("Discover", 1); CreateTab("Scripts", 2); CreateTab("Updates", 3); CreateTab("Settings", 4); CreateTab("How to Use", 5)
 _VH_UpdateFilterControl()
 TabIndicator.Position = UDim2.new(0, 0, 0, 5)
 
@@ -4609,52 +4735,93 @@ local function _VH_CreateDiscoverSection(parent, key, titleText, subtitleText, o
     panel.Size = UDim2.new(1, -4, 0, 0)
     panel.AutomaticSize = Enum.AutomaticSize.Y
     panel.BackgroundColor3 = Theme.BackgroundSecondary
-    panel.BackgroundTransparency = 0.18
+    panel.BackgroundTransparency = 0.2
     panel.BorderSizePixel = 0
     panel.LayoutOrder = order
-    panel.ClipsDescendants = false
-    Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 9)
+    panel.ClipsDescendants = true
+    Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 8)
     local stroke = Instance.new("UIStroke", panel)
-    stroke.Color = Theme.Stroke; stroke.Transparency = 0.45; stroke.Thickness = 0.8
+    stroke.Color = Color3.fromRGB(203, 213, 225); stroke.Transparency = 0.84; stroke.Thickness = 0.8
     local pad = Instance.new("UIPadding", panel)
-    pad.PaddingTop = UDim.new(0, 9); pad.PaddingBottom = UDim.new(0, 9)
-    pad.PaddingLeft = UDim.new(0, 10); pad.PaddingRight = UDim.new(0, 10)
-    local title = Instance.new("TextLabel", panel)
+    pad.PaddingTop = UDim.new(0, 7); pad.PaddingBottom = UDim.new(0, 7)
+    pad.PaddingLeft = UDim.new(0, 9); pad.PaddingRight = UDim.new(0, 9)
+    local stack = Instance.new("UIListLayout", panel)
+    stack.SortOrder = Enum.SortOrder.LayoutOrder
+    stack.Padding = UDim.new(0, 3)
+    local header = Instance.new("Frame", panel)
+    header.Name = "SectionHeading"
+    header.Size = UDim2.new(1, 0, 0, 18)
+    header.BackgroundTransparency = 1
+    header.LayoutOrder = 1
+    local iconAssets = {
+        CurrentGame = VeloxIcons.GameController,
+        Recommended = VeloxIcons.Sparkles,
+        RecentlyUpdated = VeloxIcons.Recent,
+        Categories = VeloxIcons.CategoryGrid,
+        Featured = VeloxIcons.Flame,
+        SavedEntries = VeloxIcons.Heart
+    }
+    CreateVeloxIcon(header, iconAssets[key] or VeloxIcons.Tag, 13, Theme.TextSecondary, UDim2.new(0, 0, 0.5, -6.5), nil, 4, "SectionIcon")
+    local title = Instance.new("TextLabel", header)
     title.Name = "SectionTitle"
-    title.Size = UDim2.new(1, 0, 0, 17)
+    title.Size = UDim2.new(1, -88, 1, 0)
+    title.Position = UDim2.new(0, 21, 0, 0)
     title.BackgroundTransparency = 1; title.Text = L(titleText)
     title:SetAttribute("VeloxTranslationKey", titleText)
     title.TextColor3 = Theme.TextPrimary; title.Font = Enum.Font.GothamBold
-    title.TextSize = IsMobile and 11 or 13; title.TextXAlignment = Enum.TextXAlignment.Left
+    title.TextSize = IsMobile and 10 or 12; title.TextXAlignment = Enum.TextXAlignment.Left
+    title.TextTruncate = Enum.TextTruncate.AtEnd
+    local viewButton = Instance.new("TextButton", header)
+    viewButton.Name = "SectionViewButton"
+    viewButton.Size = UDim2.new(0, 64, 1, 0)
+    viewButton.Position = UDim2.new(1, -64, 0, 0)
+    viewButton.BackgroundTransparency = 1
+    viewButton.BorderSizePixel = 0
+    viewButton.AutoButtonColor = false
+    viewButton.Text = L("See More")
+    viewButton:SetAttribute("VeloxTranslationKey", "See More")
+    viewButton.TextColor3 = Theme.Accent
+    viewButton.Font = Enum.Font.GothamMedium
+    viewButton.TextSize = IsMobile and 7 or 8
+    viewButton.TextXAlignment = Enum.TextXAlignment.Right
+    viewButton.TextTruncate = Enum.TextTruncate.AtEnd
+    viewButton.Visible = false
+    viewButton.ZIndex = 5
+    _VH_RegConn(viewButton.Activated:Connect(function()
+        if isDestroying then return end
+        DiscoveryExpandedSections[key] = not DiscoveryExpandedSections[key]
+        if type(_VH_RebuildDiscoveryViews) == "function" then _VH_RebuildDiscoveryViews() end
+    end))
     local subtitle = Instance.new("TextLabel", panel)
     subtitle.Name = "SectionSubtitle"
     subtitle.Size = UDim2.new(1, 0, 0, 0); subtitle.AutomaticSize = Enum.AutomaticSize.Y
-    subtitle.Position = UDim2.new(0, 0, 0, 18); subtitle.BackgroundTransparency = 1
-    subtitle.Text = L(subtitleText or ""); subtitle:SetAttribute("VeloxTranslationKey", subtitleText or ""); subtitle.TextColor3 = Theme.TextSecondary
-    subtitle.Font = Enum.Font.Gotham; subtitle.TextSize = IsMobile and 8 or 9
-    subtitle.TextWrapped = true; subtitle.TextXAlignment = Enum.TextXAlignment.Left
+    subtitle.BackgroundTransparency = 1; subtitle.Text = L(subtitleText or "")
+    subtitle:SetAttribute("VeloxTranslationKey", subtitleText or "")
+    subtitle.TextColor3 = Theme.TextSecondary; subtitle.Font = Enum.Font.Gotham
+    subtitle.TextSize = IsMobile and 7 or 8; subtitle.TextWrapped = true
+    subtitle.TextXAlignment = Enum.TextXAlignment.Left; subtitle.LayoutOrder = 2
     local content = Instance.new("Frame", panel)
     content.Name = "SectionContent"
     content.Size = UDim2.new(1, 0, 0, 0); content.AutomaticSize = Enum.AutomaticSize.Y
-    content.Position = UDim2.new(0, 0, 0, 38); content.BackgroundTransparency = 1
+    content.BackgroundTransparency = 1; content.LayoutOrder = 3
     local layout = Instance.new("UIListLayout", content)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.Padding = UDim.new(0, 5)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.Padding = UDim.new(0, 4)
     local empty = Instance.new("TextLabel", content)
     empty.Name = "EmptyMessage"
-    empty.Size = UDim2.new(1, 0, 0, 30)
+    empty.Size = UDim2.new(1, 0, 0, 24)
     empty.BackgroundTransparency = 1
     empty.Text = L("No entries yet. Refresh the catalogs to populate Discover.")
     empty:SetAttribute("VeloxTranslationKey", "No entries yet. Refresh the catalogs to populate Discover.")
     empty.TextColor3 = Theme.TextSecondary; empty.Font = Enum.Font.Gotham
-    empty.TextSize = IsMobile and 9 or 10; empty.TextWrapped = true
+    empty.TextSize = IsMobile and 8 or 9; empty.TextWrapped = true
     empty.TextXAlignment = Enum.TextXAlignment.Left; empty.TextYAlignment = Enum.TextYAlignment.Center
-    DiscoverySections[key] = { Panel = panel, Content = content, Empty = empty, Title = title, Subtitle = subtitle }
+    DiscoverySections[key] = { Panel = panel, Content = content, Empty = empty, Header = header, Title = title, Subtitle = subtitle, ViewButton = viewButton }
     return panel
 end
 
 DiscoverHero = Instance.new("Frame", DiscoverView)
 DiscoverHero.Name = "DiscoverHero"
-DiscoverHero.Size = UDim2.new(1, -4, 0, IsMobile and 112 or 116)
+DiscoverHero.Size = UDim2.new(1, -4, 0, IsMobile and 96 or 100)
 DiscoverHero.BackgroundColor3 = Color3.fromRGB(22, 28, 58)
 DiscoverHero.BackgroundTransparency = 0.04
 DiscoverHero.BorderSizePixel = 0
@@ -4689,7 +4856,7 @@ DiscoverHeroDescription.TextColor3 = Theme.TextSecondary; DiscoverHeroDescriptio
 DiscoverHeroDescription.TextSize = IsMobile and 8 or 10; DiscoverHeroDescription.TextWrapped = true
 DiscoverHeroDescription.TextXAlignment = Enum.TextXAlignment.Left; DiscoverHeroDescription.TextYAlignment = Enum.TextYAlignment.Top
 DiscoverActionRow = Instance.new("Frame", DiscoverHero)
-DiscoverActionRow.Size = UDim2.new(1, -20, 0, IsMobile and 23 or 25); DiscoverActionRow.Position = UDim2.new(0, 10, 1, -(IsMobile and 31 or 34))
+DiscoverActionRow.Size = UDim2.new(1, -20, 0, IsMobile and 22 or 24); DiscoverActionRow.Position = UDim2.new(0, 10, 1, -(IsMobile and 27 or 29))
 DiscoverActionRow.BackgroundTransparency = 1
 DiscoverActionLayout = Instance.new("UIListLayout", DiscoverActionRow)
 DiscoverActionLayout.FillDirection = Enum.FillDirection.Horizontal; DiscoverActionLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -4711,33 +4878,84 @@ end
 DiscoverGamesButton = _VH_CreateDiscoverAction("Browse Games", 1, IsMobile and 86 or 108)
 DiscoverUtilitiesButton = _VH_CreateDiscoverAction("Browse Utilities", 2, IsMobile and 94 or 116)
 DiscoverAllButton = _VH_CreateDiscoverAction("Search All", 3, IsMobile and 72 or 88)
-_VH_CreateDiscoverSection(DiscoverView, "CurrentGame", "Matched to Your Current Game", "Only direct compatibility matches are shown here.", 1)
-_VH_CreateDiscoverSection(DiscoverView, "Recommended", "Recommended for You", "Recommendations are based on available catalog metadata and saved favorites.", 2)
-_VH_CreateDiscoverSection(DiscoverView, "RecentlyUpdated", "Recently Updated", "Entries with valid update timestamps appear first.", 3)
-_VH_CreateDiscoverSection(DiscoverView, "Categories", "Explore Categories", "Choose a category to filter entries across both catalogs.", 4)
-_VH_CreateDiscoverSection(DiscoverView, "Featured", "Featured Entries", "Uses the catalog's existing HOT, NEW, UPDATED, and FEATURED labels.", 5)
-FavoritesHeader = Instance.new("Frame", FavoritesView)
-FavoritesHeader.Name = "FavoritesHeader"; FavoritesHeader.Size = UDim2.new(1, -4, 0, IsMobile and 64 or 72)
-FavoritesHeader.BackgroundColor3 = Theme.BackgroundSecondary; FavoritesHeader.BackgroundTransparency = 0.15
-FavoritesHeader.BorderSizePixel = 0; FavoritesHeader.LayoutOrder = 0
-Instance.new("UICorner", FavoritesHeader).CornerRadius = UDim.new(0, 9)
-FavoritesHeaderStroke = Instance.new("UIStroke", FavoritesHeader)
-FavoritesHeaderStroke.Color = Theme.Stroke; FavoritesHeaderStroke.Transparency = 0.35; FavoritesHeaderStroke.Thickness = 0.8
-FavoritesHeaderTitle = Instance.new("TextLabel", FavoritesHeader)
-FavoritesHeaderTitle.Size = UDim2.new(1, -20, 0, 20); FavoritesHeaderTitle.Position = UDim2.new(0, 10, 0, 9)
-FavoritesHeaderTitle.BackgroundTransparency = 1; FavoritesHeaderTitle.Text = L("Favorites")
-FavoritesHeaderTitle:SetAttribute("VeloxTranslationKey", "Favorites")
-FavoritesHeaderTitle.TextColor3 = Theme.TextPrimary; FavoritesHeaderTitle.Font = Enum.Font.GothamBold
-FavoritesHeaderTitle.TextSize = IsMobile and 13 or 16; FavoritesHeaderTitle.TextXAlignment = Enum.TextXAlignment.Left
-FavoritesHeaderSubtitle = Instance.new("TextLabel", FavoritesHeader)
-FavoritesHeaderSubtitle.Size = UDim2.new(1, -20, 0, 28); FavoritesHeaderSubtitle.Position = UDim2.new(0, 10, 0, 31)
-FavoritesHeaderSubtitle.BackgroundTransparency = 1; FavoritesHeaderSubtitle.Text = L("Save catalog entries to see them here.")
-FavoritesHeaderSubtitle:SetAttribute("VeloxTranslationKey", "Save catalog entries to see them here.")
-FavoritesHeaderSubtitle.TextColor3 = Theme.TextSecondary; FavoritesHeaderSubtitle.Font = Enum.Font.Gotham
-FavoritesHeaderSubtitle.TextSize = IsMobile and 8 or 9; FavoritesHeaderSubtitle.TextWrapped = true
-FavoritesHeaderSubtitle.TextXAlignment = Enum.TextXAlignment.Left
-FavoriteEntriesPanel = _VH_CreateDiscoverSection(FavoritesView, "SavedEntries", "Saved entries", "Your saved Games and Utilities entries stay separately identified.", 1)
+DiscoverModeRow = Instance.new("Frame", DiscoverView)
+DiscoverModeRow.Name = "DiscoverModeSelector"
+DiscoverModeRow.Size = UDim2.new(1, -4, 0, IsMobile and 27 or 30)
+DiscoverModeRow.BackgroundTransparency = 1
+DiscoverModeRow.LayoutOrder = 1
+local function _VH_CreateDiscoverModeButton(buttonName, iconAsset, xPos, widthScale, widthOffset)
+    local button = Instance.new("TextButton", DiscoverModeRow)
+    button.Name = buttonName
+    button.Size = UDim2.new(widthScale, widthOffset, 1, 0)
+    button.Position = UDim2.new(xPos, xPos == 0 and 0 or 3, 0, 0)
+    button.BackgroundColor3 = Theme.BackgroundSecondary
+    button.BackgroundTransparency = 0.16
+    button.BorderSizePixel = 0; button.AutoButtonColor = false; button.Text = ""
+    button.ZIndex = 3
+    Instance.new("UICorner", button).CornerRadius = UDim.new(0, 7)
+    local stroke = Instance.new("UIStroke", button)
+    stroke.Name = "ModeOutline"; stroke.Color = Color3.fromRGB(203, 213, 225)
+    stroke.Transparency = 0.82; stroke.Thickness = 0.8
+    CreateVeloxIcon(button, iconAsset, IsMobile and 11 or 13, Theme.TextSecondary, UDim2.new(0, 9, 0.5, -(IsMobile and 5.5 or 6.5)), nil, 5, buttonName .. "Icon")
+    local label = Instance.new("TextLabel", button)
+    label.Name = "ModeLabel"; label.Size = UDim2.new(1, -32, 1, 0); label.Position = UDim2.new(0, 29, 0, 0)
+    local labelKey = buttonName == "DiscoverFavoritesMode" and "Favorites" or "For You"
+    label.BackgroundTransparency = 1; label.Text = L(labelKey); label:SetAttribute("VeloxTranslationKey", labelKey)
+    label.TextColor3 = Theme.TextSecondary
+    label.Font = Enum.Font.GothamBold; label.TextSize = IsMobile and 8 or 9
+    label.TextXAlignment = Enum.TextXAlignment.Left; label.TextTruncate = Enum.TextTruncate.AtEnd
+    label.ZIndex = 5
+    return button
+end
+DiscoverForYouButton = _VH_CreateDiscoverModeButton("DiscoverForYouMode", VeloxIcons.Sparkles, 0, 0.5, -3)
+DiscoverFavoritesButton = _VH_CreateDiscoverModeButton("DiscoverFavoritesMode", VeloxIcons.Heart, 0.5, 0.5, -3)
+function _VH_UpdateDiscoveryModeUI()
+    local favoritesMode = DiscoveryMode == "Favorites"
+    for _, item in ipairs({ { Button = DiscoverForYouButton, Active = not favoritesMode }, { Button = DiscoverFavoritesButton, Active = favoritesMode } }) do
+        local button = item.Button
+        if button and button.Parent then
+            local label = button:FindFirstChild("ModeLabel")
+            local icon = button:FindFirstChild(button.Name .. "Icon")
+            local stroke = button:FindFirstChild("ModeOutline")
+            button.BackgroundColor3 = item.Active and Color3.fromRGB(43, 38, 95) or Theme.BackgroundSecondary
+            button.BackgroundTransparency = item.Active and 0.04 or 0.2
+            if label then label.TextColor3 = item.Active and Theme.TextPrimary or Theme.TextSecondary end
+            if icon then icon.ImageColor3 = item.Active and Color3.fromRGB(224, 231, 255) or Theme.TextSecondary end
+            if stroke then
+                stroke.Color = item.Active and Theme.Accent or Color3.fromRGB(203, 213, 225)
+                stroke.Transparency = item.Active and 0.22 or 0.82
+                stroke.Thickness = item.Active and 1 or 0.8
+            end
+        end
+    end
+    for key, section in pairs(DiscoverySections) do
+        if section and section.Panel and section.Panel.Parent then
+            section.Panel.Visible = favoritesMode and key == "SavedEntries" or (not favoritesMode and key ~= "SavedEntries")
+        end
+    end
+end
+_VH_RegConn(DiscoverForYouButton.Activated:Connect(function()
+    if isDestroying then return end
+    DiscoveryMode = "ForYou"
+    _VH_UpdateDiscoveryModeUI()
+    if type(_VH_RebuildDiscoveryViews) == "function" then _VH_RebuildDiscoveryViews() end
+    DiscoverView.CanvasPosition = Vector2.new(0, 0)
+end))
+_VH_RegConn(DiscoverFavoritesButton.Activated:Connect(function()
+    if isDestroying then return end
+    DiscoveryMode = "Favorites"
+    _VH_UpdateDiscoveryModeUI()
+    if type(_VH_RebuildDiscoveryViews) == "function" then _VH_RebuildDiscoveryViews() end
+    DiscoverView.CanvasPosition = Vector2.new(0, 0)
+end))
+_VH_CreateDiscoverSection(DiscoverView, "CurrentGame", "Matched to Your Current Game", "Direct compatibility matches only.", 2)
+_VH_CreateDiscoverSection(DiscoverView, "Recommended", "Recommended for You", "Based on catalog metadata and saved favorites.", 3)
+_VH_CreateDiscoverSection(DiscoverView, "RecentlyUpdated", "Recently Updated", "Entries with valid update timestamps.", 4)
+_VH_CreateDiscoverSection(DiscoverView, "Categories", "Explore Categories", "Browse categories present in the loaded catalogs.", 5)
+_VH_CreateDiscoverSection(DiscoverView, "Featured", "Featured Entries", "Uses the catalog's existing metadata labels.", 6)
+FavoriteEntriesPanel = _VH_CreateDiscoverSection(DiscoverView, "SavedEntries", "Saved entries", "Your saved Games and Utilities entries.", 7)
 FavoriteEntriesPanel.Name = "FavoriteEntriesSection"
+_VH_UpdateDiscoveryModeUI()
 
 _VH_RegConn(DiscoverGamesButton.Activated:Connect(function() if type(_VH_OpenCatalogFromDiscover) == "function" then _VH_OpenCatalogFromDiscover("Games", "", nil) end end))
 _VH_RegConn(DiscoverUtilitiesButton.Activated:Connect(function() if type(_VH_OpenCatalogFromDiscover) == "function" then _VH_OpenCatalogFromDiscover("Utilities", "", nil) end end))
@@ -4877,7 +5095,7 @@ function CreateParagraph(title, desc, parentView, order)
 	dLbl.TextWrapped = true; dLbl.LayoutOrder = 2
 end
 CreateParagraph("Found a Bug?", "If you run into any bugs, issues, or anything that doesn't seem right, please report it on our Discord. It really helps me figure out what's going wrong and fix it faster. Even small details can be useful, so don't hesitate to report anything you notice!", ChangelogsView)
-CreateParagraph("v2.0.8 - Discovery and Interface Update", "Version 2.0.8 introduces a redesigned discovery experience with dedicated Discover, Catalog, Favorites, Updates, Settings, and Help sections. Search now supports selected-catalog, Games, Utilities, and cross-catalog scopes, while improved sorting, clearer catalog labels, compatibility-aware recommendations, and better empty states make entries easier to find. The update also refines navigation and card styling, keeps cached catalog state separate, and improves refresh and status reliability without changing the supplied catalog data or existing key-system and executor fallback logic.", ChangelogsView)
+CreateParagraph("v2.0.8 - Discovery and Interface Update", "Version 2.0.8 makes Discover more compact with a quick switch between recommendations and saved favorites, expandable sections, clearer icons, and navigation that finds and highlights the exact catalog entry selected. Popup menus stay within the hub's usable content area, scaled windows retain safe viewport margins, and the Games/Utilities catalog uses a restrained light outline. The Help guide now matches the navigation, while catalog data, compatibility behavior, refresh systems, key-system logic, and executor fallbacks remain intact.", ChangelogsView)
 function _VH_HowToCard(parent, title, desc, order, iconAsset)
 	local block = Instance.new("Frame", parent)
 	block.Size = UDim2.new(1, -2, 0, 0)
@@ -5057,12 +5275,12 @@ function CreateHowToUseContent()
 		"The How to Use tab is a built-in guide. It does not change your current Scripts, Filters, Sort, or Settings.",
 		"Scroll from top to bottom. Each section explains what a control means and then shows the same control style you will see in the live hub.")
 
-	local tabs = _VH_HowToCard(HowToUseView, "Navigation Tabs", "Discover helps you find relevant entries, Catalog contains Games and Utilities, Favorites stores saved entries, Updates shows the changelog, Settings contains preferences and diagnostics, and Help explains the controls.", 2, VeloxIcons.AppBadge)
+	local tabs = _VH_HowToCard(HowToUseView, "Navigation Tabs", "Discover contains recommendations and saved Favorites. Scripts is the Games and Utilities catalog. Updates shows release notes, Settings contains preferences and diagnostics, and How to Use explains the controls.", 2, VeloxIcons.AppBadge)
 	_VH_HowToExplain(tabs,
-		"Changelog shows recent updates. Scripts is the main catalog. Settings contains preferences and actions. How to Use is this guide.",
+		"Discover provides recommendations and saved Favorites. Scripts is the catalog. Updates shows the changelog. Settings contains preferences and actions. How to Use is this guide.",
 		"Tap a tab once to open it. The active tab uses indigo so you can quickly see where you are.")
 	local tabsRow = Instance.new("Frame", tabs)
-	tabsRow.Size = UDim2.new(1, 0, 0, IsMobile and 78 or 38)
+	tabsRow.Size = UDim2.new(1, 0, 0, IsMobile and 116 or 38)
 	tabsRow.BackgroundTransparency = 1
 	tabsRow.LayoutOrder = 4
 	local tabsLayout
@@ -5078,10 +5296,10 @@ function CreateHowToUseContent()
 		tabsLayout.Padding = UDim.new(0, 6)
 		tabsLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 	end
-	local tabInfo = {{"Changelog", VeloxIcons.Changelog}, {"Scripts", VeloxIcons.Scripts}, {"Settings", VeloxIcons.Settings}, {"How to Use", VeloxIcons.HowToUse}}
+	local tabInfo = {{"Discover", VeloxIcons.Sparkles}, {"Scripts", VeloxIcons.Scripts}, {"Updates", VeloxIcons.Changelog}, {"Settings", VeloxIcons.Settings}, {"How to Use", VeloxIcons.HowToUse}}
 	for i, item in ipairs(tabInfo) do
 		local name, asset = item[1], item[2]
-		local active = name == "Scripts"
+		local active = name == "Discover"
 		local width = name == "How to Use" and 108 or 96
 		local b = Instance.new("Frame", tabsRow)
 		b.Size = IsMobile and UDim2.new(1, 0, 0, 34) or UDim2.new(0, width, 0, 34)
@@ -5936,10 +6154,21 @@ local function _VH_BuildDiscoveryRows()
     table.sort(categoryList, function(a, b) if a.Count ~= b.Count then return a.Count > b.Count end return string.lower(a.Name) < string.lower(b.Name) end)
     return allEntries, currentMatches, recommended, recent, categoryList, featured
 end
-function _VH_OpenCatalogFromDiscover(scope, query, categoryFilter)
+function _VH_OpenCatalogFromDiscover(scope, query, categoryFilter, targetEntryId)
     if isDestroying then return end
+    PendingDiscoverTarget = nil
+    DiscoverTargetFocusGeneration = DiscoverTargetFocusGeneration + 1
     if scope == "Games" or scope == "Utilities" then
         CatalogSearchScope = scope
+        if targetEntryId ~= nil then
+            PendingDiscoverTarget = {
+                Category = scope,
+                EntryId = tostring(targetEntryId),
+                CreatedAt = os.clock(),
+                Focusing = false,
+                Generation = DiscoverTargetFocusGeneration
+            }
+        end
         _VH_SelectCatalogCategory(scope, true)
     elseif scope == "All" then
         CatalogSearchScope = "All"
@@ -5956,6 +6185,7 @@ function _VH_OpenCatalogFromDiscover(scope, query, categoryFilter)
     if SearchScopeDropdown then SearchScopeDropdown.Visible = false end
     if FilterPanel then FilterPanel.Visible = false end
     if DropdownContainer then DropdownContainer.Visible = false end
+    if LanguageDropdown then LanguageDropdown.Visible = false end
     _VH_UpdateSearchScopeButton()
     _VH_UpdateFilterControl()
     _VH_SaveBrowsingPreferences()
@@ -5970,7 +6200,7 @@ local function _VH_CreateDiscoveryEntryRow(parent, entry, reason, order, favorit
     local id = tostring(entry.Id or StableScriptId(data) or "")
     local row = Instance.new("Frame", parent)
     row.Name = (favoriteMode and "Favorite_" or "Discover_") .. id:gsub("[^%w]", "_")
-    row.Size = UDim2.new(1, 0, 0, IsMobile and 58 or 62)
+    row.Size = UDim2.new(1, 0, 0, IsMobile and 50 or 54)
     row.BackgroundColor3 = Color3.fromRGB(17, 25, 43)
     row.BackgroundTransparency = 0.05
     row.BorderSizePixel = 0
@@ -5984,20 +6214,20 @@ local function _VH_CreateDiscoveryEntryRow(parent, entry, reason, order, favorit
     openButton.BackgroundTransparency = 1; openButton.BorderSizePixel = 0; openButton.AutoButtonColor = false; openButton.Text = ""
     openButton.ZIndex = 2
     local image = Instance.new("ImageLabel", openButton)
-    image.Size = UDim2.new(0, IsMobile and 40 or 44, 0, IsMobile and 40 or 44)
-    image.Position = UDim2.new(0, 8, 0.5, -(IsMobile and 20 or 22))
+    image.Size = UDim2.new(0, IsMobile and 36 or 38, 0, IsMobile and 36 or 38)
+    image.Position = UDim2.new(0, 7, 0.5, -(IsMobile and 18 or 19))
     image.BackgroundColor3 = Theme.BackgroundMain; image.BorderSizePixel = 0
     image.Image = type(data.ImageAssetId) == "string" and data.ImageAssetId or ""
     image.ScaleType = Enum.ScaleType.Crop; image.ZIndex = 3
     Instance.new("UICorner", image).CornerRadius = UDim.new(0, 6)
     local title = Instance.new("TextLabel", openButton)
-    title.Size = UDim2.new(1, -(IsMobile and 82 or 94), 0, 20); title.Position = UDim2.new(0, IsMobile and 55 or 61, 0, 7)
+    title.Size = UDim2.new(1, -(IsMobile and 78 or 90), 0, 18); title.Position = UDim2.new(0, IsMobile and 49 or 53, 0, 5)
     title.BackgroundTransparency = 1; title.Text = tostring(data.Name or entry.ExactName or "Unnamed entry")
     title.TextColor3 = Theme.TextPrimary; title.Font = Enum.Font.GothamBold
     title.TextSize = IsMobile and 8 or 10; title.TextWrapped = false; title.TextTruncate = Enum.TextTruncate.AtEnd
     title.TextXAlignment = Enum.TextXAlignment.Left; title.ZIndex = 3
     local meta = Instance.new("TextLabel", openButton)
-    meta.Size = UDim2.new(1, -(IsMobile and 82 or 94), 0, 18); meta.Position = UDim2.new(0, IsMobile and 55 or 61, 0, 29)
+    meta.Size = UDim2.new(1, -(IsMobile and 78 or 90), 0, 15); meta.Position = UDim2.new(0, IsMobile and 49 or 53, 0, 25)
     meta.BackgroundTransparency = 1
     local displayReason = tostring(reason or "")
     if string.sub(displayReason, 1, 7) == "Tagged " then
@@ -6011,19 +6241,19 @@ local function _VH_CreateDiscoveryEntryRow(parent, entry, reason, order, favorit
     meta.Font = Enum.Font.GothamMedium; meta.TextSize = IsMobile and 7 or 8
     meta.TextTruncate = Enum.TextTruncate.AtEnd; meta.TextXAlignment = Enum.TextXAlignment.Left; meta.ZIndex = 3
     local details = Instance.new("TextButton", row)
-    details.Name = "DetailsButton"; details.Size = UDim2.new(0, 26, 0, 24); details.Position = UDim2.new(1, -60, 0.5, -12)
+    details.Name = "DetailsButton"; details.Size = UDim2.new(0, 24, 0, 22); details.Position = UDim2.new(1, -56, 0.5, -11)
     details.BackgroundColor3 = Theme.BackgroundSecondary; details.BorderSizePixel = 0; details.AutoButtonColor = false; details.Text = "i"
     details.TextColor3 = Theme.TextPrimary; details.Font = Enum.Font.GothamBold; details.TextSize = 12; details.ZIndex = 5
     Instance.new("UICorner", details).CornerRadius = UDim.new(0, 6)
     local fav = Instance.new("TextButton", row)
-    fav.Name = "FavoriteButton"; fav.Size = UDim2.new(0, 26, 0, 24); fav.Position = UDim2.new(1, -30, 0.5, -12)
+    fav.Name = "FavoriteButton"; fav.Size = UDim2.new(0, 24, 0, 22); fav.Position = UDim2.new(1, -29, 0.5, -11)
     fav.BackgroundColor3 = Theme.BackgroundSecondary; fav.BorderSizePixel = 0; fav.AutoButtonColor = false
     fav.Text = SavedData.Favorites[id] and "★" or "☆"; fav.TextColor3 = SavedData.Favorites[id] and Color3.fromRGB(250, 204, 21) or Theme.TextSecondary
     fav.Font = Enum.Font.GothamBold; fav.TextSize = 14; fav.ZIndex = 5
     Instance.new("UICorner", fav).CornerRadius = UDim.new(0, 6)
     DiscoveryConnections[#DiscoveryConnections + 1] = openButton.Activated:Connect(function()
         if isDestroying then return end
-        _VH_OpenCatalogFromDiscover(category, tostring(entry.ExactName or data.Name or entry.SearchTitle or ""), nil)
+        _VH_OpenCatalogFromDiscover(category, tostring(entry.ExactName or data.Name or entry.SearchTitle or ""), nil, id)
     end)
     DiscoveryConnections[#DiscoveryConnections + 1] = details.Activated:Connect(function()
         if isDestroying then return end
@@ -6051,23 +6281,31 @@ local function _VH_AddDiscoveryEmpty(section, message)
     section.Empty.Visible = true
 end
 function _VH_RebuildDiscoveryViews()
-    if isDestroying or not DiscoverView or not FavoritesView then return end
+    if isDestroying or not DiscoverView then return end
     _VH_ClearDiscoveryContent()
     local allEntries, currentMatches, recommended, recent, categories, featured = _VH_BuildDiscoveryRows()
     local seenAcrossSections = {}
     local function renderList(sectionKey, list, maxCount, reasonField)
         local section = DiscoverySections[sectionKey]
         local displayed = 0
-        for _, item in ipairs(list or {}) do
-            if displayed >= maxCount then break end
+        list = list or {}
+        local expanded = DiscoveryExpandedSections[sectionKey] == true
+        local displayLimit = expanded and #list or maxCount
+        if section and section.ViewButton then
+            section.ViewButton.Visible = #list > maxCount
+            section.ViewButton.Text = L(expanded and "Show Less" or "See More")
+            section.ViewButton:SetAttribute("VeloxTranslationKey", expanded and "Show Less" or "See More")
+        end
+        for _, item in ipairs(list) do
+            if displayed >= displayLimit then break end
             local entry = item.Entry or item
-            local reason = item.Reason or (reasonField and item[reasonField]) or ""
+            local reason = item.Reason or (reasonField and item[reasonField]) or (sectionKey == "SavedEntries" and "Saved favorite" or "")
             if entry and entry.Instance then
                 local identity = tostring(entry.CatalogCategory or "Games") .. "\31" .. tostring(entry.Id or entry.ExactName or "")
                 if not seenAcrossSections[identity] then
                     seenAcrossSections[identity] = true
                     displayed = displayed + 1
-                    _VH_CreateDiscoveryEntryRow(section.Content, entry, reason, displayed, false)
+                    _VH_CreateDiscoveryEntryRow(section.Content, entry, reason, displayed, sectionKey == "SavedEntries")
                 end
             end
         end
@@ -6083,10 +6321,10 @@ function _VH_RebuildDiscoveryViews()
             _VH_AddDiscoveryEmpty(section, message)
         end
     end
-    renderList("CurrentGame", currentMatches, 4)
-    renderList("Recommended", recommended, 5)
-    renderList("RecentlyUpdated", recent, 4)
-    renderList("Featured", featured, 4)
+    renderList("CurrentGame", currentMatches, 3)
+    renderList("Recommended", recommended, 4)
+    renderList("RecentlyUpdated", recent, 3)
+    renderList("Featured", featured, 2)
     local categorySection = DiscoverySections.Categories
     local grid = Instance.new("Frame", categorySection.Content)
     grid.Name = "CategoryChips"; grid.Size = UDim2.new(1, 0, 0, 0); grid.AutomaticSize = Enum.AutomaticSize.Y
@@ -6096,8 +6334,14 @@ function _VH_RebuildDiscoveryViews()
     gridLayout.CellPadding = UDim2.new(0, 6, 0, 6); gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
     gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     local catCount = 0
+    local categoryLimit = DiscoveryExpandedSections.Categories and #categories or 12
+    if categorySection.ViewButton then
+        categorySection.ViewButton.Visible = #categories > 12
+        categorySection.ViewButton.Text = L(DiscoveryExpandedSections.Categories and "Show Less" or "See More")
+        categorySection.ViewButton:SetAttribute("VeloxTranslationKey", DiscoveryExpandedSections.Categories and "Show Less" or "See More")
+    end
     for _, item in ipairs(categories) do
-        if catCount >= 20 then break end
+        if catCount >= categoryLimit then break end
         catCount = catCount + 1
         local button = Instance.new("TextButton", grid)
         button.Name = "Category_" .. tostring(catCount); button.Size = gridLayout.CellSize
@@ -6122,19 +6366,17 @@ function _VH_RebuildDiscoveryViews()
         if an ~= bn then return an < bn end
         return tostring(a.CatalogCategory or "") < tostring(b.CatalogCategory or "")
     end)
-    for index, entry in ipairs(favEntries) do _VH_CreateDiscoveryEntryRow(favoriteSection.Content, entry, "Saved favorite", index, true) end
+    seenAcrossSections = {}
+    renderList("SavedEntries", favEntries, 8)
     if #favEntries == 0 then _VH_AddDiscoveryEmpty(favoriteSection, L("Save catalog entries to see them here.")) else favoriteSection.Empty.Visible = false end
-    if FavoritesHeaderSubtitle and FavoritesHeaderSubtitle.Parent then
-        local favoriteCountText
-        if CurrentLanguage == "Filipino" then
-            favoriteCountText = tostring(#favEntries) .. " naka-save na entry sa Games at Utilities."
-        elseif CurrentLanguage == "Chinese" then
-            favoriteCountText = "已收藏 " .. tostring(#favEntries) .. " 个 Games 和 Utilities 条目。"
-        else
-            favoriteCountText = tostring(#favEntries) .. " " .. L("saved entries across Games and Utilities") .. "."
+    if DiscoverFavoritesButton and DiscoverFavoritesButton.Parent then
+        local modeLabel = DiscoverFavoritesButton:FindFirstChild("ModeLabel")
+        if modeLabel then
+            modeLabel.Text = L("Favorites") .. " (" .. tostring(#favEntries) .. ")"
+            modeLabel:SetAttribute("VeloxTranslationKey", nil)
         end
-        FavoritesHeaderSubtitle.Text = favoriteCountText
     end
+    _VH_UpdateDiscoveryModeUI()
 end
 
 function _VH_NormalizeAutoExecuteName(value)
@@ -6265,13 +6507,17 @@ end
 function _VH_ScheduleFavoriteRecommendationRefresh()
 	FavoriteRecommendationRefreshGeneration = FavoriteRecommendationRefreshGeneration + 1
 	local generation = FavoriteRecommendationRefreshGeneration
+    if type(_VH_RebuildDiscoveryViews) == "function" then
+        task.defer(function()
+            if not isDestroying and generation == FavoriteRecommendationRefreshGeneration then _VH_RebuildDiscoveryViews() end
+        end)
+    end
 	task.delay(FavoriteRecommendationRefreshDelay, function()
 		if isDestroying or generation ~= FavoriteRecommendationRefreshGeneration then return end
 		SaveConfiguration()
 		_VH_RefreshRecommendations()
 		RefreshAllCardStates()
 		UpdateFilter()
-        if type(_VH_RebuildDiscoveryViews) == "function" then _VH_RebuildDiscoveryViews() end
 	end)
 end
 function MigrateSavedEntries(entries)
@@ -8144,17 +8390,8 @@ function CloseLanguageDropdown()
 	if LanguageDropdownConnection then _VH_UnregConn(LanguageDropdownConnection); LanguageDropdownConnection = nil end
 end
 function PositionLanguageDropdown()
-	if not LanguageDropdown or not LanguageDropdown.Parent or not LanguageDropdown.Visible or not languageButton or not languageButton.Parent then return end
-	local camera = workspace.CurrentCamera
-	local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
-	local abs = languageButton.AbsolutePosition
-	local size = languageButton.AbsoluteSize
-	local width, height = IsMobile and 156 or 170, 142
-	local x = math.clamp(abs.X + size.X - width, 8, math.max(8, viewport.X - width - 8))
-	local y = abs.Y + size.Y + 6
-	if y + height > viewport.Y - 8 then y = math.max(8, abs.Y - height - 6) end
-	LanguageDropdown.Position = UDim2.new(0, x, 0, y)
-	LanguageDropdown.Size = UDim2.new(0, width, 0, height)
+    if not LanguageDropdown or not LanguageDropdown.Parent or not LanguageDropdown.Visible or not languageButton or not languageButton.Parent then return end
+    _VH_SetPopupPosition(LanguageDropdown, languageButton, IsMobile and 156 or 170, 142, 8)
 end
 function UpdateLanguageDropdownSelection()
 	if not LanguageDropdown or not LanguageDropdown.Parent then return end
@@ -8262,6 +8499,7 @@ function SetLanguage(language)
 	if RecommendationPanel and RecommendationPanel.Parent then RecommendationTitle.Text = L("Recommended for You"); RecommendationSeeMoreButton.Text = L("See More") end
 	if RecommendationPanel and RecommendationPanel.Visible then _VH_RefreshRecommendations() end
 	if currentTab then SectionHeaderLabel.Text = GetLocalizedSectionHeader(currentTab) end
+    if type(_VH_RebuildDiscoveryViews) == "function" then _VH_RebuildDiscoveryViews() end
 	SaveConfiguration()
 	ShowNotification("Language: " .. language, "Success")
 end
@@ -8439,17 +8677,8 @@ function UpdateManualRefreshSelection()
 	end
 end
 function PositionManualRefreshDropdown()
-	if not ManualRefreshDropdown or not ManualRefreshDropdown.Parent or not ManualRefreshDropdown.Visible then return end
-	local camera = workspace.CurrentCamera
-	local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
-	local abs = ManualRefreshTargetButton.AbsolutePosition
-	local size = ManualRefreshTargetButton.AbsoluteSize
-	local width, height = IsMobile and 156 or 170, 142
-	local x = math.clamp(abs.X + size.X - width, 8, math.max(8, viewport.X - width - 8))
-	local y = abs.Y + size.Y + 6
-	if y + height > viewport.Y - 8 then y = math.max(8, abs.Y - height - 6) end
-	ManualRefreshDropdown.Position = UDim2.new(0, x, 0, y)
-	ManualRefreshDropdown.Size = UDim2.new(0, width, 0, height)
+    if not ManualRefreshDropdown or not ManualRefreshDropdown.Parent or not ManualRefreshDropdown.Visible or not ManualRefreshTargetButton or not ManualRefreshTargetButton.Parent then return end
+    _VH_SetPopupPosition(ManualRefreshDropdown, ManualRefreshTargetButton, IsMobile and 156 or 170, 142, 8)
 end
 function OpenManualRefreshDropdown()
 	if isDestroying then return end
