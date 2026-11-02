@@ -13,7 +13,58 @@
       "Farming",
       "Automation"
     ]
-  }, 
+  },
+  {
+    "Name": "[🎃] Steal A Pet And Ride It",
+    "Description": "Automate your gameplay with Velox Hub! Enjoy convenient features designed to improve your gaming experience. More improvements and updates are coming.",
+    "RawUrl": "https://raw.githubusercontent.com/Zyqvexon/q7vx2n9k4m8z/refs/heads/main/011.lua",
+    "ImageAssetId": "rbxassetid://112890416154013",
+    "TagType": "HOT",
+    "LastUpdated": 1793664000,
+    "PlaceId": 95168737547508,
+    "Category": "Simulator",
+    "Tags": [
+      "Simulator",
+      "Auto Farm",
+      "Pets",
+      "Automation",
+      "Beta"
+    ]
+  },
+  {
+    "Name": "DONT SPLASH",
+    "Description": "Take your gameplay to the next level with Velox Hub! Explore useful features and convenient tools designed to enhance your experience.",
+    "RawUrl": "https://raw.githubusercontent.com/Zyqvexon/q7vx2n9k4m8z/refs/heads/main/010.lua",
+    "ImageAssetId": "rbxassetid://133315800814963",
+    "TagType": "HOT",
+    "LastUpdated": 1793664000,
+    "PlaceId": 0,
+    "Category": "Obby",
+    "Tags": [
+      "Obby",
+      "Survival",
+      "Challenge",
+      "Automation",
+      "Beta"
+    ]
+  },
+  {
+    "Name": "[🎃] Survive a Million Monkeys",
+    "Description": "Survive the chaos with Velox Hub! Use helpful gameplay features to make your experience smoother while exploring ongoing improvements and updates.",
+    "RawUrl": "https://raw.githubusercontent.com/Zyqvexon/q7vx2n9k4m8z/refs/heads/main/009.lua",
+    "ImageAssetId": "rbxassetid://96887333913563",
+    "TagType": "HOT",
+    "LastUpdated": 1793664000,
+    "PlaceId": 0,
+    "Category": "Survival",
+    "Tags": [
+      "Survival",
+      "Monkeys",
+      "Auto Farm",
+      "Progression",
+      "Beta"
+    ]
+  },
   {
   "Name": "[✨] Tap Simulator REBORN",
   "Description": "Still in beta! Features are actively being developed, so expect ongoing updates, improvements, and possible changes.",
