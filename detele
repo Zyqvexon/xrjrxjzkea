@@ -1185,6 +1185,19 @@ function GetPanelSize()
 	local height = math.max(220, math.min(maxHeight, viewport.Y - 12))
 	return UDim2.fromOffset(width, height)
 end
+HoverTweens = setmetatable({}, { __mode = "k" })
+function _VH_CancelHoverTween(obj)
+	local old = HoverTweens[obj]
+	if old then pcall(function() old:Cancel() end); HoverTweens[obj] = nil end
+end
+function _VH_HoverTween(obj, props)
+	if not obj or not obj.Parent then return end
+	_VH_CancelHoverTween(obj)
+	local ok, tween = pcall(function()
+		return TweenService:Create(obj, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props)
+	end)
+	if ok and tween then HoverTweens[obj] = tween; tween:Play() end
+end
 function ApplyInteractiveAnimations(gui, originalColor, hoverColor, clickColor, strokeObj, originalStroke, hoverStroke, connectionRegistry)
 	if not gui:IsA("GuiObject") then return end
 	connectionRegistry = connectionRegistry or VeloxConnections
@@ -1199,25 +1212,26 @@ function ApplyInteractiveAnimations(gui, originalColor, hoverColor, clickColor, 
 	if not IsMobile and (originalColor and hoverColor or strokeObj and hoverStroke) then
 		RegInteractive(gui.MouseEnter:Connect(function()
 			if isDestroying or isTransitioning then return end
-			if originalColor and hoverColor then gui.BackgroundColor3 = hoverColor end
-			if strokeObj and hoverStroke then strokeObj.Color = hoverStroke end
+			if originalColor and hoverColor then _VH_HoverTween(gui, { BackgroundColor3 = hoverColor }) end
+			if strokeObj and hoverStroke then _VH_HoverTween(strokeObj, { Color = hoverStroke }) end
 		end))
 		RegInteractive(gui.MouseLeave:Connect(function()
 			if isDestroying or isTransitioning then return end
-			if originalColor then gui.BackgroundColor3 = originalColor end
-			if strokeObj and originalStroke then strokeObj.Color = originalStroke end
+			if originalColor then _VH_HoverTween(gui, { BackgroundColor3 = originalColor }) end
+			if strokeObj and originalStroke then _VH_HoverTween(strokeObj, { Color = originalStroke }) end
 		end))
 	end
 	if clickColor and gui:IsA("GuiButton") then
 		RegInteractive(gui.Activated:Connect(function()
 			if isDestroying or isTransitioning then return end
+			_VH_CancelHoverTween(gui)
 			gui.BackgroundColor3 = clickColor
 			task.delay(0.08, function()
 				if isDestroying or not gui.Parent then return end
 				if not IsMobile and hoverColor then
-					gui.BackgroundColor3 = hoverColor
+					_VH_HoverTween(gui, { BackgroundColor3 = hoverColor })
 				elseif originalColor then
-					gui.BackgroundColor3 = originalColor
+					_VH_HoverTween(gui, { BackgroundColor3 = originalColor })
 				end
 			end)
 		end))
@@ -1314,16 +1328,26 @@ MainContent.ClipsDescendants = true
 Sidebar = Instance.new("Frame", PanelGroup)
 Sidebar.Size = UDim2.new(0, SideWidth, 1, 0)
 Sidebar.Position = UDim2.new(0, 0, 0, 0)
-Sidebar.BackgroundColor3 = Theme.BackgroundSecondary
-Sidebar.BackgroundTransparency = 0.16
+Sidebar.BackgroundColor3 = Color3.fromRGB(11, 12, 21)
+Sidebar.BackgroundTransparency = 0
 Sidebar.BorderSizePixel = 0
 Sidebar.ClipsDescendants = true
+Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 18)
+SidebarSquareEdge = Instance.new("Frame", Sidebar)
+SidebarSquareEdge.Name = "SidebarSquareEdge"
+SidebarSquareEdge.Size = UDim2.new(0, 28, 1, 0)
+SidebarSquareEdge.Position = UDim2.new(1, -28, 0, 0)
+SidebarSquareEdge.BackgroundColor3 = Color3.fromRGB(11, 12, 21)
+SidebarSquareEdge.BorderSizePixel = 0
+SidebarSquareEdge.Active = false
+SidebarSquareEdge.ZIndex = 0
 SidebarDivider = Instance.new("Frame", Sidebar)
 SidebarDivider.Size = UDim2.new(0, 1, 1, 0)
 SidebarDivider.Position = UDim2.new(1, -1, 0, 0)
 SidebarDivider.BackgroundColor3 = Theme.Stroke
 SidebarDivider.BackgroundTransparency = 0.3
 SidebarDivider.BorderSizePixel = 0
+SidebarDivider.ZIndex = 3
 SidebarDragHandle = Instance.new("TextButton", Sidebar)
 SidebarDragHandle.Name = "SidebarDragHandle"
 SidebarDragHandle.Size = UDim2.new(1, 0, 1, 0)
@@ -1349,6 +1373,12 @@ SidebarLogo.BorderSizePixel = 0
 SidebarLogo.Image = "rbxassetid://97589005673854"
 SidebarLogo.ScaleType = Enum.ScaleType.Fit
 SidebarLogo.Active = false
+SidebarLogoCorner = Instance.new("UICorner", SidebarLogo)
+SidebarLogoCorner.CornerRadius = UDim.new(0, 10)
+SidebarLogoStroke = Instance.new("UIStroke", SidebarLogo)
+SidebarLogoStroke.Color = Theme.Accent
+SidebarLogoStroke.Transparency = 0.55
+SidebarLogoStroke.Thickness = 1
 Instance.new("UICorner", MainPanel).CornerRadius = UDim.new(0, 18)
 do
 	local panelStroke = Instance.new("UIStroke", MainPanel)
@@ -1367,6 +1397,15 @@ do
 end
 PanelUIScale = Instance.new("UIScale", MainPanel)
 PanelUIScale.Scale = math.clamp(tonumber(SavedData.Settings.UIScale) or 1, 0.8, 1.2)
+do
+	local introTarget = PanelUIScale.Scale
+	PanelUIScale.Scale = introTarget * 0.9
+	task.defer(function()
+		if PanelUIScale and PanelUIScale.Parent then
+			_VH_SafeTween(PanelUIScale, TweenInfo.new(0.34, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = introTarget })
+		end
+	end)
+end
 function ApplyPanelUIScale(scaleValue)
 	local nextScale = math.clamp(tonumber(scaleValue) or 1, 0.8, 1.2)
 	SavedData.Settings.UIScale = nextScale
@@ -1425,7 +1464,8 @@ function ToggleUI()
 		MainPanel.Visible = false
 		RestoreCachedProperties()
 		FloatingBtn.Visible = true
-		FloatingBtn.Size = UDim2.new(0, 45, 0, 45)
+		FloatingBtn.Size = UDim2.new(0, 28, 0, 28)
+		_VH_SafeTween(FloatingBtn, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = UDim2.new(0, 45, 0, 45) })
 		FloatingBtn.ImageTransparency = 0
 		FloatStroke.Transparency = 0
 	else
@@ -1433,6 +1473,9 @@ function ToggleUI()
 		FloatingBtn.Visible = false
 		MainPanel.Visible = true
 		RestoreCachedProperties()
+		local reopenScale = math.clamp(tonumber(SavedData.Settings.UIScale) or 1, 0.8, 1.2)
+		PanelUIScale.Scale = reopenScale * 0.9
+		_VH_SafeTween(PanelUIScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = reopenScale })
 	end
 	isTransitioning = false
 end
@@ -2080,6 +2123,7 @@ ConfirmBox.ClipsDescendants = true
 ConfirmBox.ZIndex = 401
 Instance.new("UICorner", ConfirmBox).CornerRadius = UDim.new(0, 18)
 
+ConfirmBoxScale = Instance.new("UIScale", ConfirmBox)
 ConfirmBoxGradient = Instance.new("UIGradient", ConfirmBox)
 ConfirmBoxGradient.Rotation = 135
 ConfirmBoxGradient.Color = ColorSequence.new({
@@ -2239,9 +2283,12 @@ function OpenConfirmDialog(scriptName, onExecute)
     ConfirmExecuteBtn.Active = true
     ConfirmExecuteBtn.AutoButtonColor = false
     ConfirmExecuteBtn.Text = "Execute"
-    ConfirmOverlay.BackgroundTransparency = 0.48
+    ConfirmOverlay.BackgroundTransparency = 1
     ConfirmOverlay.Visible = true
     ConfirmOverlay.Active = true
+    _VH_SafeTween(ConfirmOverlay, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 0.48 })
+    ConfirmBoxScale.Scale = 0.9
+    _VH_SafeTween(ConfirmBoxScale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
 end
 function CloseConfirmDialog(shouldExecute)
     if not isConfirming then return end
@@ -2540,9 +2587,13 @@ function _VH_OpenScriptDetails(data, entry)
 	local fittedWidth = math.min(baseWidth, math.max(240, (viewport.X - 24) / uiScale))
 	local fittedHeight = math.min(baseHeight, math.max(260, (viewport.Y - 24) / uiScale))
 	ScriptDetailsBox.Size = UDim2.fromOffset(fittedWidth, fittedHeight)
-	ScriptDetailsOverlay.BackgroundTransparency = 0.5
+	ScriptDetailsOverlay.BackgroundTransparency = 1
 	ScriptDetailsOverlay.Visible = true
 	ScriptDetailsOverlay.Active = true
+	_VH_SafeTween(ScriptDetailsOverlay, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 0.5 })
+	local detailsTargetScale = math.clamp(tonumber(SavedData.Settings.UIScale) or 1, 0.8, 1.2)
+	ScriptDetailsUIScale.Scale = detailsTargetScale * 0.92
+	_VH_SafeTween(ScriptDetailsUIScale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = detailsTargetScale })
 end
 _VH_RegConn(ScriptDetailsClose.Activated:Connect(_VH_CreateDebounce(0.1, _VH_CloseScriptDetails)))
 _VH_RegConn(ScriptDetailsCloseBottom.Activated:Connect(_VH_CreateDebounce(0.1, _VH_CloseScriptDetails)))
@@ -2828,7 +2879,7 @@ function CreateCanvas(name)
 	scroll.Size = UDim2.new(1, -28, 1, IsMobile and -112 or -120)
 	scroll.Position = UDim2.new(0, 14, 0, IsMobile and 98 or 112)
 	scroll.BackgroundTransparency = 1; scroll.BorderSizePixel = 0
-	scroll.ScrollBarThickness = 2; scroll.ScrollBarImageColor3 = Theme.Stroke
+	scroll.ScrollBarThickness = 3; scroll.ScrollBarImageColor3 = Theme.Stroke
 	scroll.Visible = (name == currentTab)
 	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y; scroll.CanvasSize = UDim2.new(0, 0, 0, 0); scroll.Active = true
 	local layout = Instance.new("UIListLayout", scroll)
@@ -2896,49 +2947,116 @@ end
 ScriptCategoryRow = Instance.new("Frame", MainContent)
 ScriptCategoryRow.Name = "ScriptCategoryTabs"
 ScriptCategoryRow.AnchorPoint = Vector2.new(0, 0)
-ScriptCategoryRow.Size = UDim2.new(1, -28, 0, IsMobile and 28 or 32)
+ScriptCategoryRow.Size = UDim2.new(1, -28, 0, IsMobile and 30 or 36)
 ScriptCategoryRow.Position = UDim2.new(0, 14, 0, IsMobile and 98 or 112)
-ScriptCategoryRow.BackgroundTransparency = 1
+ScriptCategoryRow.BackgroundColor3 = Theme.BackgroundMain
+ScriptCategoryRow.BackgroundTransparency = 0
 ScriptCategoryRow.BorderSizePixel = 0
 ScriptCategoryRow.Visible = false
 ScriptCategoryRow.ZIndex = 49
 
-ScriptCategoryLayout = Instance.new("UIListLayout", ScriptCategoryRow)
-ScriptCategoryLayout.FillDirection = Enum.FillDirection.Horizontal
-ScriptCategoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ScriptCategoryLayout.Padding = UDim.new(0, IsMobile and 5 or 7)
-ScriptCategoryLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-ScriptCategoryLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+Instance.new("UICorner", ScriptCategoryRow).CornerRadius = UDim.new(0, 12)
+ScriptCategoryTrackStroke = Instance.new("UIStroke", ScriptCategoryRow)
+ScriptCategoryTrackStroke.Color = Theme.Stroke
+ScriptCategoryTrackStroke.Transparency = 0.35
+ScriptCategoryTrackStroke.Thickness = 1
+pcall(function() ScriptCategoryTrackStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
+ScriptCategoryTrackPadding = Instance.new("UIPadding", ScriptCategoryRow)
+ScriptCategoryTrackPadding.PaddingLeft = UDim.new(0, 3); ScriptCategoryTrackPadding.PaddingRight = UDim.new(0, 3)
+ScriptCategoryTrackPadding.PaddingTop = UDim.new(0, 3); ScriptCategoryTrackPadding.PaddingBottom = UDim.new(0, 3)
 
 ScriptCategoryButtons = {}
+CategoryIndex = { Games = 1, Utilities = 2 }
+CategoryPending = nil
+CategoryThumbReady = false
+ScriptCategoryThumb = Instance.new("Frame", ScriptCategoryRow)
+ScriptCategoryThumb.Name = "CategoryThumb"
+ScriptCategoryThumb.Size = UDim2.new(0.5, -2, 1, 0)
+ScriptCategoryThumb.Position = UDim2.new(0, 0, 0, 0)
+ScriptCategoryThumb.BackgroundColor3 = Color3.new(1, 1, 1)
+ScriptCategoryThumb.BorderSizePixel = 0
+ScriptCategoryThumb.Active = false
+ScriptCategoryThumb.ZIndex = 49
+Instance.new("UICorner", ScriptCategoryThumb).CornerRadius = UDim.new(0, 9)
+ScriptCategoryThumbGradient = Instance.new("UIGradient", ScriptCategoryThumb)
+ScriptCategoryThumbGradient.Rotation = 0
+ScriptCategoryThumbGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(150, 118, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(106, 76, 240))
+})
+ScriptCategoryThumbStroke = Instance.new("UIStroke", ScriptCategoryThumb)
+ScriptCategoryThumbStroke.Color = Color3.fromRGB(196, 178, 255)
+ScriptCategoryThumbStroke.Transparency = 0.55
+ScriptCategoryThumbStroke.Thickness = 1
 
-local function UpdateScriptCategoryButtons()
+function _VH_MoveCategoryThumb(category, pending)
+	local thumb = ScriptCategoryThumb
+	local index = CategoryIndex[category]
+	if not thumb or not thumb.Parent or not index then return end
+	local target = index == 1 and UDim2.new(0, 0, 0, 0) or UDim2.new(0.5, 2, 0, 0)
+	if not CategoryThumbReady then
+		thumb.Position = target
+		CategoryThumbReady = true
+	else
+		_VH_SafeTween(thumb, TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = target })
+	end
+	if ScriptCategoryThumbStroke and ScriptCategoryThumbStroke.Parent then
+		if pending then
+			_VH_SafeTween(ScriptCategoryThumbStroke, TweenInfo.new(0.55, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Transparency = 0.05 })
+		else
+			_VH_SafeTween(ScriptCategoryThumbStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Transparency = 0.55 })
+		end
+	end
+end
+
+function _VH_PaintCategoryLabels(activeCategory)
 	for category, button in pairs(ScriptCategoryButtons) do
 		if button and button.Parent then
-			local active = category == currentScriptCategory
-			button.BackgroundColor3 = active and Theme.CardHover or Theme.BackgroundSecondary
-			button.BackgroundTransparency = active and 0.02 or 0.52
-			local stroke = button:FindFirstChild("CategoryOutline")
-			if stroke and stroke:IsA("UIStroke") then
-				stroke.Color = active and Theme.Accent or Theme.Stroke
-				stroke.Transparency = active and 0.18 or 0.4
-			end
 			local label = button:FindFirstChild("CategoryLabel")
 			if label and label:IsA("TextLabel") then
-				label.Text = GetLocalizedTabName(category)
-				label:SetAttribute("VeloxTranslationKey", category)
-				label.TextColor3 = active and Theme.TextPrimary or Theme.TextSecondary
+				local color = category == activeCategory and Color3.new(1, 1, 1) or Theme.TextSecondary
+				_VH_SafeTween(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TextColor3 = color })
 			end
 		end
 	end
 end
 
+local function UpdateScriptCategoryButtons()
+	CategoryPending = nil
+	for category, button in pairs(ScriptCategoryButtons) do
+		if button and button.Parent then
+			local label = button:FindFirstChild("CategoryLabel")
+			if label and label:IsA("TextLabel") then
+				label.Text = GetLocalizedTabName(category)
+				label:SetAttribute("VeloxTranslationKey", category)
+			end
+		end
+	end
+	_VH_PaintCategoryLabels(currentScriptCategory)
+	_VH_MoveCategoryThumb(currentScriptCategory, false)
+end
+
+-- instant visual feedback when a switch is queued behind a running refresh
+function _VH_MarkCategoryPending(category)
+	if not CategoryIndex[category] then return end
+	CategoryPending = category
+	_VH_PaintCategoryLabels(category)
+	_VH_MoveCategoryThumb(category, true)
+	task.delay(10, function()
+		if isDestroying then return end
+		if CategoryPending == category and currentScriptCategory ~= category then
+			UpdateScriptCategoryButtons()
+		end
+	end)
+end
+
 local function CreateScriptCategoryButton(category, layoutOrder)
 	local button = Instance.new("TextButton", ScriptCategoryRow)
 	button.Name = category .. "Tab"
-	button.Size = UDim2.new(0.5, IsMobile and -3 or -4, 1, 0)
+	button.Size = UDim2.new(0.5, -2, 1, 0)
+	button.Position = layoutOrder == 1 and UDim2.new(0, 0, 0, 0) or UDim2.new(0.5, 2, 0, 0)
 	button.BackgroundColor3 = Theme.BackgroundSecondary
-	button.BackgroundTransparency = 0.52
+	button.BackgroundTransparency = 1
 	button.BorderSizePixel = 0
 	button.Text = ""
 	button.AutoButtonColor = false
@@ -2946,12 +3064,6 @@ local function CreateScriptCategoryButton(category, layoutOrder)
 	button.LayoutOrder = layoutOrder
 	button.ZIndex = 50
 	Instance.new("UICorner", button).CornerRadius = UDim.new(0, 9)
-
-	local stroke = Instance.new("UIStroke", button)
-	stroke.Name = "CategoryOutline"
-	stroke.Color = Theme.Stroke
-	stroke.Transparency = 0.4
-	stroke.Thickness = 1
 
 	local label = Instance.new("TextLabel", button)
 	label.Name = "CategoryLabel"
@@ -2969,7 +3081,16 @@ local function CreateScriptCategoryButton(category, layoutOrder)
 	label.ZIndex = 51
 
 	ScriptCategoryButtons[category] = button
-	ApplyInteractiveAnimations(button, Theme.BackgroundSecondary, Theme.CardHover, Theme.BackgroundMain, stroke, Theme.Stroke, Theme.Accent)
+	if not IsMobile then
+		_VH_RegConn(button.MouseEnter:Connect(function()
+			if isDestroying or category == (CategoryPending or currentScriptCategory) then return end
+			_VH_SafeTween(label, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TextColor3 = Theme.TextPrimary })
+		end))
+		_VH_RegConn(button.MouseLeave:Connect(function()
+			if isDestroying or category == (CategoryPending or currentScriptCategory) then return end
+			_VH_SafeTween(label, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TextColor3 = Theme.TextSecondary })
+		end))
+	end
 
 	_VH_RegConn(button.Activated:Connect(function()
 		if isDestroying or currentTab ~= "Scripts" then return end
@@ -2981,6 +3102,7 @@ local function CreateScriptCategoryButton(category, layoutOrder)
 			PendingTasks.__CatalogRefreshAuto = PendingTasks.__CatalogRefreshAuto or false
 			SetScriptEmptyState("loading", category)
 			SetHubStatus("Connecting...", Theme.Warning, category)
+			_VH_MarkCategoryPending(category)
 			ShowNotification("Loading " .. category .. " catalog when the current refresh finishes...", "Info")
 			return
 		end
@@ -3102,6 +3224,16 @@ pcall(function() SearchInput.TextEditable = true end)
 pcall(function() SearchInput.Interactable = true end)
 SearchInput.ZIndex = 52
 Instance.new("UIPadding", SearchInput).PaddingRight = UDim.new(0, 10)
+_VH_RegConn(SearchInput.Focused:Connect(function()
+	if isDestroying then return end
+	_VH_SafeTween(SearchStroke, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Color = Theme.Accent, Thickness = 1.5 })
+	_VH_SafeTween(SearchIcon, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { ImageColor3 = Theme.Accent })
+end))
+_VH_RegConn(SearchInput.FocusLost:Connect(function()
+	if isDestroying then return end
+	_VH_SafeTween(SearchStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Color = Theme.Stroke, Thickness = 0.8 })
+	_VH_SafeTween(SearchIcon, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { ImageColor3 = Theme.TextSecondary })
+end))
 
 ClearSearchBtn = Instance.new("TextButton", SearchContainer)
 ClearSearchBtn.Size = UDim2.new(0, 24, 0, 24)
@@ -4139,6 +4271,7 @@ do
 end
 TabIconAssetIds = { Changelog = VeloxIcons.Changelog, Scripts = VeloxIcons.Scripts, Settings = VeloxIcons.Settings, ["How to Use"] = VeloxIcons.HowToUse }
 TabButtonCache = {}
+TabViewBasePositions = setmetatable({}, { __mode = "k" })
 function CreateTab(name, index)
 	local tabHeight = IsMobile and 36 or 40
 	local tabStep = tabHeight + (IsMobile and 4 or 6)
@@ -4203,6 +4336,8 @@ function CreateTab(name, index)
 		_VH_SafeTween(TabIndicator, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = UDim2.new(0, 0, 0, yOffset + 5) })
 		SectionHeaderLabel.Text = GetLocalizedSectionHeader(name)
 		SectionHeaderLabel.Visible = true
+		SectionHeaderLabel.TextTransparency = 1
+		_VH_SafeTween(SectionHeaderLabel, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TextTransparency = 0 })
 		ScriptCategoryRow.Visible = (name == "Scripts")
 		SearchRow.Visible = (name == "Scripts")
 		if name == "Scripts" then
@@ -4215,22 +4350,30 @@ function CreateTab(name, index)
 		end
 		for tName, view in pairs(TabViews) do
 			view.Visible = (tName == name)
-			if view.Visible then view.CanvasPosition = Vector2.new(0, 0) end
+			if view.Visible then
+				view.CanvasPosition = Vector2.new(0, 0)
+				local basePos = TabViewBasePositions[view]
+				if not basePos then basePos = view.Position; TabViewBasePositions[view] = basePos end
+				view.Position = UDim2.new(basePos.X.Scale, basePos.X.Offset, basePos.Y.Scale, basePos.Y.Offset + 14)
+				_VH_SafeTween(view, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = basePos })
+			end
 		end
 		for tName, tBtn in pairs(TabButtonCache) do
 			local active = tName == currentTab
 			local activeColor = active and Theme.TextPrimary or Theme.TextSecondary
-			tBtn.BackgroundColor3 = active and Theme.AccentSoft or Theme.BackgroundSecondary
-			tBtn.BackgroundTransparency = active and 0.1 or 1
+			_VH_SafeTween(tBtn, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				BackgroundColor3 = active and Theme.AccentSoft or Theme.BackgroundSecondary,
+				BackgroundTransparency = active and 0.1 or 1
+			})
 			local tabOutline = tBtn:FindFirstChild("TabOutline")
 			if tabOutline and tabOutline:IsA("UIStroke") then
 				tabOutline.Color = Theme.Accent
-				tabOutline.Transparency = active and 0.55 or 1
+				_VH_SafeTween(tabOutline, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Transparency = active and 0.55 or 1 })
 			end
 			local childIcon = tBtn:FindFirstChild("TabIcon")
 			local childLabel = tBtn:FindFirstChild("TabLabel")
-			if childIcon and childIcon:IsA("ImageLabel") then childIcon.ImageColor3 = activeColor end
-			if childLabel then childLabel.TextColor3 = activeColor end
+			if childIcon and childIcon:IsA("ImageLabel") then _VH_SafeTween(childIcon, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { ImageColor3 = activeColor }) end
+			if childLabel then _VH_SafeTween(childLabel, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TextColor3 = activeColor }) end
 		end
 	end))
 end
