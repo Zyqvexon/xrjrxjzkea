@@ -5,13 +5,7 @@ if type(getgenv) == "function" then
 		GlobalEnv = executorEnv
 	end
 end
--- ============================================================
--- Velox Hub theme switch
---   "Christmas" : festive pine/cranberry/gold theme + snow + lights
---   "Default"   : the normal violet theme
---   "Auto"      : Christmas from Dec 1 to Jan 5, Default otherwise
--- You can also set  getgenv().VeloxTheme = "Default"  before running.
--- ============================================================
+
 VeloxThemeMode = "Christmas"
 if type(GlobalEnv.VeloxTheme) == "string" then VeloxThemeMode = GlobalEnv.VeloxTheme end
 function _VH_IsChristmasActive()
@@ -19,7 +13,7 @@ function _VH_IsChristmasActive()
 	if mode == "christmas" then return true end
 	if mode == "auto" then
 		local ok, month, day = pcall(function() return tonumber(os.date("%m")), tonumber(os.date("%d")) end)
-		if ok and month and day then return month == 12 or (month == 1 and day <= 5) end
+		if ok and month and day then return month == 12 or (month == 1 and day <= 1) end
 	end
 	return false
 end
@@ -2410,7 +2404,7 @@ ScriptDetailsOverlay.Visible = false
 ScriptDetailsOverlay.Active = false
 ScriptDetailsOverlay.ZIndex = 500
 ScriptDetailsBox = Instance.new("Frame", ScriptDetailsOverlay)
-ScriptDetailsBox.Size = IsMobile and UDim2.new(0, 322, 0, 438) or UDim2.new(0, 420, 0, 468)
+ScriptDetailsBox.Size = IsMobile and UDim2.new(0, 322, 0, 470) or UDim2.new(0, 420, 0, 500)
 ScriptDetailsBox.Position = UDim2.new(0.5, 0, 0.5, 0)
 ScriptDetailsBox.AnchorPoint = Vector2.new(0.5, 0.5)
 ScriptDetailsBox.BackgroundColor3 = Color3.new(1, 1, 1)
@@ -2430,195 +2424,370 @@ ScriptDetailsGradient.Color = ColorSequence.new({
 	ColorSequenceKeypoint.new(0.55, Theme.BackgroundSecondary),
 	ColorSequenceKeypoint.new(1, _VH_RGB(14, 15, 26))
 })
-ScriptDetailsAccent = Instance.new("Frame", ScriptDetailsBox)
-ScriptDetailsAccent.Size = UDim2.new(1, -28, 0, 3)
-ScriptDetailsAccent.Position = UDim2.new(0, 14, 0, 10)
-ScriptDetailsAccent.BackgroundColor3 = Theme.Accent
-ScriptDetailsAccent.BorderSizePixel = 0
-ScriptDetailsAccent.ZIndex = 503
-Instance.new("UICorner", ScriptDetailsAccent).CornerRadius = UDim.new(1, 0)
 ScriptDetailsUIScale = Instance.new("UIScale", ScriptDetailsBox)
 ScriptDetailsUIScale.Scale = math.clamp(tonumber(SavedData.Settings.UIScale) or 1, 0.8, 1.2)
-ScriptDetailsHeader = Instance.new("Frame", ScriptDetailsBox)
-ScriptDetailsHeader.Size = UDim2.new(1, -28, 0, IsMobile and 94 or 100)
-ScriptDetailsHeader.Position = UDim2.new(0, 14, 0, 20)
-ScriptDetailsHeader.BackgroundTransparency = 1
-ScriptDetailsImage = Instance.new("ImageLabel", ScriptDetailsHeader)
-ScriptDetailsImage.Size = UDim2.new(0, IsMobile and 58 or 66, 0, IsMobile and 58 or 66)
-ScriptDetailsImage.Position = UDim2.new(0, 0, 0.5, -(IsMobile and 29 or 33))
-ScriptDetailsImage.BackgroundColor3 = Theme.BackgroundMain
-ScriptDetailsImage.BorderSizePixel = 0
-ScriptDetailsImage.ScaleType = Enum.ScaleType.Crop
-Instance.new("UICorner", ScriptDetailsImage).CornerRadius = UDim.new(0, 12)
-ScriptDetailsImageStroke = Instance.new("UIStroke", ScriptDetailsImage)
-ScriptDetailsImageStroke.Color = Theme.Stroke
-ScriptDetailsImageStroke.Transparency = 0.15
-ScriptDetailsImageStroke.Thickness = 1
-ScriptDetailsName = Instance.new("TextLabel", ScriptDetailsHeader)
-ScriptDetailsName.Size = UDim2.new(1, -(IsMobile and 108 or 124), 0, IsMobile and 34 or 40)
-ScriptDetailsName.Position = UDim2.new(0, IsMobile and 70 or 80, 0.5, 0)
-ScriptDetailsName.AnchorPoint = Vector2.new(0, 0.5)
-ScriptDetailsName.BackgroundTransparency = 1
-ScriptDetailsName.Text = "Script Details"
-ScriptDetailsName.TextColor3 = Theme.TextPrimary
-ScriptDetailsName.Font = Enum.Font.GothamBold
-ScriptDetailsName.TextSize = IsMobile and 13 or 16
-ScriptDetailsName.TextWrapped = true
-ScriptDetailsName.TextTruncate = Enum.TextTruncate.AtEnd
-ScriptDetailsName.TextXAlignment = Enum.TextXAlignment.Left
-ScriptDetailsName.TextYAlignment = Enum.TextYAlignment.Center
-ScriptDetailsBadge = Instance.new("Frame", ScriptDetailsHeader)
-ScriptDetailsBadge.Size = UDim2.new(0, IsMobile and 88 or 96, 0, 20)
-ScriptDetailsBadge.Position = UDim2.new(0, IsMobile and 70 or 80, 0, IsMobile and 55 or 58)
-ScriptDetailsBadge.BackgroundColor3 = _VH_RGB(104, 72, 235)
-ScriptDetailsBadge.BorderSizePixel = 0
-ScriptDetailsBadge.Visible = false
-Instance.new("UICorner", ScriptDetailsBadge).CornerRadius = UDim.new(0, 9)
-ScriptDetailsBadgeText = Instance.new("TextLabel", ScriptDetailsBadge)
-ScriptDetailsBadgeText.Size = UDim2.new(1, 0, 1, 0)
-ScriptDetailsBadgeText.BackgroundTransparency = 1
-ScriptDetailsBadgeText.TextColor3 = _VH_RGB(255, 255, 255)
-ScriptDetailsBadgeText.Font = Enum.Font.GothamBold
-ScriptDetailsBadgeText.TextSize = 8
-ScriptDetailsBadgeText.TextXAlignment = Enum.TextXAlignment.Center
-ScriptDetailsTagBadge = Instance.new("Frame", ScriptDetailsHeader)
-ScriptDetailsTagBadge.Size = UDim2.new(0, IsMobile and 78 or 86, 0, 20)
-ScriptDetailsTagBadge.Position = UDim2.new(0, IsMobile and 164 or 184, 0, IsMobile and 55 or 58)
-ScriptDetailsTagBadge.BackgroundColor3 = _VH_RGB(50, 54, 82)
-ScriptDetailsTagBadge.BorderSizePixel = 0
-ScriptDetailsTagBadge.Visible = false
-Instance.new("UICorner", ScriptDetailsTagBadge).CornerRadius = UDim.new(0, 9)
-ScriptDetailsTagBadgeText = Instance.new("TextLabel", ScriptDetailsTagBadge)
-ScriptDetailsTagBadgeText.Size = UDim2.new(1, 0, 1, 0)
-ScriptDetailsTagBadgeText.BackgroundTransparency = 1
-ScriptDetailsTagBadgeText.TextColor3 = _VH_RGB(255, 255, 255)
-ScriptDetailsTagBadgeText.Font = Enum.Font.GothamBold
-ScriptDetailsTagBadgeText.TextSize = 8
-ScriptDetailsTagBadgeText.TextXAlignment = Enum.TextXAlignment.Center
-ScriptDetailsClose = Instance.new("TextButton", ScriptDetailsHeader)
-ScriptDetailsClose.Size = UDim2.new(0, 28, 0, 28)
-ScriptDetailsClose.Position = UDim2.new(1, -28, 0, 0)
-ScriptDetailsClose.BackgroundColor3 = Theme.Card
-ScriptDetailsClose.BorderSizePixel = 0
-ScriptDetailsClose.AutoButtonColor = false
-ScriptDetailsClose.Text = ""
-CreateVeloxIcon(ScriptDetailsClose, VeloxIcons.Close, 13, Theme.TextPrimary, UDim2.new(0.5, -6.5, 0.5, -6.5), nil, 1, "CloseIcon")
-Instance.new("UICorner", ScriptDetailsClose).CornerRadius = UDim.new(1, 0)
-ScriptDetailsCloseStroke = Instance.new("UIStroke", ScriptDetailsClose)
-ScriptDetailsCloseStroke.Color = Theme.Stroke
-ApplyInteractiveAnimations(ScriptDetailsClose, Theme.Card, Theme.CardHover, Theme.BackgroundMain, ScriptDetailsCloseStroke, Theme.Stroke, Theme.Accent)
-ScriptDetailsContent = Instance.new("ScrollingFrame", ScriptDetailsBox)
-ScriptDetailsContent.Size = UDim2.new(1, -28, 1, -(IsMobile and 154 or 162))
-ScriptDetailsContent.Position = UDim2.new(0, 14, 0, IsMobile and 108 or 114)
-ScriptDetailsContent.BackgroundTransparency = 1
-ScriptDetailsContent.BorderSizePixel = 0
-ScriptDetailsContent.ScrollBarThickness = 2
-ScriptDetailsContent.ScrollBarImageColor3 = Theme.Stroke
-ScriptDetailsContent.AutomaticCanvasSize = Enum.AutomaticSize.Y
-ScriptDetailsContent.CanvasSize = UDim2.new(0, 0, 0, 0)
-ScriptDetailsContent.ClipsDescendants = true
-ScriptDetailsLayout = Instance.new("UIListLayout", ScriptDetailsContent)
-ScriptDetailsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ScriptDetailsLayout.Padding = UDim.new(0, 8)
-ScriptDetailsDescription = Instance.new("TextLabel", ScriptDetailsContent)
-ScriptDetailsDescription.Size = UDim2.new(1, -2, 0, 0)
-ScriptDetailsDescription.AutomaticSize = Enum.AutomaticSize.Y
-ScriptDetailsDescription.BackgroundTransparency = 1
-ScriptDetailsDescription.TextColor3 = Theme.TextSecondary
-ScriptDetailsDescription.Font = Enum.Font.Gotham
-ScriptDetailsDescription.TextSize = IsMobile and 10 or 11
-ScriptDetailsDescription.TextWrapped = true
-ScriptDetailsDescription.TextXAlignment = Enum.TextXAlignment.Left
-ScriptDetailsDescription.TextYAlignment = Enum.TextYAlignment.Top
-ScriptDetailsDescription.LayoutOrder = 1
-ScriptDetailsMeta = Instance.new("Frame", ScriptDetailsContent)
-ScriptDetailsMeta.Size = UDim2.new(1, -2, 0, 0)
-ScriptDetailsMeta.AutomaticSize = Enum.AutomaticSize.Y
-ScriptDetailsMeta.BackgroundColor3 = Theme.Card
-ScriptDetailsMeta.BorderSizePixel = 0
-ScriptDetailsMeta.LayoutOrder = 2
-Instance.new("UICorner", ScriptDetailsMeta).CornerRadius = UDim.new(0, 11)
-ScriptDetailsMetaPad = Instance.new("UIPadding", ScriptDetailsMeta)
-ScriptDetailsMetaPad.PaddingTop = UDim.new(0, 8)
-ScriptDetailsMetaPad.PaddingBottom = UDim.new(0, 8)
-ScriptDetailsMetaPad.PaddingLeft = UDim.new(0, 10)
-ScriptDetailsMetaPad.PaddingRight = UDim.new(0, 10)
-ScriptDetailsMetaLayout = Instance.new("UIListLayout", ScriptDetailsMeta)
-ScriptDetailsMetaLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ScriptDetailsMetaLayout.Padding = UDim.new(0, 4)
-function _VH_SetDetailsMetaRow(order, labelText, valueText, valueColor)
-	local row = Instance.new("Frame", ScriptDetailsMeta)
-	row.Size = UDim2.new(1, 0, 0, 19)
-	row.BackgroundTransparency = 1
-	row.LayoutOrder = order
-	local label = Instance.new("TextLabel", row)
-	label.Size = UDim2.new(0.35, 0, 1, 0)
-	label.BackgroundTransparency = 1
-	label.Text = labelText
-	label.TextColor3 = Theme.TextSecondary
-	label.Font = Enum.Font.GothamMedium
-	label.TextSize = 9
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	local value = Instance.new("TextLabel", row)
-	value.Size = UDim2.new(0.65, 0, 1, 0)
-	value.Position = UDim2.new(0.35, 0, 0, 0)
-	value.BackgroundTransparency = 1
-	value.Text = valueText
-	value.TextColor3 = valueColor or Theme.TextPrimary
-	value.Font = Enum.Font.GothamMedium
-	value.TextSize = 9
-	value.TextXAlignment = Enum.TextXAlignment.Right
-	value.TextTruncate = Enum.TextTruncate.AtEnd
-	return row
+do
+	local bannerH = IsMobile and 70 or 84
+	local thumb = IsMobile and 60 or 72
+	local thumbY = bannerH - (IsMobile and 30 or 34)
+	local nameY = bannerH + 4
+	local nameH = IsMobile and 30 or 34
+	local badgeY = nameY + nameH + 2
+	local headerH = badgeY + 28
+	local textX = 16 + thumb + 12
+	local footerH = 64
+
+	ScriptDetailsAccent = Instance.new("Frame", ScriptDetailsBox)
+	ScriptDetailsAccent.Size = UDim2.new(1, -32, 0, 1)
+	ScriptDetailsAccent.Position = UDim2.new(0, 16, 0, headerH)
+	ScriptDetailsAccent.BackgroundColor3 = Theme.Stroke
+	ScriptDetailsAccent.BackgroundTransparency = 0.45
+	ScriptDetailsAccent.BorderSizePixel = 0
+	ScriptDetailsAccent.ZIndex = 503
+
+	ScriptDetailsHeader = Instance.new("Frame", ScriptDetailsBox)
+	ScriptDetailsHeader.Size = UDim2.new(1, 0, 0, headerH)
+	ScriptDetailsHeader.Position = UDim2.new(0, 0, 0, 0)
+	ScriptDetailsHeader.BackgroundTransparency = 1
+	ScriptDetailsHeader.ZIndex = 502
+
+	ScriptDetailsBanner = Instance.new("ImageLabel", ScriptDetailsHeader)
+	ScriptDetailsBanner.Name = "Banner"
+	ScriptDetailsBanner.Size = UDim2.new(1, 0, 0, bannerH)
+	ScriptDetailsBanner.BackgroundColor3 = Theme.AccentSoft
+	ScriptDetailsBanner.BorderSizePixel = 0
+	ScriptDetailsBanner.ScaleType = Enum.ScaleType.Crop
+	ScriptDetailsBanner.ImageTransparency = 0.2
+	ScriptDetailsBanner.ZIndex = 1
+	Instance.new("UICorner", ScriptDetailsBanner).CornerRadius = UDim.new(0, 18)
+	ScriptDetailsBannerFade = Instance.new("UIGradient", ScriptDetailsBanner)
+	ScriptDetailsBannerFade.Rotation = 90
+	ScriptDetailsBannerFade.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.2),
+		NumberSequenceKeypoint.new(0.55, 0.55),
+		NumberSequenceKeypoint.new(1, 1)
+	})
+
+	ScriptDetailsImageGlow = Instance.new("Frame", ScriptDetailsHeader)
+	ScriptDetailsImageGlow.Size = UDim2.new(0, thumb + 10, 0, thumb + 10)
+	ScriptDetailsImageGlow.Position = UDim2.new(0, 11, 0, thumbY - 5)
+	ScriptDetailsImageGlow.BackgroundColor3 = Theme.Accent
+	ScriptDetailsImageGlow.BackgroundTransparency = 0.82
+	ScriptDetailsImageGlow.BorderSizePixel = 0
+	ScriptDetailsImageGlow.ZIndex = 2
+	Instance.new("UICorner", ScriptDetailsImageGlow).CornerRadius = UDim.new(0, 18)
+
+	ScriptDetailsImage = Instance.new("ImageLabel", ScriptDetailsHeader)
+	ScriptDetailsImage.Size = UDim2.new(0, thumb, 0, thumb)
+	ScriptDetailsImage.Position = UDim2.new(0, 16, 0, thumbY)
+	ScriptDetailsImage.BackgroundColor3 = Theme.BackgroundMain
+	ScriptDetailsImage.BorderSizePixel = 0
+	ScriptDetailsImage.ScaleType = Enum.ScaleType.Crop
+	ScriptDetailsImage.ZIndex = 3
+	Instance.new("UICorner", ScriptDetailsImage).CornerRadius = UDim.new(0, 14)
+	ScriptDetailsImageStroke = Instance.new("UIStroke", ScriptDetailsImage)
+	ScriptDetailsImageStroke.Color = Theme.Accent
+	ScriptDetailsImageStroke.Transparency = 0.3
+	ScriptDetailsImageStroke.Thickness = 1.5
+
+	ScriptDetailsName = Instance.new("TextLabel", ScriptDetailsHeader)
+	ScriptDetailsName.Size = UDim2.new(1, -(textX + 16), 0, nameH)
+	ScriptDetailsName.Position = UDim2.new(0, textX, 0, nameY)
+	ScriptDetailsName.BackgroundTransparency = 1
+	ScriptDetailsName.Text = "Script Details"
+	ScriptDetailsName.TextColor3 = Theme.TextPrimary
+	ScriptDetailsName.Font = Enum.Font.GothamBold
+	ScriptDetailsName.TextSize = IsMobile and 13 or 16
+	ScriptDetailsName.TextWrapped = true
+	ScriptDetailsName.TextTruncate = Enum.TextTruncate.AtEnd
+	ScriptDetailsName.TextXAlignment = Enum.TextXAlignment.Left
+	ScriptDetailsName.TextYAlignment = Enum.TextYAlignment.Center
+	ScriptDetailsName.ZIndex = 3
+
+	ScriptDetailsBadgeRow = Instance.new("Frame", ScriptDetailsHeader)
+	ScriptDetailsBadgeRow.Size = UDim2.new(1, -(textX + 16), 0, 20)
+	ScriptDetailsBadgeRow.Position = UDim2.new(0, textX, 0, badgeY)
+	ScriptDetailsBadgeRow.BackgroundTransparency = 1
+	ScriptDetailsBadgeRow.ZIndex = 3
+	ScriptDetailsBadgeLayout = Instance.new("UIListLayout", ScriptDetailsBadgeRow)
+	ScriptDetailsBadgeLayout.FillDirection = Enum.FillDirection.Horizontal
+	ScriptDetailsBadgeLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	ScriptDetailsBadgeLayout.Padding = UDim.new(0, 6)
+	ScriptDetailsBadgeLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+
+	ScriptDetailsBadge = Instance.new("Frame", ScriptDetailsBadgeRow)
+	ScriptDetailsBadge.Size = UDim2.new(0, IsMobile and 82 or 94, 0, 20)
+	ScriptDetailsBadge.BackgroundColor3 = _VH_RGB(104, 72, 235)
+	ScriptDetailsBadge.BorderSizePixel = 0
+	ScriptDetailsBadge.Visible = false
+	ScriptDetailsBadge.LayoutOrder = 1
+	ScriptDetailsBadge.ZIndex = 3
+	Instance.new("UICorner", ScriptDetailsBadge).CornerRadius = UDim.new(0, 10)
+	ScriptDetailsBadgeText = Instance.new("TextLabel", ScriptDetailsBadge)
+	ScriptDetailsBadgeText.Size = UDim2.new(1, 0, 1, 0)
+	ScriptDetailsBadgeText.BackgroundTransparency = 1
+	ScriptDetailsBadgeText.TextColor3 = _VH_RGB(255, 255, 255)
+	ScriptDetailsBadgeText.Font = Enum.Font.GothamBold
+	ScriptDetailsBadgeText.TextSize = 8
+	ScriptDetailsBadgeText.TextXAlignment = Enum.TextXAlignment.Center
+	ScriptDetailsBadgeText.ZIndex = 4
+
+	ScriptDetailsTagBadge = Instance.new("Frame", ScriptDetailsBadgeRow)
+	ScriptDetailsTagBadge.Size = UDim2.new(0, IsMobile and 78 or 88, 0, 20)
+	ScriptDetailsTagBadge.BackgroundColor3 = _VH_RGB(50, 54, 82)
+	ScriptDetailsTagBadge.BorderSizePixel = 0
+	ScriptDetailsTagBadge.Visible = false
+	ScriptDetailsTagBadge.LayoutOrder = 2
+	ScriptDetailsTagBadge.ZIndex = 3
+	Instance.new("UICorner", ScriptDetailsTagBadge).CornerRadius = UDim.new(0, 10)
+	ScriptDetailsTagBadgeText = Instance.new("TextLabel", ScriptDetailsTagBadge)
+	ScriptDetailsTagBadgeText.Size = UDim2.new(1, 0, 1, 0)
+	ScriptDetailsTagBadgeText.BackgroundTransparency = 1
+	ScriptDetailsTagBadgeText.TextColor3 = _VH_RGB(255, 255, 255)
+	ScriptDetailsTagBadgeText.Font = Enum.Font.GothamBold
+	ScriptDetailsTagBadgeText.TextSize = 8
+	ScriptDetailsTagBadgeText.TextXAlignment = Enum.TextXAlignment.Center
+	ScriptDetailsTagBadgeText.ZIndex = 4
+
+	ScriptDetailsClose = Instance.new("TextButton", ScriptDetailsHeader)
+	ScriptDetailsClose.Size = UDim2.new(0, 30, 0, 30)
+	ScriptDetailsClose.Position = UDim2.new(1, -44, 0, 12)
+	ScriptDetailsClose.BackgroundColor3 = Theme.BackgroundMain
+	ScriptDetailsClose.BackgroundTransparency = 0.2
+	ScriptDetailsClose.BorderSizePixel = 0
+	ScriptDetailsClose.AutoButtonColor = false
+	ScriptDetailsClose.Text = ""
+	ScriptDetailsClose.ZIndex = 5
+	CreateVeloxIcon(ScriptDetailsClose, VeloxIcons.Close, 13, Theme.TextPrimary, UDim2.new(0.5, -6.5, 0.5, -6.5), nil, 1, "CloseIcon")
+	Instance.new("UICorner", ScriptDetailsClose).CornerRadius = UDim.new(1, 0)
+	ScriptDetailsCloseStroke = Instance.new("UIStroke", ScriptDetailsClose)
+	ScriptDetailsCloseStroke.Color = Theme.Stroke
+	ScriptDetailsCloseStroke.Transparency = 0.2
+	ApplyInteractiveAnimations(ScriptDetailsClose, Theme.BackgroundMain, Theme.CardHover, Theme.BackgroundSecondary, ScriptDetailsCloseStroke, Theme.Stroke, Theme.Accent)
+
+	ScriptDetailsContent = Instance.new("ScrollingFrame", ScriptDetailsBox)
+	ScriptDetailsContent.Size = UDim2.new(1, -32, 1, -(headerH + 6 + footerH))
+	ScriptDetailsContent.Position = UDim2.new(0, 16, 0, headerH + 6)
+	ScriptDetailsContent.BackgroundTransparency = 1
+	ScriptDetailsContent.BorderSizePixel = 0
+	ScriptDetailsContent.ScrollBarThickness = 3
+	ScriptDetailsContent.ScrollBarImageColor3 = Theme.Stroke
+	ScriptDetailsContent.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	ScriptDetailsContent.CanvasSize = UDim2.new(0, 0, 0, 0)
+	ScriptDetailsContent.ClipsDescendants = true
+	ScriptDetailsContent.ZIndex = 502
+	ScriptDetailsLayout = Instance.new("UIListLayout", ScriptDetailsContent)
+	ScriptDetailsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	ScriptDetailsLayout.Padding = UDim.new(0, 10)
+
+	ScriptDetailsAbout = Instance.new("Frame", ScriptDetailsContent)
+	ScriptDetailsAbout.Size = UDim2.new(1, -2, 0, 0)
+	ScriptDetailsAbout.AutomaticSize = Enum.AutomaticSize.Y
+	ScriptDetailsAbout.BackgroundColor3 = Theme.Card
+	ScriptDetailsAbout.BorderSizePixel = 0
+	ScriptDetailsAbout.LayoutOrder = 1
+	Instance.new("UICorner", ScriptDetailsAbout).CornerRadius = UDim.new(0, 12)
+	ScriptDetailsAboutStroke = Instance.new("UIStroke", ScriptDetailsAbout)
+	ScriptDetailsAboutStroke.Color = Theme.Stroke
+	ScriptDetailsAboutStroke.Transparency = 0.6
+	ScriptDetailsAboutPad = Instance.new("UIPadding", ScriptDetailsAbout)
+	ScriptDetailsAboutPad.PaddingTop = UDim.new(0, 12)
+	ScriptDetailsAboutPad.PaddingBottom = UDim.new(0, 12)
+	ScriptDetailsAboutPad.PaddingLeft = UDim.new(0, 14)
+	ScriptDetailsAboutPad.PaddingRight = UDim.new(0, 14)
+	ScriptDetailsAboutLayout = Instance.new("UIListLayout", ScriptDetailsAbout)
+	ScriptDetailsAboutLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	ScriptDetailsAboutLayout.Padding = UDim.new(0, 6)
+	ScriptDetailsAboutLabel = Instance.new("TextLabel", ScriptDetailsAbout)
+	ScriptDetailsAboutLabel.Size = UDim2.new(1, 0, 0, 10)
+	ScriptDetailsAboutLabel.BackgroundTransparency = 1
+	ScriptDetailsAboutLabel.Text = "ABOUT"
+	ScriptDetailsAboutLabel.TextColor3 = Theme.AccentText
+	ScriptDetailsAboutLabel.Font = Enum.Font.GothamBold
+	ScriptDetailsAboutLabel.TextSize = 8
+	ScriptDetailsAboutLabel.TextXAlignment = Enum.TextXAlignment.Left
+	ScriptDetailsAboutLabel.LayoutOrder = 1
+	ScriptDetailsDescription = Instance.new("TextLabel", ScriptDetailsAbout)
+	ScriptDetailsDescription.Size = UDim2.new(1, 0, 0, 0)
+	ScriptDetailsDescription.AutomaticSize = Enum.AutomaticSize.Y
+	ScriptDetailsDescription.BackgroundTransparency = 1
+	ScriptDetailsDescription.TextColor3 = Theme.TextSecondary
+	ScriptDetailsDescription.Font = Enum.Font.Gotham
+	ScriptDetailsDescription.TextSize = IsMobile and 10 or 12
+	ScriptDetailsDescription.TextWrapped = true
+	ScriptDetailsDescription.TextXAlignment = Enum.TextXAlignment.Left
+	ScriptDetailsDescription.TextYAlignment = Enum.TextYAlignment.Top
+	ScriptDetailsDescription.LayoutOrder = 2
+
+	ScriptDetailsMeta = Instance.new("Frame", ScriptDetailsContent)
+	ScriptDetailsMeta.Size = UDim2.new(1, -2, 0, 0)
+	ScriptDetailsMeta.AutomaticSize = Enum.AutomaticSize.Y
+	ScriptDetailsMeta.BackgroundTransparency = 1
+	ScriptDetailsMeta.BorderSizePixel = 0
+	ScriptDetailsMeta.LayoutOrder = 2
+	ScriptDetailsMetaLayout = Instance.new("UIGridLayout", ScriptDetailsMeta)
+	ScriptDetailsMetaLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	ScriptDetailsMetaLayout.FillDirection = Enum.FillDirection.Horizontal
+	ScriptDetailsMetaLayout.CellSize = UDim2.new(0.5, -4, 0, IsMobile and 40 or 44)
+	ScriptDetailsMetaLayout.CellPadding = UDim2.new(0, 8, 0, 8)
+
+	ScriptDetailsTagsFrame = Instance.new("Frame", ScriptDetailsContent)
+	ScriptDetailsTagsFrame.Size = UDim2.new(1, -2, 0, 0)
+	ScriptDetailsTagsFrame.AutomaticSize = Enum.AutomaticSize.Y
+	ScriptDetailsTagsFrame.BackgroundColor3 = Theme.Card
+	ScriptDetailsTagsFrame.BorderSizePixel = 0
+	ScriptDetailsTagsFrame.LayoutOrder = 3
+	Instance.new("UICorner", ScriptDetailsTagsFrame).CornerRadius = UDim.new(0, 12)
+	ScriptDetailsTagsStroke = Instance.new("UIStroke", ScriptDetailsTagsFrame)
+	ScriptDetailsTagsStroke.Color = Theme.Stroke
+	ScriptDetailsTagsStroke.Transparency = 0.6
+	ScriptDetailsTagsPad = Instance.new("UIPadding", ScriptDetailsTagsFrame)
+	ScriptDetailsTagsPad.PaddingTop = UDim.new(0, 12)
+	ScriptDetailsTagsPad.PaddingBottom = UDim.new(0, 12)
+	ScriptDetailsTagsPad.PaddingLeft = UDim.new(0, 14)
+	ScriptDetailsTagsPad.PaddingRight = UDim.new(0, 14)
+	ScriptDetailsTagsLayout = Instance.new("UIListLayout", ScriptDetailsTagsFrame)
+	ScriptDetailsTagsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	ScriptDetailsTagsLayout.Padding = UDim.new(0, 8)
+	ScriptDetailsTagsLabel = Instance.new("TextLabel", ScriptDetailsTagsFrame)
+	ScriptDetailsTagsLabel.Size = UDim2.new(1, 0, 0, 10)
+	ScriptDetailsTagsLabel.BackgroundTransparency = 1
+	ScriptDetailsTagsLabel.Text = "TAGS"
+	ScriptDetailsTagsLabel.TextColor3 = Theme.AccentText
+	ScriptDetailsTagsLabel.Font = Enum.Font.GothamBold
+	ScriptDetailsTagsLabel.TextSize = 8
+	ScriptDetailsTagsLabel.TextXAlignment = Enum.TextXAlignment.Left
+	ScriptDetailsTagsLabel.LayoutOrder = 1
+	ScriptDetailsTagChips = Instance.new("Frame", ScriptDetailsTagsFrame)
+	ScriptDetailsTagChips.Size = UDim2.new(1, 0, 0, 0)
+	ScriptDetailsTagChips.AutomaticSize = Enum.AutomaticSize.Y
+	ScriptDetailsTagChips.BackgroundTransparency = 1
+	ScriptDetailsTagChips.LayoutOrder = 2
+	ScriptDetailsTagChipsLayout = Instance.new("UIListLayout", ScriptDetailsTagChips)
+	ScriptDetailsTagChipsLayout.FillDirection = Enum.FillDirection.Horizontal
+	ScriptDetailsTagChipsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	ScriptDetailsTagChipsLayout.Padding = UDim.new(0, 6)
+	ScriptDetailsTagsWrapOk = pcall(function() ScriptDetailsTagChipsLayout.Wraps = true end)
+	ScriptDetailsTagsText = Instance.new("TextLabel", ScriptDetailsTagsFrame)
+	ScriptDetailsTagsText.Size = UDim2.new(1, 0, 0, 0)
+	ScriptDetailsTagsText.AutomaticSize = Enum.AutomaticSize.Y
+	ScriptDetailsTagsText.BackgroundTransparency = 1
+	ScriptDetailsTagsText.TextColor3 = Theme.TextPrimary
+	ScriptDetailsTagsText.Font = Enum.Font.GothamMedium
+	ScriptDetailsTagsText.TextSize = 10
+	ScriptDetailsTagsText.TextWrapped = true
+	ScriptDetailsTagsText.TextXAlignment = Enum.TextXAlignment.Left
+	ScriptDetailsTagsText.TextYAlignment = Enum.TextYAlignment.Top
+	ScriptDetailsTagsText.LayoutOrder = 3
+
+	ScriptDetailsActions = Instance.new("Frame", ScriptDetailsBox)
+	ScriptDetailsActions.Size = UDim2.new(1, -32, 0, 40)
+	ScriptDetailsActions.Position = UDim2.new(0, 16, 1, -54)
+	ScriptDetailsActions.BackgroundTransparency = 1
+	ScriptDetailsActions.ZIndex = 503
+	ScriptDetailsCloseBottom = Instance.new("TextButton", ScriptDetailsActions)
+	ScriptDetailsCloseBottom.Size = UDim2.new(1, 0, 1, 0)
+	ScriptDetailsCloseBottom.BackgroundColor3 = Theme.Accent
+	ScriptDetailsCloseBottom.BorderSizePixel = 0
+	ScriptDetailsCloseBottom.AutoButtonColor = false
+	ScriptDetailsCloseBottom.Text = "Close"
+	ScriptDetailsCloseBottom.TextColor3 = _VH_RGB(255, 255, 255)
+	ScriptDetailsCloseBottom.Font = Enum.Font.GothamBold
+	ScriptDetailsCloseBottom.TextSize = 11
+	ScriptDetailsCloseBottom.ZIndex = 504
+	Instance.new("UICorner", ScriptDetailsCloseBottom).CornerRadius = UDim.new(0, 12)
+	ScriptDetailsCloseBottomStroke = Instance.new("UIStroke", ScriptDetailsCloseBottom)
+	ScriptDetailsCloseBottomStroke.Color = Theme.Accent
+	ApplyInteractiveAnimations(ScriptDetailsCloseBottom, Theme.Accent, _VH_RGB(142, 112, 255), _VH_RGB(100, 70, 225), ScriptDetailsCloseBottomStroke, Theme.Accent, Theme.Accent)
+
+	if IsChristmas then
+		for i = 1, 13 do
+			local capSize = 8 + ((i * 7) % 5) * 2
+			local cap = Instance.new("Frame", ScriptDetailsBox)
+			cap.Name = "SnowCap"
+			cap.Size = UDim2.new(0, capSize, 0, capSize)
+			cap.AnchorPoint = Vector2.new(0.5, 0.5)
+			cap.Position = UDim2.new(0.06 + (i - 1) * 0.0733, 0, 0, 0)
+			cap.BackgroundColor3 = Color3.fromRGB(244, 250, 252)
+			cap.BackgroundTransparency = 0.05
+			cap.BorderSizePixel = 0
+			cap.Active = false
+			cap.ZIndex = 510
+			Instance.new("UICorner", cap).CornerRadius = UDim.new(1, 0)
+		end
+	end
 end
-ScriptDetailsTagsFrame = Instance.new("Frame", ScriptDetailsContent)
-ScriptDetailsTagsFrame.Size = UDim2.new(1, -2, 0, 0)
-ScriptDetailsTagsFrame.AutomaticSize = Enum.AutomaticSize.Y
-ScriptDetailsTagsFrame.BackgroundColor3 = Theme.Card
-ScriptDetailsTagsFrame.BorderSizePixel = 0
-ScriptDetailsTagsFrame.LayoutOrder = 3
-Instance.new("UICorner", ScriptDetailsTagsFrame).CornerRadius = UDim.new(0, 11)
-ScriptDetailsTagsPad = Instance.new("UIPadding", ScriptDetailsTagsFrame)
-ScriptDetailsTagsPad.PaddingTop = UDim.new(0, 8)
-ScriptDetailsTagsPad.PaddingBottom = UDim.new(0, 8)
-ScriptDetailsTagsPad.PaddingLeft = UDim.new(0, 10)
-ScriptDetailsTagsPad.PaddingRight = UDim.new(0, 10)
-ScriptDetailsTagsLabel = Instance.new("TextLabel", ScriptDetailsTagsFrame)
-ScriptDetailsTagsLabel.Size = UDim2.new(0, 42, 0, 18)
-ScriptDetailsTagsLabel.BackgroundTransparency = 1
-ScriptDetailsTagsLabel.Text = "Tags"
-ScriptDetailsTagsLabel.TextColor3 = Theme.TextSecondary
-ScriptDetailsTagsLabel.Font = Enum.Font.GothamMedium
-ScriptDetailsTagsLabel.TextSize = 9
-ScriptDetailsTagsLabel.TextXAlignment = Enum.TextXAlignment.Left
-ScriptDetailsTagsText = Instance.new("TextLabel", ScriptDetailsTagsFrame)
-ScriptDetailsTagsText.Size = UDim2.new(1, -48, 0, 0)
-ScriptDetailsTagsText.Position = UDim2.new(0, 48, 0, 0)
-ScriptDetailsTagsText.AutomaticSize = Enum.AutomaticSize.Y
-ScriptDetailsTagsText.BackgroundTransparency = 1
-ScriptDetailsTagsText.TextColor3 = Theme.TextPrimary
-ScriptDetailsTagsText.Font = Enum.Font.GothamMedium
-ScriptDetailsTagsText.TextSize = 9
-ScriptDetailsTagsText.TextWrapped = true
-ScriptDetailsTagsText.TextXAlignment = Enum.TextXAlignment.Left
-ScriptDetailsTagsText.TextYAlignment = Enum.TextYAlignment.Top
-ScriptDetailsActions = Instance.new("Frame", ScriptDetailsBox)
-ScriptDetailsActions.Size = UDim2.new(1, -28, 0, 34)
-ScriptDetailsActions.Position = UDim2.new(0, 14, 1, -48)
-ScriptDetailsActions.BackgroundTransparency = 1
-ScriptDetailsCloseBottom = Instance.new("TextButton", ScriptDetailsActions)
-ScriptDetailsCloseBottom.Size = UDim2.new(1, 0, 1, 0)
-ScriptDetailsCloseBottom.BackgroundColor3 = Theme.Accent
-ScriptDetailsCloseBottom.BorderSizePixel = 0
-ScriptDetailsCloseBottom.AutoButtonColor = false
-ScriptDetailsCloseBottom.Text = "Close"
-ScriptDetailsCloseBottom.TextColor3 = _VH_RGB(255, 255, 255)
-ScriptDetailsCloseBottom.Font = Enum.Font.GothamBold
-ScriptDetailsCloseBottom.TextSize = 10
-Instance.new("UICorner", ScriptDetailsCloseBottom).CornerRadius = UDim.new(0, 9)
-ScriptDetailsCloseBottomStroke = Instance.new("UIStroke", ScriptDetailsCloseBottom)
-ScriptDetailsCloseBottomStroke.Color = Theme.Accent
-ApplyInteractiveAnimations(ScriptDetailsCloseBottom, Theme.Accent, _VH_RGB(142, 112, 255), _VH_RGB(100, 70, 225), ScriptDetailsCloseBottomStroke, Theme.Accent, Theme.Accent)
+function _VH_SetDetailsMetaRow(order, labelText, valueText, valueColor)
+	local tile = Instance.new("Frame", ScriptDetailsMeta)
+	tile.BackgroundColor3 = Theme.Card
+	tile.BorderSizePixel = 0
+	tile.LayoutOrder = order
+	tile.ZIndex = 502
+	Instance.new("UICorner", tile).CornerRadius = UDim.new(0, 11)
+	local tileStroke = Instance.new("UIStroke", tile)
+	tileStroke.Color = Theme.Stroke
+	tileStroke.Transparency = 0.6
+	local pip = Instance.new("Frame", tile)
+	pip.Size = UDim2.new(0, 3, 0, IsMobile and 18 or 20)
+	pip.Position = UDim2.new(0, 0, 0.5, -(IsMobile and 9 or 10))
+	pip.BackgroundColor3 = valueColor or Theme.Stroke
+	pip.BorderSizePixel = 0
+	pip.ZIndex = 503
+	Instance.new("UICorner", pip).CornerRadius = UDim.new(1, 0)
+	local label = Instance.new("TextLabel", tile)
+	label.Size = UDim2.new(1, -22, 0, 10)
+	label.Position = UDim2.new(0, 12, 0, IsMobile and 7 or 8)
+	label.BackgroundTransparency = 1
+	label.Text = string.upper(tostring(labelText))
+	label.TextColor3 = Theme.TextSecondary
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 8
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.ZIndex = 503
+	local value = Instance.new("TextLabel", tile)
+	value.Size = UDim2.new(1, -22, 0, 16)
+	value.Position = UDim2.new(0, 12, 0, IsMobile and 19 or 22)
+	value.BackgroundTransparency = 1
+	value.Text = tostring(valueText)
+	value.TextColor3 = valueColor or Theme.TextPrimary
+	value.Font = Enum.Font.GothamBold
+	value.TextSize = IsMobile and 10 or 11
+	value.TextXAlignment = Enum.TextXAlignment.Left
+	value.TextTruncate = Enum.TextTruncate.AtEnd
+	value.ZIndex = 503
+	return tile
+end
+function _VH_ClearDetailsTagChips()
+	for _, child in ipairs(ScriptDetailsTagChips:GetChildren()) do
+		if child:IsA("Frame") then child:Destroy() end
+	end
+end
+function _VH_AddDetailsTagChip(tagText, order)
+	local chip = Instance.new("Frame", ScriptDetailsTagChips)
+	chip.AutomaticSize = Enum.AutomaticSize.X
+	chip.Size = UDim2.new(0, 0, 0, 22)
+	chip.BackgroundColor3 = Theme.AccentSoft
+	chip.BorderSizePixel = 0
+	chip.LayoutOrder = order
+	chip.ZIndex = 503
+	Instance.new("UICorner", chip).CornerRadius = UDim.new(1, 0)
+	local chipStroke = Instance.new("UIStroke", chip)
+	chipStroke.Color = Theme.Accent
+	chipStroke.Transparency = 0.65
+	local chipPad = Instance.new("UIPadding", chip)
+	chipPad.PaddingLeft = UDim.new(0, 10)
+	chipPad.PaddingRight = UDim.new(0, 10)
+	local chipLabel = Instance.new("TextLabel", chip)
+	chipLabel.AutomaticSize = Enum.AutomaticSize.X
+	chipLabel.Size = UDim2.new(0, 0, 1, 0)
+	chipLabel.BackgroundTransparency = 1
+	chipLabel.Text = tagText
+	chipLabel.TextColor3 = Theme.AccentText
+	chipLabel.Font = Enum.Font.GothamMedium
+	chipLabel.TextSize = 9
+	chipLabel.ZIndex = 504
+	return chip
+end
 CurrentScriptDetails = nil
 function _VH_ClearDetailsMetadata()
 	for _, child in ipairs(ScriptDetailsMeta:GetChildren()) do
@@ -2635,6 +2804,7 @@ function _VH_OpenScriptDetails(data, entry)
 	if isDestroying or type(data) ~= "table" or not ScriptDetailsOverlay then return end
 	CurrentScriptDetails = entry
 	ScriptDetailsImage.Image = type(data.ImageAssetId) == "string" and data.ImageAssetId or ""
+	ScriptDetailsBanner.Image = ScriptDetailsImage.Image
 	ScriptDetailsName.Text = tostring(data.Name or "Unnamed Script")
 	local recommendationKind = entry and tostring(entry.RecommendationType or "") or ""
 	local recommended = entry and entry.Recommended == true
@@ -2656,19 +2826,33 @@ function _VH_OpenScriptDetails(data, entry)
 	_VH_SetDetailsMetaRow(3, "Updated", FormatLastUpdatedLabel(data.LastUpdated))
 	_VH_SetDetailsMetaRow(4, "Game", gameText, placeId == 0 and Theme.Success or (placeId == PlaceId and Theme.Success or Theme.Warning))
 	_VH_SetDetailsMetaRow(5, "Compatibility", compatibility and "Compatible" or "Configured for another game", compatibility and Theme.Success or Theme.Warning)
-	_VH_SetDetailsMetaRow(6, "Favorite", SavedData.Favorites[entry.Id] and "Favorited" or "Not favorited", SavedData.Favorites[entry.Id] and _VH_RGB(250, 204, 21) or Theme.TextPrimary)
-	local autoOn = compatibility and _VH_IsAutoExecuteActive(entry.Id)
+	local entryId = entry and entry.Id
+	local favorited = (entryId ~= nil and SavedData.Favorites[entryId]) and true or false
+	_VH_SetDetailsMetaRow(6, "Favorite", favorited and "Favorited" or "Not favorited", favorited and _VH_RGB(250, 204, 21) or Theme.TextPrimary)
+	local autoOn = compatibility and entryId ~= nil and _VH_IsAutoExecuteActive(entryId)
 	_VH_SetDetailsMetaRow(7, "Auto Execute", autoOn and "ON" or "OFF", autoOn and Theme.Success or Theme.TextPrimary)
 	local tagTypeValue = NormalizeTagType(data.TagType)
 	_VH_SetDetailsMetaRow(8, "Status", tagTypeValue ~= "NONE" and tagTypeValue or "Standard")
 	local tagValues = _VH_NormalizeRecommendationList(data.Tags)
-	ScriptDetailsTagsText.Text = #tagValues > 0 and table.concat(tagValues, "  •  ") or "No tags"
-	ScriptDetailsTagsText.TextColor3 = #tagValues > 0 and Theme.TextPrimary or Theme.TextSecondary
+	_VH_ClearDetailsTagChips()
+	local useChips = ScriptDetailsTagsWrapOk and #tagValues > 0
+	ScriptDetailsTagChips.Visible = useChips
+	ScriptDetailsTagsText.Visible = not useChips
+	if useChips then
+		for index, tagName in ipairs(tagValues) do
+			if index > 14 then break end
+			_VH_AddDetailsTagChip(tostring(tagName), index)
+		end
+	else
+		ScriptDetailsTagsText.Text = #tagValues > 0 and table.concat(tagValues, "  •  ") or "No tags"
+		ScriptDetailsTagsText.TextColor3 = #tagValues > 0 and Theme.TextPrimary or Theme.TextSecondary
+	end
+	ScriptDetailsContent.CanvasPosition = Vector2.new(0, 0)
 	local camera = workspace.CurrentCamera
 	local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
 	local uiScale = math.max(0.8, math.min(1.2, tonumber(ScriptDetailsUIScale.Scale) or 1))
 	local baseWidth = IsMobile and 322 or 420
-	local baseHeight = IsMobile and 438 or 468
+	local baseHeight = IsMobile and 470 or 500
 	local fittedWidth = math.min(baseWidth, math.max(240, (viewport.X - 24) / uiScale))
 	local fittedHeight = math.min(baseHeight, math.max(260, (viewport.Y - 24) / uiScale))
 	ScriptDetailsBox.Size = UDim2.fromOffset(fittedWidth, fittedHeight)
@@ -2716,6 +2900,10 @@ _VH_RegConn(UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.Escape then
 			CloseConfirmDialog(false)
 			return
+		end
+	elseif ScriptDetailsOverlay and ScriptDetailsOverlay.Visible then
+		if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.Escape then
+			_VH_CloseScriptDetails()
 		end
 	end
 end))
@@ -2959,12 +3147,28 @@ do
 end
 
 if IsChristmas then
-	-- ---------------------------------------------------------------
-	-- 3D spinning Christmas tree (real 3D parts in a ViewportFrame)
-	-- ---------------------------------------------------------------
+	MainGradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Theme.BackgroundMain),
+		ColorSequenceKeypoint.new(0.62, Theme.BackgroundSecondary),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 18, 24))
+	})
+	if not IsMobile and TopLeftRow then
+		local greeting = Instance.new("TextLabel", TopLeftRow)
+		greeting.Name = "ChristmasGreeting"
+		greeting.AutomaticSize = Enum.AutomaticSize.X
+		greeting.Size = UDim2.new(0, 0, 1, 0)
+		greeting.BackgroundTransparency = 1
+		greeting.Text = "\u{00B7}  Merry Christmas"
+		greeting.Font = Enum.Font.GothamMedium
+		greeting.TextSize = 11
+		greeting.TextColor3 = Theme.AccentAlt
+		greeting.TextXAlignment = Enum.TextXAlignment.Left
+		greeting.LayoutOrder = 4
+	end
+
 	local treeModel, treeLights, treeStar = nil, {}, {}
 	local treeOk = pcall(function()
-		local vpSize = IsMobile and 44 or 52
+		local vpSize = IsMobile and 48 or 58
 		local vp = Instance.new("ViewportFrame")
 		vp.Name = "ChristmasTree3D"
 		vp.Size = UDim2.new(0, vpSize, 0, vpSize)
@@ -3002,7 +3206,7 @@ if IsChristmas then
 			return p
 		end
 
-		local upright = CFrame.Angles(0, 0, math.rad(90)) -- cylinders lie along X by default
+		local upright = CFrame.Angles(0, 0, math.rad(90))
 		part(Enum.PartType.Cylinder, Vector3.new(0.8, 0.7, 0.7), CFrame.new(0, 0.4, 0) * upright, Color3.fromRGB(96, 62, 36))
 
 		local tiers = 7
@@ -3015,9 +3219,24 @@ if IsChristmas then
 			tierY[i] = y
 			local green = Color3.fromRGB(math.floor(20 + t * 28), math.floor(104 + t * 46), math.floor(50 + t * 22))
 			part(Enum.PartType.Cylinder, Vector3.new(0.5, diameter, diameter), CFrame.new(0, y, 0) * upright, green)
+			part(Enum.PartType.Cylinder, Vector3.new(0.06, diameter * 0.985, diameter * 0.985), CFrame.new(0, y + 0.265, 0) * upright, Color3.fromRGB(238, 247, 252))
 		end
 
-		-- baubles
+		part(Enum.PartType.Cylinder, Vector3.new(0.14, 3.7, 3.7), CFrame.new(0, 0.06, 0) * upright, Color3.fromRGB(238, 247, 252))
+		local gifts = {
+			{ angle = 0.35, radius = 1.45, size = 0.5, box = Color3.fromRGB(214, 40, 56), ribbon = Color3.fromRGB(255, 214, 80) },
+			{ angle = 2.35, radius = 1.4, size = 0.42, box = Color3.fromRGB(60, 130, 220), ribbon = Color3.fromRGB(245, 248, 255) },
+			{ angle = 4.3, radius = 1.5, size = 0.36, box = Color3.fromRGB(240, 190, 60), ribbon = Color3.fromRGB(214, 40, 56) }
+		}
+		for _, gift in ipairs(gifts) do
+			local gx, gz = math.cos(gift.angle) * gift.radius, math.sin(gift.angle) * gift.radius
+			local giftCF = CFrame.new(gx, 0.13 + gift.size / 2, gz) * CFrame.Angles(0, -gift.angle, 0)
+			part(Enum.PartType.Block, Vector3.new(gift.size, gift.size, gift.size), giftCF, gift.box)
+			part(Enum.PartType.Block, Vector3.new(gift.size + 0.02, gift.size + 0.02, 0.07), giftCF, gift.ribbon)
+			part(Enum.PartType.Block, Vector3.new(0.07, gift.size + 0.02, gift.size + 0.02), giftCF, gift.ribbon)
+			part(Enum.PartType.Ball, Vector3.new(0.15, 0.15, 0.15), giftCF * CFrame.new(0, gift.size / 2 + 0.05, 0), gift.ribbon)
+		end
+
 		local baubleColors = { Color3.fromRGB(226, 48, 62), Color3.fromRGB(250, 205, 80), Color3.fromRGB(80, 150, 235) }
 		for i = 1, tiers - 1 do
 			for k = 0, 1 do
@@ -3029,7 +3248,6 @@ if IsChristmas then
 			end
 		end
 
-		-- blinking lights (spiral)
 		local lightColors = { Color3.fromRGB(255, 90, 90), Color3.fromRGB(255, 225, 120), Color3.fromRGB(110, 235, 160), Color3.fromRGB(255, 255, 255) }
 		for k = 1, 16 do
 			local t = k / 17
@@ -3041,7 +3259,6 @@ if IsChristmas then
 			treeLights[#treeLights + 1] = { part = bulb, on = base, off = base:Lerp(Color3.new(0, 0, 0), 0.7) }
 		end
 
-		-- star (square + rotated square = 8-point star)
 		local gold = Color3.fromRGB(255, 214, 80)
 		treeStar[1] = part(Enum.PartType.Block, Vector3.new(0.62, 0.62, 0.16), CFrame.new(0, 4.0, 0), gold, Enum.Material.Neon)
 		treeStar[2] = part(Enum.PartType.Block, Vector3.new(0.62, 0.62, 0.16), CFrame.new(0, 4.0, 0) * CFrame.Angles(0, 0, math.rad(45)), gold, Enum.Material.Neon)
@@ -3066,65 +3283,73 @@ if IsChristmas then
 		fallback.ZIndex = 6
 	end
 
-	-- ---------------------------------------------------------------
-	-- twinkling light string with soft glow along the top edge
-	-- ---------------------------------------------------------------
 	local bulbRow = Instance.new("Frame", MainContent)
 	bulbRow.Name = "ChristmasLights"
-	bulbRow.Size = UDim2.new(1, -72, 0, 8)
+	bulbRow.Size = UDim2.new(1, -72, 0, 16)
 	bulbRow.Position = UDim2.new(0, 36, 0, IsMobile and 1 or 2)
 	bulbRow.BackgroundTransparency = 1
 	bulbRow.Active = false
 	bulbRow.ZIndex = 5
-	local wire = Instance.new("Frame", bulbRow)
-	wire.Name = "Wire"
-	wire.Size = UDim2.new(1, 0, 0, 1)
-	wire.Position = UDim2.new(0, 0, 0, 2)
-	wire.BackgroundColor3 = Color3.fromRGB(46, 86, 64)
-	wire.BackgroundTransparency = 0.35
-	wire.BorderSizePixel = 0
-	wire.Active = false
-	wire.ZIndex = 5
 	local bulbColors = {
 		Color3.fromRGB(235, 64, 76), Color3.fromRGB(250, 204, 70),
 		Color3.fromRGB(70, 205, 120), Color3.fromRGB(240, 246, 255)
 	}
-	local bulbCount = IsMobile and 12 or 20
+	local swags = IsMobile and 3 or 4
+	local perSwag = IsMobile and 4 or 5
+	local droop = IsMobile and 3 or 4
 	local bulbSize = IsMobile and 4 or 5
+	local function swagY(f)
+		return 2 + math.sin(math.pi * ((f * swags) % 1)) * droop
+	end
+	local wireDots = swags * 28
+	for j = 0, wireDots do
+		local f = j / wireDots
+		local dot = Instance.new("Frame", bulbRow)
+		dot.Name = "Wire"
+		dot.Size = UDim2.new(0, 5, 0, 1)
+		dot.AnchorPoint = Vector2.new(0.5, 0)
+		dot.Position = UDim2.new(f, 0, 0, swagY(f))
+		dot.BackgroundColor3 = Color3.fromRGB(46, 86, 64)
+		dot.BackgroundTransparency = 0.4
+		dot.BorderSizePixel = 0
+		dot.Active = false
+		dot.ZIndex = 5
+	end
 	local bulbs, glows = {}, {}
-	for i = 1, bulbCount do
-		local x = (i - 1) / (bulbCount - 1)
-		local color = bulbColors[((i - 1) % #bulbColors) + 1]
-		local glow = Instance.new("Frame", bulbRow)
-		glow.Name = "Glow" .. i
-		glow.Size = UDim2.new(0, bulbSize * 3, 0, bulbSize * 3)
-		glow.AnchorPoint = Vector2.new(0.5, 0.5)
-		glow.Position = UDim2.new(x, 0, 0, 2 + bulbSize / 2)
-		glow.BackgroundColor3 = color
-		glow.BackgroundTransparency = 0.85
-		glow.BorderSizePixel = 0
-		glow.Active = false
-		glow.ZIndex = 5
-		Instance.new("UICorner", glow).CornerRadius = UDim.new(1, 0)
-		glows[i] = glow
-		local bulb = Instance.new("Frame", bulbRow)
-		bulb.Name = "Bulb" .. i
-		bulb.Size = UDim2.new(0, bulbSize, 0, bulbSize)
-		bulb.AnchorPoint = Vector2.new(0.5, 0)
-		bulb.Position = UDim2.new(x, 0, 0, 2)
-		bulb.BackgroundColor3 = color
-		bulb.BackgroundTransparency = 0.2
-		bulb.BorderSizePixel = 0
-		bulb.Active = false
-		bulb.ZIndex = 6
-		Instance.new("UICorner", bulb).CornerRadius = UDim.new(1, 0)
-		bulbs[i] = bulb
+	local bulbIndex = 0
+	for s = 0, swags - 1 do
+		for j = 1, perSwag do
+			bulbIndex = bulbIndex + 1
+			local f = (s + j / (perSwag + 1)) / swags
+			local y = swagY(f)
+			local color = bulbColors[((bulbIndex - 1) % #bulbColors) + 1]
+			local glow = Instance.new("Frame", bulbRow)
+			glow.Name = "Glow" .. bulbIndex
+			glow.Size = UDim2.new(0, bulbSize * 3, 0, bulbSize * 3)
+			glow.AnchorPoint = Vector2.new(0.5, 0.5)
+			glow.Position = UDim2.new(f, 0, 0, y + 1 + bulbSize / 2)
+			glow.BackgroundColor3 = color
+			glow.BackgroundTransparency = 0.86
+			glow.BorderSizePixel = 0
+			glow.Active = false
+			glow.ZIndex = 5
+			Instance.new("UICorner", glow).CornerRadius = UDim.new(1, 0)
+			local bulb = Instance.new("Frame", bulbRow)
+			bulb.Name = "Bulb" .. bulbIndex
+			bulb.Size = UDim2.new(0, bulbSize, 0, bulbSize)
+			bulb.AnchorPoint = Vector2.new(0.5, 0)
+			bulb.Position = UDim2.new(f, 0, 0, y + 1)
+			bulb.BackgroundColor3 = color
+			bulb.BackgroundTransparency = 0.15
+			bulb.BorderSizePixel = 0
+			bulb.Active = false
+			bulb.ZIndex = 6
+			Instance.new("UICorner", bulb).CornerRadius = UDim.new(1, 0)
+			bulbs[bulbIndex] = bulb
+			glows[bulbIndex] = glow
+		end
 	end
 
-	-- ---------------------------------------------------------------
-	-- depth-layered snow: far + mid flakes behind the UI, big near
-	-- flakes drift in front of it (parallax = 3D feel)
-	-- ---------------------------------------------------------------
 	local function makeSnowLayer(name, z)
 		local layer = Instance.new("Frame", MainPanel)
 		layer.Name = name
@@ -3166,9 +3391,6 @@ if IsChristmas then
 		end
 	end
 
-	-- ---------------------------------------------------------------
-	-- one Heartbeat drives everything (paused while hidden/minimized)
-	-- ---------------------------------------------------------------
 	local christmasClock = 0
 	_VH_RegConn(RunService.Heartbeat:Connect(function(dt)
 		if isDestroying or isMinimized or not MainPanel or not MainPanel.Parent or not MainPanel.Visible then return end
@@ -3181,8 +3403,8 @@ if IsChristmas then
 		end
 		for i = 1, #bulbs do
 			local pulse = 0.5 + 0.5 * math.sin(christmasClock * 2.2 + i * 1.3)
-			bulbs[i].BackgroundTransparency = 0.1 + 0.55 * pulse
-			glows[i].BackgroundTransparency = 0.95 - 0.2 * (1 - pulse)
+			bulbs[i].BackgroundTransparency = 0.08 + 0.3 * pulse
+			glows[i].BackgroundTransparency = 0.8 + 0.13 * pulse
 		end
 		if treeModel and treeModel.Parent then
 			treeModel:PivotTo(CFrame.new(0, 2.1 + math.sin(christmasClock * 1.6) * 0.05, 0) * CFrame.Angles(0, christmasClock * 0.9, 0))
@@ -3361,7 +3583,6 @@ local function UpdateScriptCategoryButtons()
 	_VH_MoveCategoryThumb(currentScriptCategory, false)
 end
 
--- instant visual feedback when a switch is queued behind a running refresh
 function _VH_MarkCategoryPending(category)
 	if not CategoryIndex[category] then return end
 	CategoryPending = category
@@ -5946,13 +6167,12 @@ local function _VH_CreateLaunchContext(scriptName, scriptId)
 	local nonce = _VH_GenerateRandomString(32)
 	local context = {
 		issuer = "Velox Hub",
-		
+
 		protocol = 1.0,
 		protocolVersion = 1.0,
 		contextVersion = 1.0,
 		protocolToken = VELOX_LAUNCH_PROTOCOL_TOKEN,
-		
-		
+
 		hubVersion = "2.0.7",
 		hubRelease = "2.0.7",
 		scriptId = cleanId,
