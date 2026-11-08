@@ -888,37 +888,37 @@ TagTypeConfig = {
 	UPDATED = {
 		Priority = 5,
 		BadgeColor = Theme.Success,
-		CardColor = _VH_RGB(18, 36, 34),
-		HoverColor = _VH_RGB(23, 46, 43),
-		StrokeColor = _VH_RGB(44, 104, 88)
+		CardColor = Theme.Card,
+		HoverColor = Theme.CardHover,
+		StrokeColor = Theme.Stroke
 	},
 	HOT = {
 		Priority = 4,
 		BadgeColor = Theme.Error,
-		CardColor = _VH_RGB(40, 22, 30),
-		HoverColor = _VH_RGB(52, 28, 38),
-		StrokeColor = _VH_RGB(122, 56, 76)
+		CardColor = Theme.Card,
+		HoverColor = Theme.CardHover,
+		StrokeColor = Theme.Stroke
 	},
 	NEW = {
 		Priority = 3,
 		BadgeColor = Theme.Info,
-		CardColor = _VH_RGB(18, 30, 42),
-		HoverColor = _VH_RGB(23, 39, 54),
-		StrokeColor = _VH_RGB(48, 92, 124)
+		CardColor = Theme.Card,
+		HoverColor = Theme.CardHover,
+		StrokeColor = Theme.Stroke
 	},
 	FEATURED = {
 		Priority = 2,
 		BadgeColor = Theme.System,
-		CardColor = _VH_RGB(34, 24, 52),
-		HoverColor = _VH_RGB(44, 31, 66),
-		StrokeColor = _VH_RGB(104, 76, 160)
+		CardColor = Theme.Card,
+		HoverColor = Theme.CardHover,
+		StrokeColor = Theme.Stroke
 	},
 	NONE = {
 		Priority = 1,
 		BadgeColor = _VH_RGB(100, 106, 140),
 		CardColor = Theme.Card,
 		HoverColor = Theme.CardHover,
-		StrokeColor = _VH_RGB(44, 48, 72)
+		StrokeColor = Theme.Stroke
 	}
 }
 function NormalizeTagType(value)
@@ -1122,7 +1122,7 @@ function ApplyTagBorder(card, tagType, stroke)
 	local normalized = NormalizeTagType(tagType)
 	local config = TagTypeConfig[normalized] or TagTypeConfig.NONE
 	stroke.Color = config.StrokeColor
-	stroke.Transparency = 0.3
+	stroke.Transparency = 0.45
 	stroke.Thickness = 1
 	stroke.Enabled = true
 end
@@ -2193,124 +2193,168 @@ ConfirmOverlay.ZIndex = 400
 ConfirmOverlay.Active = false
 
 ConfirmBox = Instance.new("Frame", ConfirmOverlay)
-ConfirmBox.Size = IsMobile and UDim2.new(0, 308, 0, 202) or UDim2.new(0, 380, 0, 214)
+ConfirmBox.Size = IsMobile and UDim2.new(0, 300, 0, 256) or UDim2.new(0, 372, 0, 266)
 ConfirmBox.Position = UDim2.new(0.5, 0, 0.5, 0)
 ConfirmBox.AnchorPoint = Vector2.new(0.5, 0.5)
 ConfirmBox.BackgroundColor3 = Color3.new(1, 1, 1)
 ConfirmBox.BorderSizePixel = 0
 ConfirmBox.ClipsDescendants = true
 ConfirmBox.ZIndex = 401
-Instance.new("UICorner", ConfirmBox).CornerRadius = UDim.new(0, 18)
+Instance.new("UICorner", ConfirmBox).CornerRadius = UDim.new(0, 20)
 
 ConfirmBoxScale = Instance.new("UIScale", ConfirmBox)
 ConfirmBoxGradient = Instance.new("UIGradient", ConfirmBox)
-ConfirmBoxGradient.Rotation = 135
+ConfirmBoxGradient.Rotation = 120
 ConfirmBoxGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, _VH_RGB(30, 26, 58)),
-    ColorSequenceKeypoint.new(0.55, Theme.BackgroundSecondary),
-    ColorSequenceKeypoint.new(1, _VH_RGB(13, 14, 24))
+	ColorSequenceKeypoint.new(0, Theme.AccentSoft:Lerp(Theme.BackgroundSecondary, 0.5)),
+	ColorSequenceKeypoint.new(0.5, Theme.BackgroundSecondary),
+	ColorSequenceKeypoint.new(1, Theme.BackgroundMain)
 })
 
 ConfirmBoxStroke = Instance.new("UIStroke", ConfirmBox)
-ConfirmBoxStroke.Color = Theme.Stroke
-ConfirmBoxStroke.Thickness = 0.8
+ConfirmBoxStroke.Color = Color3.new(1, 1, 1)
+ConfirmBoxStroke.Thickness = 1
+ConfirmBoxStroke.Transparency = 0.3
 pcall(function() ConfirmBoxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
+ConfirmBoxStrokeGradient = Instance.new("UIGradient", ConfirmBoxStroke)
+ConfirmBoxStrokeGradient.Rotation = 120
+ConfirmBoxStrokeGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Theme.Accent),
+	ColorSequenceKeypoint.new(0.5, Theme.Stroke),
+	ColorSequenceKeypoint.new(1, Theme.AccentAlt)
+})
 
 ConfirmAccent = Instance.new("Frame", ConfirmBox)
-ConfirmAccent.Size = UDim2.new(1, -28, 0, 3)
-ConfirmAccent.Position = UDim2.new(0, 14, 0, 10)
-ConfirmAccent.BackgroundColor3 = Theme.Accent
+ConfirmAccent.Size = UDim2.new(1, -56, 0, 2)
+ConfirmAccent.Position = UDim2.new(0, 28, 0, 0)
+ConfirmAccent.BackgroundColor3 = Color3.new(1, 1, 1)
 ConfirmAccent.BorderSizePixel = 0
 ConfirmAccent.ZIndex = 403
-Instance.new("UICorner", ConfirmAccent).CornerRadius = UDim.new(1, 0)
+ConfirmAccentGradient = Instance.new("UIGradient", ConfirmAccent)
+ConfirmAccentGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Theme.Accent),
+	ColorSequenceKeypoint.new(1, Theme.AccentAlt)
+})
+ConfirmAccentGradient.Transparency = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 1),
+	NumberSequenceKeypoint.new(0.2, 0.05),
+	NumberSequenceKeypoint.new(0.8, 0.05),
+	NumberSequenceKeypoint.new(1, 1)
+})
 
 ConfirmContent = Instance.new("Frame", ConfirmBox)
-ConfirmContent.Size = UDim2.new(1, -28, 1, -28)
-ConfirmContent.Position = UDim2.new(0, 14, 0, 20)
+ConfirmContent.Size = UDim2.new(1, -36, 1, -44)
+ConfirmContent.Position = UDim2.new(0, 18, 0, 24)
 ConfirmContent.BackgroundTransparency = 1
 ConfirmContent.ZIndex = 402
 
 ConfirmHeader = Instance.new("Frame", ConfirmContent)
-ConfirmHeader.Size = UDim2.new(1, 0, 0, 42)
+ConfirmHeader.Size = UDim2.new(1, 0, 0, 86)
 ConfirmHeader.BackgroundTransparency = 1
 ConfirmHeader.LayoutOrder = 1
 ConfirmHeader.ZIndex = 402
 
+ConfirmIconGlow = Instance.new("Frame", ConfirmHeader)
+ConfirmIconGlow.Size = UDim2.new(0, 58, 0, 58)
+ConfirmIconGlow.Position = UDim2.new(0.5, -29, 0, -9)
+ConfirmIconGlow.BackgroundColor3 = Theme.Accent
+ConfirmIconGlow.BackgroundTransparency = 0.84
+ConfirmIconGlow.BorderSizePixel = 0
+ConfirmIconGlow.ZIndex = 402
+Instance.new("UICorner", ConfirmIconGlow).CornerRadius = UDim.new(1, 0)
+
 ConfirmIcon = Instance.new("Frame", ConfirmHeader)
-ConfirmIcon.Size = UDim2.new(0, 34, 0, 34)
-ConfirmIcon.Position = UDim2.new(0, 0, 0.5, -17)
-ConfirmIcon.BackgroundColor3 = _VH_RGB(52, 38, 110)
+ConfirmIcon.Size = UDim2.new(0, 40, 0, 40)
+ConfirmIcon.Position = UDim2.new(0.5, -20, 0, 0)
+ConfirmIcon.BackgroundColor3 = Color3.new(1, 1, 1)
 ConfirmIcon.BorderSizePixel = 0
 ConfirmIcon.ZIndex = 403
-Instance.new("UICorner", ConfirmIcon).CornerRadius = UDim.new(0, 11)
+Instance.new("UICorner", ConfirmIcon).CornerRadius = UDim.new(1, 0)
+ConfirmIconGradient = Instance.new("UIGradient", ConfirmIcon)
+ConfirmIconGradient.Rotation = 45
+ConfirmIconGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Theme.Accent),
+	ColorSequenceKeypoint.new(1, Theme.Accent:Lerp(Color3.new(0, 0, 0), 0.4))
+})
 ConfirmIconStroke = Instance.new("UIStroke", ConfirmIcon)
-ConfirmIconStroke.Color = Theme.Accent
-ConfirmIconStroke.Transparency = 0.18
+ConfirmIconStroke.Color = Theme.AccentText
+ConfirmIconStroke.Transparency = 0.6
 ConfirmIconStroke.Thickness = 1
 
-CreateVeloxIcon(ConfirmIcon, VeloxIcons.HowToUse, 18, _VH_RGB(232, 226, 255), UDim2.new(0.5, -9, 0.5, -9), nil, 404, "ConfirmIconImage")
+CreateVeloxIcon(ConfirmIcon, VeloxIcons.HowToUse, 20, Color3.new(1, 1, 1), UDim2.new(0.5, -10, 0.5, -10), nil, 404, "ConfirmIconImage")
 
 ConfirmTitle = Instance.new("TextLabel", ConfirmHeader)
-ConfirmTitle.Size = UDim2.new(1, -46, 0, 20)
-ConfirmTitle.Position = UDim2.new(0, 46, 0, 1)
+ConfirmTitle.Size = UDim2.new(1, 0, 0, 20)
+ConfirmTitle.Position = UDim2.new(0, 0, 0, 48)
 ConfirmTitle.BackgroundTransparency = 1
 ConfirmTitle.Text = "Execute Script"
 ConfirmTitle.TextColor3 = Theme.TextPrimary
 ConfirmTitle.Font = Enum.Font.GothamBold
 ConfirmTitle.TextSize = IsMobile and 14 or 16
-ConfirmTitle.TextXAlignment = Enum.TextXAlignment.Left
+ConfirmTitle.TextXAlignment = Enum.TextXAlignment.Center
 ConfirmTitle.TextYAlignment = Enum.TextYAlignment.Center
 ConfirmTitle.ZIndex = 403
 
 ConfirmSubtitle = Instance.new("TextLabel", ConfirmHeader)
-ConfirmSubtitle.Size = UDim2.new(1, -46, 0, 16)
-ConfirmSubtitle.Position = UDim2.new(0, 46, 0, 23)
+ConfirmSubtitle.Size = UDim2.new(1, 0, 0, 14)
+ConfirmSubtitle.Position = UDim2.new(0, 0, 0, 70)
 ConfirmSubtitle.BackgroundTransparency = 1
 ConfirmSubtitle.Text = "Review the selected script before continuing."
 ConfirmSubtitle.TextColor3 = Theme.TextSecondary
 ConfirmSubtitle.Font = Enum.Font.GothamMedium
 ConfirmSubtitle.TextSize = IsMobile and 8 or 9
-ConfirmSubtitle.TextXAlignment = Enum.TextXAlignment.Left
+ConfirmSubtitle.TextXAlignment = Enum.TextXAlignment.Center
 ConfirmSubtitle.ZIndex = 403
 
 ConfirmMessage = Instance.new("TextLabel", ConfirmContent)
-ConfirmMessage.Size = UDim2.new(1, 0, 0, 30)
-ConfirmMessage.Position = UDim2.new(0, 0, 0, 48)
+ConfirmMessage.Size = UDim2.new(1, 0, 0, 24)
+ConfirmMessage.Position = UDim2.new(0, 0, 0, 94)
 ConfirmMessage.BackgroundTransparency = 1
 ConfirmMessage.Text = "Are you sure you want to run this script?"
 ConfirmMessage.TextColor3 = Theme.TextPrimary
 ConfirmMessage.Font = Enum.Font.Gotham
 ConfirmMessage.TextSize = IsMobile and 10 or 11
-ConfirmMessage.TextXAlignment = Enum.TextXAlignment.Left
+ConfirmMessage.TextXAlignment = Enum.TextXAlignment.Center
 ConfirmMessage.TextYAlignment = Enum.TextYAlignment.Center
 ConfirmMessage.TextWrapped = true
 ConfirmMessage.ZIndex = 403
 
 ConfirmScriptNameFrame = Instance.new("Frame", ConfirmContent)
-ConfirmScriptNameFrame.Size = UDim2.new(1, 0, 0, 34)
-ConfirmScriptNameFrame.Position = UDim2.new(0, 0, 0, 78)
-ConfirmScriptNameFrame.BackgroundColor3 = Theme.Card
+ConfirmScriptNameFrame.Size = UDim2.new(1, 0, 0, 36)
+ConfirmScriptNameFrame.Position = UDim2.new(0, 0, 0, 124)
+ConfirmScriptNameFrame.BackgroundColor3 = Theme.BackgroundMain
 ConfirmScriptNameFrame.BorderSizePixel = 0
 ConfirmScriptNameFrame.ZIndex = 403
-Instance.new("UICorner", ConfirmScriptNameFrame).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", ConfirmScriptNameFrame).CornerRadius = UDim.new(1, 0)
+ConfirmScriptNameStroke = Instance.new("UIStroke", ConfirmScriptNameFrame)
+ConfirmScriptNameStroke.Color = Theme.Accent
+ConfirmScriptNameStroke.Transparency = 0.5
+ConfirmScriptNameStroke.Thickness = 1
+ConfirmScriptNameDot = Instance.new("Frame", ConfirmScriptNameFrame)
+ConfirmScriptNameDot.Size = UDim2.new(0, 6, 0, 6)
+ConfirmScriptNameDot.Position = UDim2.new(0, 14, 0.5, -3)
+ConfirmScriptNameDot.BackgroundColor3 = Theme.Accent
+ConfirmScriptNameDot.BorderSizePixel = 0
+ConfirmScriptNameDot.ZIndex = 404
+Instance.new("UICorner", ConfirmScriptNameDot).CornerRadius = UDim.new(1, 0)
 
 ConfirmScriptName = Instance.new("TextLabel", ConfirmScriptNameFrame)
-ConfirmScriptName.Size = UDim2.new(1, -18, 1, 0)
-ConfirmScriptName.Position = UDim2.new(0, 9, 0, 0)
+ConfirmScriptName.Size = UDim2.new(1, -44, 1, 0)
+ConfirmScriptName.Position = UDim2.new(0, 28, 0, 0)
 ConfirmScriptName.BackgroundTransparency = 1
 ConfirmScriptName.Text = ""
-ConfirmScriptName.TextColor3 = Theme.Accent
+ConfirmScriptName.TextColor3 = Theme.AccentText
 ConfirmScriptName.Font = Enum.Font.GothamBold
 ConfirmScriptName.TextSize = IsMobile and 10 or 11
 ConfirmScriptName.TextXAlignment = Enum.TextXAlignment.Center
 ConfirmScriptName.TextYAlignment = Enum.TextYAlignment.Center
-ConfirmScriptName.TextWrapped = true
+ConfirmScriptName.TextWrapped = false
 ConfirmScriptName.TextTruncate = Enum.TextTruncate.AtEnd
 ConfirmScriptName.ZIndex = 404
 
 ConfirmButtonRow = Instance.new("Frame", ConfirmContent)
-ConfirmButtonRow.Size = UDim2.new(1, 0, 0, 34)
-ConfirmButtonRow.Position = UDim2.new(0, 0, 1, -34)
+ConfirmButtonRow.Size = UDim2.new(1, 0, 0, 40)
+ConfirmButtonRow.Position = UDim2.new(0, 0, 1, -40)
 ConfirmButtonRow.BackgroundTransparency = 1
 ConfirmButtonRow.ZIndex = 402
 
@@ -2319,11 +2363,11 @@ ConfirmRowLayout.FillDirection = Enum.FillDirection.Horizontal
 ConfirmRowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 ConfirmRowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 ConfirmRowLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ConfirmRowLayout.Padding = UDim.new(0, 10)
+ConfirmRowLayout.Padding = UDim.new(0, 12)
 
 ConfirmCancelBtn = Instance.new("TextButton", ConfirmButtonRow)
-ConfirmCancelBtn.Size = UDim2.new(0.5, -5, 1, 0)
-ConfirmCancelBtn.BackgroundColor3 = Theme.BackgroundMain
+ConfirmCancelBtn.Size = UDim2.new(0.5, -6, 1, 0)
+ConfirmCancelBtn.BackgroundColor3 = Theme.Card
 ConfirmCancelBtn.Text = "Cancel"
 ConfirmCancelBtn.TextColor3 = Theme.TextPrimary
 ConfirmCancelBtn.Font = Enum.Font.GothamBold
@@ -2331,26 +2375,30 @@ ConfirmCancelBtn.TextSize = IsMobile and 10 or 11
 ConfirmCancelBtn.AutoButtonColor = false
 ConfirmCancelBtn.LayoutOrder = 1
 ConfirmCancelBtn.ZIndex = 403
-Instance.new("UICorner", ConfirmCancelBtn).CornerRadius = UDim.new(0, 9)
+Instance.new("UICorner", ConfirmCancelBtn).CornerRadius = UDim.new(0, 12)
 CancelStroke = Instance.new("UIStroke", ConfirmCancelBtn)
 CancelStroke.Color = Theme.Stroke
 CancelStroke.Transparency = 0.2
 CancelStroke.Thickness = 1
 
 ConfirmExecuteBtn = Instance.new("TextButton", ConfirmButtonRow)
-ConfirmExecuteBtn.Size = UDim2.new(0.5, -5, 1, 0)
+ConfirmExecuteBtn.Size = UDim2.new(0.5, -6, 1, 0)
 ConfirmExecuteBtn.BackgroundColor3 = Theme.Accent
 ConfirmExecuteBtn.Text = "Execute"
-ConfirmExecuteBtn.TextColor3 = _VH_RGB(255, 255, 255)
+ConfirmExecuteBtn.TextColor3 = Color3.new(1, 1, 1)
 ConfirmExecuteBtn.Font = Enum.Font.GothamBold
 ConfirmExecuteBtn.TextSize = IsMobile and 10 or 11
 ConfirmExecuteBtn.AutoButtonColor = false
 ConfirmExecuteBtn.LayoutOrder = 2
 ConfirmExecuteBtn.ZIndex = 403
-Instance.new("UICorner", ConfirmExecuteBtn).CornerRadius = UDim.new(0, 9)
+Instance.new("UICorner", ConfirmExecuteBtn).CornerRadius = UDim.new(0, 12)
+ConfirmExecuteStroke = Instance.new("UIStroke", ConfirmExecuteBtn)
+ConfirmExecuteStroke.Color = Theme.AccentText
+ConfirmExecuteStroke.Transparency = 0.65
+ConfirmExecuteStroke.Thickness = 1
 
-ApplyInteractiveAnimations(ConfirmCancelBtn, Theme.BackgroundMain, Theme.BackgroundSecondary, _VH_RGB(9, 10, 18), CancelStroke, CancelStroke.Color, Theme.Accent)
-ApplyInteractiveAnimations(ConfirmExecuteBtn, Theme.Accent, _VH_RGB(142, 112, 255), _VH_RGB(100, 70, 225))
+ApplyInteractiveAnimations(ConfirmCancelBtn, Theme.Card, Theme.CardHover, Theme.BackgroundMain, CancelStroke, CancelStroke.Color, Theme.Accent)
+ApplyInteractiveAnimations(ConfirmExecuteBtn, Theme.Accent, Theme.Accent:Lerp(Color3.new(1, 1, 1), 0.18), Theme.Accent:Lerp(Color3.new(0, 0, 0), 0.25))
 
 isConfirming = false
 pendingExecuteCallback = nil
@@ -2389,9 +2437,9 @@ end))
 _VH_RegConn(ConfirmOverlay.InputBegan:Connect(function(input)
 	if not isConfirming then return end
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		pos = input.Position
-		bPos, bSize = ConfirmBox.AbsolutePosition, ConfirmBox.AbsoluteSize
-		inside = pos.X >= bPos.X and pos.X <= bPos.X + bSize.X and pos.Y >= bPos.Y and pos.Y <= bPos.Y + bSize.Y
+		local pos = input.Position
+		local bPos, bSize = ConfirmBox.AbsolutePosition, ConfirmBox.AbsoluteSize
+		local inside = pos.X >= bPos.X and pos.X <= bPos.X + bSize.X and pos.Y >= bPos.Y and pos.Y <= bPos.Y + bSize.Y
 		if not inside then CloseConfirmDialog(false) end
 	end
 end))
@@ -3283,71 +3331,108 @@ if IsChristmas then
 		fallback.ZIndex = 6
 	end
 
-	local bulbRow = Instance.new("Frame", MainContent)
-	bulbRow.Name = "ChristmasLights"
-	bulbRow.Size = UDim2.new(1, -72, 0, 16)
-	bulbRow.Position = UDim2.new(0, 36, 0, IsMobile and 1 or 2)
-	bulbRow.BackgroundTransparency = 1
-	bulbRow.Active = false
-	bulbRow.ZIndex = 5
-	local bulbColors = {
-		Color3.fromRGB(235, 64, 76), Color3.fromRGB(250, 204, 70),
-		Color3.fromRGB(70, 205, 120), Color3.fromRGB(240, 246, 255)
+	SidebarBrand.Position = UDim2.new(0, 10, 0, IsMobile and 16 or 18)
+	local lightsHost = Instance.new("Frame", MainPanel)
+	lightsHost.Name = "ChristmasLights"
+	lightsHost.Size = UDim2.new(1, -44, 0, 26)
+	lightsHost.Position = UDim2.new(0, 22, 0, 0)
+	lightsHost.BackgroundTransparency = 1
+	lightsHost.BorderSizePixel = 0
+	lightsHost.Active = false
+	lightsHost.ZIndex = 30
+	local wireY = 2
+	local wire = Instance.new("Frame", lightsHost)
+	wire.Name = "Wire"
+	wire.Size = UDim2.new(1, 0, 0, 2)
+	wire.Position = UDim2.new(0, 0, 0, wireY)
+	wire.BackgroundColor3 = Color3.fromRGB(36, 62, 49)
+	wire.BorderSizePixel = 0
+	wire.Active = false
+	wire.ZIndex = 30
+	Instance.new("UICorner", wire).CornerRadius = UDim.new(1, 0)
+	for side = 0, 1 do
+		local clip = Instance.new("Frame", lightsHost)
+		clip.Name = "WireClip"
+		clip.Size = UDim2.new(0, 6, 0, 6)
+		clip.AnchorPoint = Vector2.new(0.5, 0)
+		clip.Position = UDim2.new(side, 0, 0, wireY - 2)
+		clip.BackgroundColor3 = Color3.fromRGB(176, 184, 194)
+		clip.BorderSizePixel = 0
+		clip.Active = false
+		clip.ZIndex = 31
+		Instance.new("UICorner", clip).CornerRadius = UDim.new(0, 2)
+	end
+	local panelWidth = MainPanel.Size.X.Offset
+	if panelWidth <= 0 then panelWidth = IsMobile and 600 or 1000 end
+	local bulbSpacing = IsMobile and 30 or 36
+	local bulbCount = math.max(8, math.floor((panelWidth - 44) / bulbSpacing))
+	local bulbW = IsMobile and 5 or 7
+	local bulbH = IsMobile and 8 or 11
+	local bulbPalette = {
+		Color3.fromRGB(240, 62, 74), Color3.fromRGB(255, 202, 64),
+		Color3.fromRGB(64, 208, 120), Color3.fromRGB(150, 205, 255)
 	}
-	local swags = IsMobile and 3 or 4
-	local perSwag = IsMobile and 4 or 5
-	local droop = IsMobile and 3 or 4
-	local bulbSize = IsMobile and 4 or 5
-	local function swagY(f)
-		return 2 + math.sin(math.pi * ((f * swags) % 1)) * droop
-	end
-	local wireDots = swags * 28
-	for j = 0, wireDots do
-		local f = j / wireDots
-		local dot = Instance.new("Frame", bulbRow)
-		dot.Name = "Wire"
-		dot.Size = UDim2.new(0, 5, 0, 1)
-		dot.AnchorPoint = Vector2.new(0.5, 0)
-		dot.Position = UDim2.new(f, 0, 0, swagY(f))
-		dot.BackgroundColor3 = Color3.fromRGB(46, 86, 64)
-		dot.BackgroundTransparency = 0.4
-		dot.BorderSizePixel = 0
-		dot.Active = false
-		dot.ZIndex = 5
-	end
-	local bulbs, glows = {}, {}
-	local bulbIndex = 0
-	for s = 0, swags - 1 do
-		for j = 1, perSwag do
-			bulbIndex = bulbIndex + 1
-			local f = (s + j / (perSwag + 1)) / swags
-			local y = swagY(f)
-			local color = bulbColors[((bulbIndex - 1) % #bulbColors) + 1]
-			local glow = Instance.new("Frame", bulbRow)
-			glow.Name = "Glow" .. bulbIndex
-			glow.Size = UDim2.new(0, bulbSize * 3, 0, bulbSize * 3)
-			glow.AnchorPoint = Vector2.new(0.5, 0.5)
-			glow.Position = UDim2.new(f, 0, 0, y + 1 + bulbSize / 2)
-			glow.BackgroundColor3 = color
-			glow.BackgroundTransparency = 0.86
-			glow.BorderSizePixel = 0
-			glow.Active = false
-			glow.ZIndex = 5
-			Instance.new("UICorner", glow).CornerRadius = UDim.new(1, 0)
-			local bulb = Instance.new("Frame", bulbRow)
-			bulb.Name = "Bulb" .. bulbIndex
-			bulb.Size = UDim2.new(0, bulbSize, 0, bulbSize)
-			bulb.AnchorPoint = Vector2.new(0.5, 0)
-			bulb.Position = UDim2.new(f, 0, 0, y + 1)
-			bulb.BackgroundColor3 = color
-			bulb.BackgroundTransparency = 0.15
-			bulb.BorderSizePixel = 0
-			bulb.Active = false
-			bulb.ZIndex = 6
-			Instance.new("UICorner", bulb).CornerRadius = UDim.new(1, 0)
-			bulbs[bulbIndex] = bulb
-			glows[bulbIndex] = glow
-		end
+	local bulbs, halos, outerHalos = {}, {}, {}
+	for i = 1, bulbCount do
+		local f = (i - 0.5) / bulbCount
+		local color = bulbPalette[((i - 1) % #bulbPalette) + 1]
+		local centerY = wireY + 5 + bulbH / 2
+		local outer = Instance.new("Frame", lightsHost)
+		outer.Name = "HaloOuter"
+		outer.Size = UDim2.new(0, bulbW * 4.6, 0, bulbW * 4.6)
+		outer.AnchorPoint = Vector2.new(0.5, 0.5)
+		outer.Position = UDim2.new(f, 0, 0, centerY)
+		outer.BackgroundColor3 = color
+		outer.BackgroundTransparency = 0.9
+		outer.BorderSizePixel = 0
+		outer.Active = false
+		outer.ZIndex = 31
+		Instance.new("UICorner", outer).CornerRadius = UDim.new(1, 0)
+		local halo = Instance.new("Frame", lightsHost)
+		halo.Name = "Halo"
+		halo.Size = UDim2.new(0, bulbW * 2.5, 0, bulbH * 1.9)
+		halo.AnchorPoint = Vector2.new(0.5, 0.5)
+		halo.Position = UDim2.new(f, 0, 0, centerY)
+		halo.BackgroundColor3 = color
+		halo.BackgroundTransparency = 0.75
+		halo.BorderSizePixel = 0
+		halo.Active = false
+		halo.ZIndex = 32
+		Instance.new("UICorner", halo).CornerRadius = UDim.new(1, 0)
+		local socket = Instance.new("Frame", lightsHost)
+		socket.Name = "Socket"
+		socket.Size = UDim2.new(0, bulbW - 1, 0, 4)
+		socket.AnchorPoint = Vector2.new(0.5, 0)
+		socket.Position = UDim2.new(f, 0, 0, wireY + 1)
+		socket.BackgroundColor3 = Color3.fromRGB(22, 38, 30)
+		socket.BorderSizePixel = 0
+		socket.Active = false
+		socket.ZIndex = 33
+		Instance.new("UICorner", socket).CornerRadius = UDim.new(0, 1)
+		local bulb = Instance.new("Frame", lightsHost)
+		bulb.Name = "Bulb"
+		bulb.Size = UDim2.new(0, bulbW, 0, bulbH)
+		bulb.AnchorPoint = Vector2.new(0.5, 0)
+		bulb.Position = UDim2.new(f, 0, 0, wireY + 5)
+		bulb.BackgroundColor3 = color
+		bulb.BackgroundTransparency = 0.08
+		bulb.BorderSizePixel = 0
+		bulb.Active = false
+		bulb.ZIndex = 34
+		Instance.new("UICorner", bulb).CornerRadius = UDim.new(1, 0)
+		local shine = Instance.new("Frame", bulb)
+		shine.Name = "Shine"
+		shine.Size = UDim2.new(0, math.max(2, math.floor(bulbW * 0.3)), 0, math.max(3, math.floor(bulbH * 0.3)))
+		shine.Position = UDim2.new(0.2, 0, 0.12, 0)
+		shine.BackgroundColor3 = Color3.new(1, 1, 1)
+		shine.BackgroundTransparency = 0.35
+		shine.BorderSizePixel = 0
+		shine.Active = false
+		shine.ZIndex = 35
+		Instance.new("UICorner", shine).CornerRadius = UDim.new(1, 0)
+		bulbs[i] = bulb
+		halos[i] = halo
+		outerHalos[i] = outer
 	end
 
 	local function makeSnowLayer(name, z)
@@ -3363,11 +3448,10 @@ if IsChristmas then
 		return layer
 	end
 	local snowBack = makeSnowLayer("ChristmasSnowBack", 0)
-	local snowFront = makeSnowLayer("ChristmasSnowFront", 8)
 	local depthLayers = {
-		{ layer = snowBack,  count = IsMobile and 8 or 14, size = { 2, 2 }, alpha = { 0.55, 0.78 }, speed = { 0.03, 0.055 }, amp = { 2, 5 } },
-		{ layer = snowBack,  count = IsMobile and 7 or 12, size = { 3, 3 }, alpha = { 0.35, 0.55 }, speed = { 0.07, 0.11 }, amp = { 5, 10 } },
-		{ layer = snowFront, count = IsMobile and 2 or 4,  size = { 5, 7 }, alpha = { 0.3, 0.5 },  speed = { 0.13, 0.2 },  amp = { 10, 18 } },
+		{ layer = snowBack, count = IsMobile and 5 or 9, size = { 2, 2 }, alpha = { 0.4, 0.6 }, speed = { 0.03, 0.055 }, amp = { 2, 5 } },
+		{ layer = snowBack, count = IsMobile and 4 or 7, size = { 3, 3 }, alpha = { 0.28, 0.45 }, speed = { 0.07, 0.11 }, amp = { 5, 10 } },
+		{ layer = snowBack, count = IsMobile and 2 or 4, size = { 4, 5 }, alpha = { 0.15, 0.3 }, speed = { 0.12, 0.18 }, amp = { 9, 16 } }
 	}
 	local flakes = {}
 	for _, d in ipairs(depthLayers) do
@@ -3402,9 +3486,10 @@ if IsChristmas then
 			flake.obj.Position = UDim2.new(flake.x, math.floor(math.sin(christmasClock * flake.sway + flake.phase) * flake.amp), flake.y, 0)
 		end
 		for i = 1, #bulbs do
-			local pulse = 0.5 + 0.5 * math.sin(christmasClock * 2.2 + i * 1.3)
-			bulbs[i].BackgroundTransparency = 0.08 + 0.3 * pulse
-			glows[i].BackgroundTransparency = 0.8 + 0.13 * pulse
+			local dim = 1 - (0.5 + 0.5 * math.sin(christmasClock * 2.4 - i * 0.55))
+			bulbs[i].BackgroundTransparency = 0.04 + 0.2 * dim
+			halos[i].BackgroundTransparency = 0.68 + 0.22 * dim
+			outerHalos[i].BackgroundTransparency = 0.86 + 0.1 * dim
 		end
 		if treeModel and treeModel.Parent then
 			treeModel:PivotTo(CFrame.new(0, 2.1 + math.sin(christmasClock * 1.6) * 0.05, 0) * CFrame.Angles(0, christmasClock * 0.9, 0))
@@ -3829,12 +3914,12 @@ RecommendationPanel = Instance.new("Frame", ScriptsView)
 RecommendationPanel.Name = "RecommendedForYouPanel"
 RecommendationPanel.Size = UDim2.new(1, -4, 0, IsMobile and 136 or 148)
 RecommendationPanel.Position = UDim2.new(0, 2, 0, 0)
-RecommendationPanel.BackgroundColor3 = _VH_RGB(255, 255, 255)
+RecommendationPanel.BackgroundColor3 = Color3.new(1, 1, 1)
 RecommendationPanel.BorderSizePixel = 0
 RecommendationPanel.LayoutOrder = 0
 RecommendationPanel.Visible = false
 RecommendationPanel.ClipsDescendants = true
-Instance.new("UICorner", RecommendationPanel).CornerRadius = UDim.new(0, 14)
+Instance.new("UICorner", RecommendationPanel).CornerRadius = UDim.new(0, 16)
 
 RecommendationBorder = Instance.new("Frame", RecommendationPanel)
 RecommendationBorder.Name = "InsetBorder"
@@ -3843,43 +3928,66 @@ RecommendationBorder.Position = UDim2.new(0, 1, 0, 1)
 RecommendationBorder.BackgroundTransparency = 1
 RecommendationBorder.BorderSizePixel = 0
 RecommendationBorder.ZIndex = 3
-Instance.new("UICorner", RecommendationBorder).CornerRadius = UDim.new(0, 13)
+Instance.new("UICorner", RecommendationBorder).CornerRadius = UDim.new(0, 15)
 RecommendationPanelStroke = Instance.new("UIStroke", RecommendationBorder)
-RecommendationPanelStroke.Color = _VH_RGB(118, 86, 240)
-RecommendationPanelStroke.Transparency = 0.32
+RecommendationPanelStroke.Color = Color3.new(1, 1, 1)
+RecommendationPanelStroke.Transparency = 0.3
 RecommendationPanelStroke.Thickness = 1
+RecommendationPanelStrokeGradient = Instance.new("UIGradient", RecommendationPanelStroke)
+RecommendationPanelStrokeGradient.Rotation = 20
+RecommendationPanelStrokeGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Theme.Accent),
+	ColorSequenceKeypoint.new(0.5, Theme.Stroke),
+	ColorSequenceKeypoint.new(1, Theme.AccentAlt)
+})
 
 RecommendationPanelGradient = Instance.new("UIGradient", RecommendationPanel)
 RecommendationPanelGradient.Rotation = 90
 RecommendationPanelGradient.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, _VH_RGB(28, 22, 56)),
-	ColorSequenceKeypoint.new(0.52, _VH_RGB(19, 19, 36)),
-	ColorSequenceKeypoint.new(1, _VH_RGB(15, 15, 28))
+	ColorSequenceKeypoint.new(0, Theme.AccentSoft:Lerp(Theme.BackgroundSecondary, 0.55)),
+	ColorSequenceKeypoint.new(0.55, Theme.BackgroundSecondary),
+	ColorSequenceKeypoint.new(1, Theme.BackgroundMain)
 })
 
 RecommendationAccent = Instance.new("Frame", RecommendationPanel)
-RecommendationAccent.Size = UDim2.new(1, -28, 0, 2)
-RecommendationAccent.Position = UDim2.new(0, 14, 0, 10)
-RecommendationAccent.BackgroundColor3 = _VH_RGB(122, 90, 250)
+RecommendationAccent.Size = UDim2.new(1, -36, 0, 2)
+RecommendationAccent.Position = UDim2.new(0, 18, 0, 8)
+RecommendationAccent.BackgroundColor3 = Color3.new(1, 1, 1)
 RecommendationAccent.BorderSizePixel = 0
 RecommendationAccent.ZIndex = 5
-Instance.new("UICorner", RecommendationAccent).CornerRadius = UDim.new(1, 0)
+RecommendationAccentGradient = Instance.new("UIGradient", RecommendationAccent)
+RecommendationAccentGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Theme.Accent),
+	ColorSequenceKeypoint.new(1, Theme.AccentAlt)
+})
+RecommendationAccentGradient.Transparency = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 1),
+	NumberSequenceKeypoint.new(0.18, 0.1),
+	NumberSequenceKeypoint.new(0.82, 0.1),
+	NumberSequenceKeypoint.new(1, 1)
+})
 
 RecommendationIcon = Instance.new("Frame", RecommendationPanel)
-RecommendationIcon.Size = UDim2.new(0, IsMobile and 26 or 30, 0, IsMobile and 26 or 30)
-RecommendationIcon.Position = UDim2.new(0, 12, 0, IsMobile and 18 or 20)
-RecommendationIcon.BackgroundColor3 = _VH_RGB(40, 30, 90)
+RecommendationIcon.Size = UDim2.new(0, IsMobile and 28 or 32, 0, IsMobile and 28 or 32)
+RecommendationIcon.Position = UDim2.new(0, 12, 0, IsMobile and 17 or 19)
+RecommendationIcon.BackgroundColor3 = Color3.new(1, 1, 1)
 RecommendationIcon.BorderSizePixel = 0
 RecommendationIcon.ZIndex = 6
-Instance.new("UICorner", RecommendationIcon).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", RecommendationIcon).CornerRadius = UDim.new(1, 0)
+RecommendationIconGradient = Instance.new("UIGradient", RecommendationIcon)
+RecommendationIconGradient.Rotation = 45
+RecommendationIconGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Theme.Accent),
+	ColorSequenceKeypoint.new(1, Theme.Accent:Lerp(Color3.new(0, 0, 0), 0.4))
+})
 RecommendationIconStroke = Instance.new("UIStroke", RecommendationIcon)
-RecommendationIconStroke.Color = _VH_RGB(146, 120, 255)
-RecommendationIconStroke.Transparency = 0.14
+RecommendationIconStroke.Color = Theme.AccentText
+RecommendationIconStroke.Transparency = 0.55
 RecommendationIconStroke.Thickness = 1
 RecommendationSparkBack = Instance.new("Frame", RecommendationIcon)
 RecommendationSparkBack.Size = UDim2.new(0, IsMobile and 10 or 12, 0, IsMobile and 10 or 12)
 RecommendationSparkBack.Position = UDim2.new(0.5, -(IsMobile and 5 or 6), 0.5, -(IsMobile and 5 or 6))
-RecommendationSparkBack.BackgroundColor3 = _VH_RGB(206, 192, 255)
+RecommendationSparkBack.BackgroundColor3 = Color3.new(1, 1, 1)
 RecommendationSparkBack.BorderSizePixel = 0
 RecommendationSparkBack.Rotation = 45
 RecommendationSparkBack.ZIndex = 7
@@ -3887,14 +3995,14 @@ Instance.new("UICorner", RecommendationSparkBack).CornerRadius = UDim.new(0, 3)
 RecommendationSparkCore = Instance.new("Frame", RecommendationIcon)
 RecommendationSparkCore.Size = UDim2.new(0, IsMobile and 4 or 5, 0, IsMobile and 4 or 5)
 RecommendationSparkCore.Position = UDim2.new(0.5, -(IsMobile and 2 or 2.5), 0.5, -(IsMobile and 2 or 2.5))
-RecommendationSparkCore.BackgroundColor3 = _VH_RGB(84, 66, 170)
+RecommendationSparkCore.BackgroundColor3 = Theme.Accent
 RecommendationSparkCore.BorderSizePixel = 0
 RecommendationSparkCore.ZIndex = 8
 Instance.new("UICorner", RecommendationSparkCore).CornerRadius = UDim.new(1, 0)
 
 RecommendationTitle = Instance.new("TextLabel", RecommendationPanel)
 RecommendationTitle.Size = UDim2.new(1, -(IsMobile and 150 or 170), 0, 18)
-RecommendationTitle.Position = UDim2.new(0, IsMobile and 46 or 50, 0, IsMobile and 17 or 19)
+RecommendationTitle.Position = UDim2.new(0, IsMobile and 48 or 52, 0, IsMobile and 16 or 18)
 RecommendationTitle.BackgroundTransparency = 1
 RecommendationTitle.Text = L("Recommended for You"); RecommendationTitle:SetAttribute("VeloxTranslationKey", "Recommended for You")
 RecommendationTitle.TextColor3 = Theme.TextPrimary
@@ -3906,10 +4014,10 @@ RecommendationTitle.ZIndex = 6
 
 RecommendationSubtitle = Instance.new("TextLabel", RecommendationPanel)
 RecommendationSubtitle.Size = UDim2.new(1, -(IsMobile and 155 or 175), 0, 15)
-RecommendationSubtitle.Position = UDim2.new(0, IsMobile and 46 or 50, 0, IsMobile and 35 or 37)
+RecommendationSubtitle.Position = UDim2.new(0, IsMobile and 48 or 52, 0, IsMobile and 34 or 36)
 RecommendationSubtitle.BackgroundTransparency = 1
 RecommendationSubtitle.Text = L("Based on your current game")
-RecommendationSubtitle.TextColor3 = _VH_RGB(176, 182, 210)
+RecommendationSubtitle.TextColor3 = Theme.TextSecondary
 RecommendationSubtitle.Font = Enum.Font.GothamMedium
 RecommendationSubtitle.TextSize = IsMobile and 8 or 9
 RecommendationSubtitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -3919,18 +4027,18 @@ RecommendationSubtitle.ZIndex = 6
 RecommendationSeeMoreButton = Instance.new("TextButton", RecommendationPanel)
 RecommendationSeeMoreButton.Size = UDim2.new(0, IsMobile and 76 or 88, 0, IsMobile and 24 or 26)
 RecommendationSeeMoreButton.Position = UDim2.new(1, -(IsMobile and 88 or 100), 0, IsMobile and 18 or 20)
-RecommendationSeeMoreButton.BackgroundColor3 = _VH_RGB(46, 34, 108)
+RecommendationSeeMoreButton.BackgroundColor3 = Theme.AccentSoft
 RecommendationSeeMoreButton.BorderSizePixel = 0
 RecommendationSeeMoreButton.AutoButtonColor = false
 RecommendationSeeMoreButton.Text = L("See More"); RecommendationSeeMoreButton:SetAttribute("VeloxTranslationKey", "See More")
-RecommendationSeeMoreButton.TextColor3 = _VH_RGB(226, 218, 255)
+RecommendationSeeMoreButton.TextColor3 = Theme.AccentText
 RecommendationSeeMoreButton.Font = Enum.Font.GothamBold
 RecommendationSeeMoreButton.TextSize = IsMobile and 8 or 9
 RecommendationSeeMoreButton.ZIndex = 7
-Instance.new("UICorner", RecommendationSeeMoreButton).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", RecommendationSeeMoreButton).CornerRadius = UDim.new(1, 0)
 RecommendationSeeMoreStroke = Instance.new("UIStroke", RecommendationSeeMoreButton)
-RecommendationSeeMoreStroke.Color = _VH_RGB(138, 110, 250)
-RecommendationSeeMoreStroke.Transparency = 0.18
+RecommendationSeeMoreStroke.Color = Theme.Accent
+RecommendationSeeMoreStroke.Transparency = 0.4
 RecommendationSeeMoreStroke.Thickness = 1
 
 RecommendationList = Instance.new("Frame", RecommendationPanel)
@@ -3953,31 +4061,31 @@ RecommendationListPadding.PaddingRight = UDim.new(0, 0)
 RecommendationPrevButton = Instance.new("TextButton", RecommendationPanel)
 RecommendationPrevButton.Size = UDim2.new(0, IsMobile and 24 or 28, 0, IsMobile and 24 or 28)
 RecommendationPrevButton.Position = UDim2.new(0, IsMobile and 6 or 7, 0, IsMobile and 79 or 85)
-RecommendationPrevButton.BackgroundColor3 = _VH_RGB(28, 30, 50)
+RecommendationPrevButton.BackgroundColor3 = Theme.Card
 RecommendationPrevButton.BorderSizePixel = 0
 RecommendationPrevButton.AutoButtonColor = false
 RecommendationPrevButton.Text = ""
 RecommendationPrevButton.ZIndex = 10
-CreateVeloxIcon(RecommendationPrevButton, VeloxIcons.ChevronLeft, 12, _VH_RGB(226, 228, 246), UDim2.new(0.5, -6, 0.5, -6), nil, 11, "PrevIcon")
+CreateVeloxIcon(RecommendationPrevButton, VeloxIcons.ChevronLeft, 12, Theme.TextPrimary, UDim2.new(0.5, -6, 0.5, -6), nil, 11, "PrevIcon")
 Instance.new("UICorner", RecommendationPrevButton).CornerRadius = UDim.new(1, 0)
 RecommendationPrevStroke = Instance.new("UIStroke", RecommendationPrevButton)
-RecommendationPrevStroke.Color = _VH_RGB(66, 70, 106)
-RecommendationPrevStroke.Transparency = 0.18
+RecommendationPrevStroke.Color = Theme.Stroke
+RecommendationPrevStroke.Transparency = 0.2
 RecommendationPrevStroke.Thickness = 1
 
 RecommendationNextButton = Instance.new("TextButton", RecommendationPanel)
 RecommendationNextButton.Size = UDim2.new(0, IsMobile and 24 or 28, 0, IsMobile and 24 or 28)
 RecommendationNextButton.Position = UDim2.new(1, -(IsMobile and 30 or 35), 0, IsMobile and 79 or 85)
-RecommendationNextButton.BackgroundColor3 = _VH_RGB(28, 30, 50)
+RecommendationNextButton.BackgroundColor3 = Theme.Card
 RecommendationNextButton.BorderSizePixel = 0
 RecommendationNextButton.AutoButtonColor = false
 RecommendationNextButton.Text = ""
 RecommendationNextButton.ZIndex = 10
-CreateVeloxIcon(RecommendationNextButton, VeloxIcons.ChevronRight, 12, _VH_RGB(226, 228, 246), UDim2.new(0.5, -6, 0.5, -6), nil, 11, "NextIcon")
+CreateVeloxIcon(RecommendationNextButton, VeloxIcons.ChevronRight, 12, Theme.TextPrimary, UDim2.new(0.5, -6, 0.5, -6), nil, 11, "NextIcon")
 Instance.new("UICorner", RecommendationNextButton).CornerRadius = UDim.new(1, 0)
 RecommendationNextStroke = Instance.new("UIStroke", RecommendationNextButton)
-RecommendationNextStroke.Color = _VH_RGB(66, 70, 106)
-RecommendationNextStroke.Transparency = 0.18
+RecommendationNextStroke.Color = Theme.Stroke
+RecommendationNextStroke.Transparency = 0.2
 RecommendationNextStroke.Thickness = 1
 
 RecommendationPageLabel = Instance.new("TextLabel", RecommendationPanel)
@@ -3985,15 +4093,15 @@ RecommendationPageLabel.Size = UDim2.new(0, 60, 0, 11)
 RecommendationPageLabel.Position = UDim2.new(0.5, -30, 1, -(IsMobile and 13 or 14))
 RecommendationPageLabel.BackgroundTransparency = 1
 RecommendationPageLabel.Text = ""
-RecommendationPageLabel.TextColor3 = _VH_RGB(166, 172, 200)
+RecommendationPageLabel.TextColor3 = Theme.TextSecondary
 RecommendationPageLabel.Font = Enum.Font.GothamMedium
 RecommendationPageLabel.TextSize = 8
 RecommendationPageLabel.TextXAlignment = Enum.TextXAlignment.Center
 RecommendationPageLabel.ZIndex = 6
 
-ApplyInteractiveAnimations(RecommendationSeeMoreButton, RecommendationSeeMoreButton.BackgroundColor3, _VH_RGB(62, 46, 140), _VH_RGB(30, 22, 72), RecommendationSeeMoreStroke, RecommendationSeeMoreStroke.Color, Theme.Accent)
-ApplyInteractiveAnimations(RecommendationPrevButton, RecommendationPrevButton.BackgroundColor3, _VH_RGB(40, 43, 70), _VH_RGB(16, 17, 30), RecommendationPrevStroke, RecommendationPrevStroke.Color, Theme.Accent)
-ApplyInteractiveAnimations(RecommendationNextButton, RecommendationNextButton.BackgroundColor3, _VH_RGB(40, 43, 70), _VH_RGB(16, 17, 30), RecommendationNextStroke, RecommendationNextStroke.Color, Theme.Accent)
+ApplyInteractiveAnimations(RecommendationSeeMoreButton, Theme.AccentSoft, Theme.Accent:Lerp(Theme.AccentSoft, 0.55), Theme.Accent:Lerp(Theme.AccentSoft, 0.8), RecommendationSeeMoreStroke, RecommendationSeeMoreStroke.Color, Theme.AccentText)
+ApplyInteractiveAnimations(RecommendationPrevButton, Theme.Card, Theme.CardHover, Theme.BackgroundMain, RecommendationPrevStroke, RecommendationPrevStroke.Color, Theme.Accent)
+ApplyInteractiveAnimations(RecommendationNextButton, Theme.Card, Theme.CardHover, Theme.BackgroundMain, RecommendationNextStroke, RecommendationNextStroke.Color, Theme.Accent)
 
 DropdownContainer = Instance.new("ScrollingFrame", ScreenGui)
 DropdownContainer.Name = "SortScriptsPanel"
@@ -5845,7 +5953,7 @@ function _VH_RefreshRecommendationPanel(items, currentCount)
 
 			local button = Instance.new("TextButton", RecommendationList)
 			button.Size = UDim2.new(cardWidthScale, cardWidthOffset, 0, cardHeight)
-			button.BackgroundColor3 = _VH_RGB(20, 21, 36)
+			button.BackgroundColor3 = Theme.Card
 			button.BorderSizePixel = 0
 			button.AutoButtonColor = false
 			button.Text = ""
@@ -5854,23 +5962,32 @@ function _VH_RefreshRecommendationPanel(items, currentCount)
 			button.ZIndex = 6
 			Instance.new("UICorner", button).CornerRadius = UDim.new(0, 11)
 			local buttonStroke = Instance.new("UIStroke", button)
-			buttonStroke.Color = _VH_RGB(56, 60, 92)
-			buttonStroke.Transparency = 0.1
+			buttonStroke.Color = Theme.Stroke
+			buttonStroke.Transparency = 0.35
 			buttonStroke.Thickness = 1
+			ApplyInteractiveAnimations(button, Theme.Card, Theme.CardHover, Theme.BackgroundSecondary, buttonStroke, Theme.Stroke, Theme.Accent, RecommendationConnections)
+			local reasonAccent = Instance.new("Frame", button)
+			reasonAccent.Name = "ReasonAccent"
+			reasonAccent.Size = UDim2.new(0, 3, 1, -24)
+			reasonAccent.Position = UDim2.new(0, 0, 0, 12)
+			reasonAccent.BackgroundColor3 = Theme.Accent
+			reasonAccent.BorderSizePixel = 0
+			reasonAccent.ZIndex = 8
+			Instance.new("UICorner", reasonAccent).CornerRadius = UDim.new(1, 0)
 
 			local imageSize = IsMobile and 42 or 50
 			local image = Instance.new("ImageLabel", button)
 			image.Size = UDim2.new(0, imageSize, 0, imageSize)
 			image.Position = UDim2.new(0, 7, 0.5, -(imageSize / 2))
-			image.BackgroundColor3 = _VH_RGB(24, 26, 44)
+			image.BackgroundColor3 = Theme.BackgroundMain
 			image.BorderSizePixel = 0
 			image.Image = type(entry.Data) == "table" and tostring(entry.Data.ImageAssetId or "") or ""
 			image.ScaleType = Enum.ScaleType.Crop
 			image.ZIndex = 7
-			Instance.new("UICorner", image).CornerRadius = UDim.new(0, 9)
+			Instance.new("UICorner", image).CornerRadius = UDim.new(0, 10)
 			local imageStroke = Instance.new("UIStroke", image)
-			imageStroke.Color = _VH_RGB(64, 68, 104)
-			imageStroke.Transparency = 0.2
+			imageStroke.Color = Theme.Accent
+			imageStroke.Transparency = 0.55
 			imageStroke.Thickness = 1
 
 			local textX = imageSize + 15
@@ -5891,13 +6008,13 @@ function _VH_RefreshRecommendationPanel(items, currentCount)
 			local reasonChip = Instance.new("Frame", button)
 			reasonChip.Size = UDim2.new(1, -textX - 8, 0, IsMobile and 17 or 19)
 			reasonChip.Position = UDim2.new(0, textX, 1, -(IsMobile and 22 or 24))
-			reasonChip.BackgroundColor3 = _VH_RGB(26, 28, 48)
+			reasonChip.BackgroundColor3 = Theme.BackgroundMain
 			reasonChip.BorderSizePixel = 0
 			reasonChip.ZIndex = 7
-			Instance.new("UICorner", reasonChip).CornerRadius = UDim.new(0, 6)
+			Instance.new("UICorner", reasonChip).CornerRadius = UDim.new(1, 0)
 			local reasonStroke = Instance.new("UIStroke", reasonChip)
-			reasonStroke.Color = _VH_RGB(66, 70, 108)
-			reasonStroke.Transparency = 0.2
+			reasonStroke.Color = Theme.Stroke
+			reasonStroke.Transparency = 0.3
 			reasonStroke.Thickness = 1
 
 			local reasonDot = Instance.new("Frame", reasonChip)
@@ -5913,6 +6030,7 @@ function _VH_RefreshRecommendationPanel(items, currentCount)
 				reasonDotColor = _VH_RGB(168, 85, 247)
 			end
 			reasonDot.BackgroundColor3 = reasonDotColor
+			reasonAccent.BackgroundColor3 = reasonDotColor
 			reasonDot.BorderSizePixel = 0
 			reasonDot.ZIndex = 8
 			Instance.new("UICorner", reasonDot).CornerRadius = UDim.new(1, 0)
@@ -5922,7 +6040,7 @@ function _VH_RefreshRecommendationPanel(items, currentCount)
 			reasonLabel.Position = UDim2.new(0, 15, 0, 0)
 			reasonLabel.BackgroundTransparency = 1
 			reasonLabel.Text = _VH_GetRecommendationShortReason(item.Reason)
-			reasonLabel.TextColor3 = _VH_RGB(222, 226, 242)
+			reasonLabel.TextColor3 = Theme.TextPrimary
 			reasonLabel.Font = Enum.Font.GothamMedium
 			reasonLabel.TextSize = IsMobile and 7 or 8
 			reasonLabel.TextTruncate = Enum.TextTruncate.None
@@ -6255,9 +6373,6 @@ function CreateScriptCard(data, renderParent, registerImmediately, originalIndex
 	Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
 	local cardStroke = GetOrCreateCardStroke(card)
 	ApplyTagBorder(card, tagType, cardStroke)
-	if isRecommended then
-		card.BackgroundColor3 = _VH_RGB(30, 26, 56)
-	end
 	local pad = Instance.new("UIPadding", card)
 	pad.PaddingLeft = UDim.new(0, 12); pad.PaddingRight = UDim.new(0, 12)
 	pad.PaddingTop = UDim.new(0, 12); pad.PaddingBottom = UDim.new(0, 12)
@@ -6467,9 +6582,7 @@ function CreateScriptCard(data, renderParent, registerImmediately, originalIndex
 		end
 		local isON = compatible and _VH_IsAutoExecuteActive(scriptId)
 		ApplyTagBorder(card, tagType, cardStroke)
-		card.BackgroundColor3 = isRecommended and _VH_RGB(30, 26, 56) or tagConfig.CardColor
-		cardStroke.Thickness = isRecommended and 1.5 or 1
-		if isRecommended then cardStroke.Color = _VH_RGB(160, 132, 255) end
+		card.BackgroundColor3 = tagConfig.CardColor
 		recommendBadge.Visible = isRecommended
 		recommendText.Text = recommendationType == "SMART" and "YOU MAY LIKE" or "FOR YOU"
 		badgeRow.Visible = isRecommended or tagType ~= "NONE"
