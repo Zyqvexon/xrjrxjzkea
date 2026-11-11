@@ -8,7 +8,7 @@ end
 
 HubVersion = "2.0.8"
 HomeFallbackGameImage = ""
-VeloxThemeMode = "Auto"
+VeloxThemeMode = "Christmas"
 if type(GlobalEnv.VeloxTheme) == "string" then VeloxThemeMode = GlobalEnv.VeloxTheme end
 function _VH_IsChristmasActive()
 	local mode = string.lower(tostring(VeloxThemeMode or "Default"))
