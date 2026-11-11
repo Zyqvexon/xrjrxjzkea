@@ -6,6 +6,8 @@ if type(getgenv) == "function" then
 	end
 end
 
+HubVersion = "2.0.8"
+HomeFallbackGameImage = ""
 VeloxThemeMode = "Auto"
 if type(GlobalEnv.VeloxTheme) == "string" then VeloxThemeMode = GlobalEnv.VeloxTheme end
 function _VH_IsChristmasActive()
@@ -1252,9 +1254,25 @@ ScreenGui.IgnoreGuiInset = true
 ScreenGui.DisplayOrder = 100
 ScreenGui.Parent = TargetParent
 
+TextObjectClasses = { TextLabel = true, TextButton = true, TextBox = true }
+function _VH_NormalizeTextStroke(stroke)
+	if not stroke or not stroke.Parent then return end
+	local parentClass = stroke.Parent.ClassName
+	if not TextObjectClasses[parentClass] then return end
+	if stroke.ApplyStrokeMode ~= Enum.ApplyStrokeMode.Contextual then return end
+	if parentClass == "TextButton" then
+		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	else
+		stroke:Destroy()
+	end
+end
 function _VH_DisableTextOutline(object)
-	if object and (object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox")) then
+	if not object then return end
+	local className = object.ClassName
+	if TextObjectClasses[className] then
 		object.TextStrokeTransparency = 1
+	elseif className == "UIStroke" then
+		_VH_NormalizeTextStroke(object)
 	end
 end
 function _VH_ClearTextOutlines(root)
@@ -1265,7 +1283,13 @@ function _VH_ClearTextOutlines(root)
 	end
 end
 _VH_ClearTextOutlines(ScreenGui)
-_VH_RegConn(ScreenGui.DescendantAdded:Connect(_VH_DisableTextOutline))
+_VH_RegConn(ScreenGui.DescendantAdded:Connect(function(object)
+	if object.ClassName == "UIStroke" then
+		task.defer(_VH_NormalizeTextStroke, object)
+	else
+		_VH_DisableTextOutline(object)
+	end
+end))
 pcall(function() protectgui(ScreenGui) end)
 GlobalEnv[_G_Identifier] = function()
 	_VH_CleanUpMemory()
@@ -3089,7 +3113,7 @@ BLRowLay = Instance.new("UIListLayout", BtmLeftRow)
 BLRowLay.FillDirection = Enum.FillDirection.Horizontal; BLRowLay.SortOrder = Enum.SortOrder.LayoutOrder; BLRowLay.Padding = UDim.new(0, 6)
 VersionLabel = Instance.new("TextLabel", BtmLeftRow)
 VersionLabel.AutomaticSize = Enum.AutomaticSize.X; VersionLabel.Size = UDim2.new(0, 0, 1, 0)
-VersionLabel.BackgroundTransparency = 1; VersionLabel.Text = "v2.0.7 | " .. (type(identifyexecutor) == "function" and identifyexecutor() or (type(getexecutorname) == "function" and getexecutorname() or "Unknown Executor"))
+VersionLabel.BackgroundTransparency = 1; VersionLabel.Text = "v" .. HubVersion .. " | " .. (type(identifyexecutor) == "function" and identifyexecutor() or (type(getexecutorname) == "function" and getexecutorname() or "Unknown Executor"))
 VersionLabel.TextColor3 = Theme.Accent; VersionLabel.Font = Enum.Font.GothamMedium; VersionLabel.TextSize = IsMobile and 10 or 12; VersionLabel.LayoutOrder = 1
 DiagnosticsLabel = Instance.new("TextLabel", BtmLeftRow)
 DiagnosticsLabel.AutomaticSize = Enum.AutomaticSize.X; DiagnosticsLabel.Size = UDim2.new(0, 0, 1, 0); DiagnosticsLabel.BackgroundTransparency = 1
@@ -4989,10 +5013,6 @@ TabIndexByName = {}
 TabLayout = { Height = IsMobile and 36 or 40, Step = IsMobile and 40 or 46 }
 TabViewBasePositions = setmetatable({}, { __mode = "k" })
 
-function _VH_TabIndicatorY(index)
-	return (index - 1) * TabLayout.Step + 5
-end
-
 function _VH_BuildHomeGlyph(icon, color)
 	icon.Image = ""
 	icon:SetAttribute("Glyph", true)
@@ -5225,6 +5245,18 @@ _VH_UpdateFilterControl()
 
 HubChangelog = {
 	{
+		Version = "v" .. HubVersion,
+		Title = "Game Thumbnail, Clean Text & Performance Update",
+		Items = {
+			"Added a current game thumbnail to the Home dashboard with an automatic fallback image.",
+			"Removed text strokes and outlines across the entire interface for cleaner, sharper text.",
+			"Improved Home status chips to fit smaller screens without overlapping or clipping.",
+			"Unified card and control styling for a more consistent interface.",
+			"Reduced redundant interface updates and removed unused code for smoother performance.",
+			"Synchronized the displayed version and changelog entries across the hub."
+		}
+	},
+	{
 		Version = "v2.0.7",
 		Title = "Final Security, Compatibility & Stability Update",
 		Items = {
@@ -5379,7 +5411,7 @@ function _VH_ActionButton(parent, text, order, primary, callback)
 	btn.TextSize = IsMobile and 10 or 11
 	btn.TextColor3 = primary and Color3.new(1, 1, 1) or Theme.TextPrimary
 	btn.BackgroundColor3 = primary and Theme.Accent or Theme.BackgroundMain
-	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 11)
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
 	local btnStroke = Instance.new("UIStroke", btn)
 	btnStroke.Color = primary and Theme.AccentText or Theme.Stroke
 	btnStroke.Transparency = primary and 0.65 or 0.3
@@ -5466,16 +5498,53 @@ function CreateHomeContent()
 	chipLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 	chipLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	chipLayout.Padding = UDim.new(0, 6)
-	_VH_Chip(chipRow, "Online", Theme.Success:Lerp(Theme.BackgroundMain, 0.65), 1, Theme.Success)
-	local _, fpsLabel = _VH_Chip(chipRow, "FPS --", nil, 2)
-	local _, pingLabel = _VH_Chip(chipRow, "Ping --", nil, 3)
-	local _, playersLabel = _VH_Chip(chipRow, "Players --", nil, 4)
+	local onlineChip = _VH_Chip(chipRow, "Online", Theme.Success:Lerp(Theme.BackgroundMain, 0.65), 1, Theme.Success)
+	local fpsChip, fpsLabel = _VH_Chip(chipRow, "FPS --", nil, 2)
+	local pingChip, pingLabel = _VH_Chip(chipRow, "Ping --", nil, 3)
+	local playersChip, playersLabel = _VH_Chip(chipRow, "Players --", nil, 4)
 	refs.FpsLabel, refs.PingLabel, refs.PlayersLabel = fpsLabel, pingLabel, playersLabel
+	refs.ChipRow = chipRow
+	refs.Chips = { onlineChip, fpsChip, pingChip, playersChip }
+	_VH_RegConn(chipRow:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() _VH_FitHeroChips() end))
 
 	local gameCard = _VH_SurfaceCard(HomeView, 2)
 	local _, gameSlot = _VH_CardHeader(gameCard, "Current Game", 1, VeloxIcons.PlayCircle)
 	refs.GamePill, refs.GamePillLabel = _VH_Chip(gameSlot, "Loading", Theme.BackgroundMain, 1, Theme.TextSecondary)
-	refs.GameName = Instance.new("TextLabel", gameCard)
+	local thumbSize = IsMobile and 60 or 72
+	local gameRow = Instance.new("Frame", gameCard)
+	gameRow.Name = "GameRow"
+	gameRow.Size = UDim2.new(1, 0, 0, thumbSize)
+	gameRow.AutomaticSize = Enum.AutomaticSize.Y
+	gameRow.BackgroundTransparency = 1
+	gameRow.LayoutOrder = 2
+	local thumbFrame = Instance.new("Frame", gameRow)
+	thumbFrame.Name = "GameThumbFrame"
+	thumbFrame.Size = UDim2.new(0, thumbSize, 0, thumbSize)
+	thumbFrame.BackgroundColor3 = Theme.BackgroundMain
+	thumbFrame.BorderSizePixel = 0
+	Instance.new("UICorner", thumbFrame).CornerRadius = UDim.new(0, 12)
+	local thumbStroke = Instance.new("UIStroke", thumbFrame)
+	thumbStroke.Color = Theme.Stroke
+	thumbStroke.Transparency = 0.35
+	thumbStroke.Thickness = 1
+	refs.GameThumb = Instance.new("ImageLabel", thumbFrame)
+	refs.GameThumb.Name = "GameThumb"
+	refs.GameThumb.Size = UDim2.new(1, 0, 1, 0)
+	refs.GameThumb.BackgroundTransparency = 1
+	refs.GameThumb.BorderSizePixel = 0
+	refs.GameThumb.Image = ""
+	refs.GameThumb.ScaleType = Enum.ScaleType.Fit
+	Instance.new("UICorner", refs.GameThumb).CornerRadius = UDim.new(0, 12)
+	local textColumn = Instance.new("Frame", gameRow)
+	textColumn.Name = "GameText"
+	textColumn.Size = UDim2.new(1, -(thumbSize + 12), 0, 0)
+	textColumn.Position = UDim2.new(0, thumbSize + 12, 0, 0)
+	textColumn.AutomaticSize = Enum.AutomaticSize.Y
+	textColumn.BackgroundTransparency = 1
+	local textLayout = Instance.new("UIListLayout", textColumn)
+	textLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	textLayout.Padding = UDim.new(0, 3)
+	refs.GameName = Instance.new("TextLabel", textColumn)
 	refs.GameName.Size = UDim2.new(1, 0, 0, IsMobile and 18 or 20)
 	refs.GameName.BackgroundTransparency = 1
 	refs.GameName.Text = "..."
@@ -5484,8 +5553,8 @@ function CreateHomeContent()
 	refs.GameName.TextSize = IsMobile and 13 or 15
 	refs.GameName.TextXAlignment = Enum.TextXAlignment.Left
 	refs.GameName.TextTruncate = Enum.TextTruncate.AtEnd
-	refs.GameName.LayoutOrder = 2
-	refs.GameId = Instance.new("TextLabel", gameCard)
+	refs.GameName.LayoutOrder = 1
+	refs.GameId = Instance.new("TextLabel", textColumn)
 	refs.GameId.Size = UDim2.new(1, 0, 0, 12)
 	refs.GameId.BackgroundTransparency = 1
 	refs.GameId.Text = ""
@@ -5493,8 +5562,8 @@ function CreateHomeContent()
 	refs.GameId.Font = Enum.Font.GothamMedium
 	refs.GameId.TextSize = 9
 	refs.GameId.TextXAlignment = Enum.TextXAlignment.Left
-	refs.GameId.LayoutOrder = 3
-	refs.GameInfo = Instance.new("TextLabel", gameCard)
+	refs.GameId.LayoutOrder = 2
+	refs.GameInfo = Instance.new("TextLabel", textColumn)
 	refs.GameInfo.Size = UDim2.new(1, 0, 0, 0)
 	refs.GameInfo.AutomaticSize = Enum.AutomaticSize.Y
 	refs.GameInfo.BackgroundTransparency = 1
@@ -5505,7 +5574,7 @@ function CreateHomeContent()
 	refs.GameInfo.TextWrapped = true
 	refs.GameInfo.TextXAlignment = Enum.TextXAlignment.Left
 	refs.GameInfo.TextYAlignment = Enum.TextYAlignment.Top
-	refs.GameInfo.LayoutOrder = 4
+	refs.GameInfo.LayoutOrder = 3
 	_VH_ActionButton(gameCard, "Browse Scripts", 5, true, function() _VH_SwitchTab("Scripts") end)
 
 	local statsGrid = Instance.new("Frame", HomeView)
@@ -5583,7 +5652,7 @@ function CreateHomeContent()
 		btn.AutoButtonColor = false
 		btn.Text = ""
 		btn.LayoutOrder = order
-		Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 11)
+		Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
 		local btnStroke = Instance.new("UIStroke", btn)
 		btnStroke.Color = Theme.Stroke
 		btnStroke.Transparency = 0.35
@@ -5689,33 +5758,93 @@ function _VH_RefreshHome()
 		end
 		local gameState = CategoryCatalogStates.Games
 		local loaded = gameState and type(gameState.Entries) == "table" and (#gameState.Entries > 0 or gameState.Loaded) or false
-		local dedicated, universal = 0, 0
-		if loaded then
-			for _, entry in ipairs(gameState.Entries) do
-				local place = tonumber(entry.PlaceId) or 0
-				if place ~= 0 and place == PlaceId then dedicated = dedicated + 1 elseif place == 0 then universal = universal + 1 end
+		local entryTotal = (gameState and type(gameState.Entries) == "table") and #gameState.Entries or 0
+		local gameKey = tostring(loaded) .. ":" .. tostring(entryTotal) .. ":" .. tostring(PlaceId)
+		if refs.GameKey ~= gameKey then
+			refs.GameKey = gameKey
+			local dedicated, universal = 0, 0
+			if loaded then
+				for _, entry in ipairs(gameState.Entries) do
+					local place = tonumber(entry.PlaceId) or 0
+					if place ~= 0 and place == PlaceId then dedicated = dedicated + 1 elseif place == 0 then universal = universal + 1 end
+				end
+			end
+			local pillText, pillColor, pillTextColor
+			if not loaded then
+				pillText, pillColor, pillTextColor = "Loading", Theme.BackgroundMain, Theme.TextSecondary
+			elseif dedicated > 0 then
+				pillText, pillColor, pillTextColor = "Supported", Theme.Success:Lerp(Theme.BackgroundMain, 0.65), Theme.Success
+			else
+				pillText, pillColor, pillTextColor = "Universal only", Theme.Warning:Lerp(Theme.BackgroundMain, 0.7), Theme.Warning
+			end
+			refs.GamePillLabel.Text = pillText
+			refs.GamePillLabel.TextColor3 = pillTextColor
+			refs.GamePill.BackgroundColor3 = pillColor
+			if loaded then
+				refs.GameInfo.Text = string.format("%d dedicated script%s for this game  \u{2022}  %d universal", dedicated, dedicated == 1 and "" or "s", universal)
+			else
+				refs.GameInfo.Text = "The catalog is still loading. Counts appear as soon as it is ready."
 			end
 		end
-		local pillText, pillColor, pillTextColor
-		if not loaded then
-			pillText, pillColor, pillTextColor = "Loading", Theme.BackgroundMain, Theme.TextSecondary
-		elseif dedicated > 0 then
-			pillText, pillColor, pillTextColor = "Supported", Theme.Success:Lerp(Theme.BackgroundMain, 0.65), Theme.Success
-		else
-			pillText, pillColor, pillTextColor = "Universal only", Theme.Warning:Lerp(Theme.BackgroundMain, 0.7), Theme.Warning
+		_VH_FitHeroChips()
+	end)
+end
+
+function _VH_FitHeroChips()
+	local refs = HomeRefs
+	if not refs or not refs.ChipRow or not refs.ChipRow.Parent or not refs.Chips then return end
+	local scale = (PanelUIScale and PanelUIScale.Scale) or 1
+	local available = refs.ChipRow.AbsoluteSize.X / scale
+	if available <= 0 then return end
+	local TextService = game:GetService("TextService")
+	local used = 0
+	local overflowed = false
+	for index, chip in ipairs(refs.Chips) do
+		local label = chip:FindFirstChildOfClass("TextLabel")
+		local width = 48
+		if label then
+			local ok, size = pcall(function()
+				return TextService:GetTextSize(label.Text, label.TextSize, label.Font, Vector2.new(1000, 40))
+			end)
+			if ok and size then width = size.X + 18 end
 		end
-		refs.GamePillLabel.Text = pillText
-		refs.GamePillLabel.TextColor3 = pillTextColor
-		refs.GamePill.BackgroundColor3 = pillColor
-		if loaded then
-			refs.GameInfo.Text = string.format("%d dedicated script%s for this game  \u{2022}  %d universal", dedicated, dedicated == 1 and "" or "s", universal)
+		local needed = used + width + (index > 1 and 6 or 0)
+		if overflowed or needed > available then
+			overflowed = true
+			chip.Visible = false
 		else
-			refs.GameInfo.Text = "The catalog is still loading. Counts appear as soon as it is ready."
+			chip.Visible = true
+			used = needed
 		end
+	end
+end
+
+function _VH_LoadHomeThumbnail()
+	local refs = HomeRefs
+	if not refs or not refs.GameThumb or refs.ThumbRequested then return end
+	refs.ThumbRequested = true
+	local thumb = refs.GameThumb
+	local function useFallback()
+		if thumb and thumb.Parent then thumb.Image = HomeFallbackGameImage or "" end
+	end
+	if type(GameId) ~= "number" or GameId <= 0 then
+		useFallback()
+		return
+	end
+	thumb.Image = "rbxthumb://type=GameIcon&id=" .. tostring(GameId) .. "&w=150&h=150"
+	task.spawn(function()
+		pcall(function() game:GetService("ContentProvider"):PreloadAsync({ thumb }) end)
+		for _ = 1, 20 do
+			if isDestroying or not thumb.Parent then return end
+			if thumb.IsLoaded then return end
+			task.wait(0.15)
+		end
+		useFallback()
 	end)
 end
 
 CreateHomeContent()
+_VH_LoadHomeThumbnail()
 SidebarCredits = Instance.new("Frame", Sidebar)
 SidebarCredits.Size = UDim2.new(1, -20, 0, IsMobile and 106 or 126)
 SidebarCredits.AnchorPoint = Vector2.new(0.5, 1)
@@ -5836,34 +5965,6 @@ end)))
 _VH_RegConn(SidebarDiscord.Activated:Connect(_VH_CreateDebounce(0.2, function()
 	_VH_OpenCreditLink("https://discord.gg/duXxnUp4Vq", "Discord link opened.")
 end)))
-function CreateParagraph(title, desc, parentView, order)
-	local block = Instance.new("Frame", parentView)
-	block.Size = UDim2.new(1, 0, 0, 0); block.AutomaticSize = Enum.AutomaticSize.Y
-	block.BackgroundColor3 = Theme.Card; block.LayoutOrder = order or 0
-	Instance.new("UICorner", block).CornerRadius = UDim.new(0, 14)
-	local paragraphStroke = Instance.new("UIStroke", block)
-	paragraphStroke.Color = Color3.new(1, 1, 1)
-	paragraphStroke.Transparency = 0.3
-	local paragraphStrokeGradient = Instance.new("UIGradient", paragraphStroke)
-	paragraphStrokeGradient.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Theme.Accent),
-		ColorSequenceKeypoint.new(0.3, Theme.Stroke),
-		ColorSequenceKeypoint.new(1, Theme.Stroke)
-	})
-	local pad = Instance.new("UIPadding", block)
-	pad.PaddingLeft = UDim.new(0, 12); pad.PaddingRight = UDim.new(0, 12); pad.PaddingTop = UDim.new(0, 10); pad.PaddingBottom = UDim.new(0, 10)
-	local lay = Instance.new("UIListLayout", block)
-	lay.Padding = UDim.new(0, 4); lay.SortOrder = Enum.SortOrder.LayoutOrder
-	local tLbl = Instance.new("TextLabel", block)
-	tLbl.Size = UDim2.new(1, 0, 0, 18); tLbl.BackgroundTransparency = 1; tLbl.Text = title
-	tLbl.TextColor3 = Theme.TextPrimary; tLbl.Font = Enum.Font.GothamBold; tLbl.TextSize = 14
-	tLbl.TextXAlignment = Enum.TextXAlignment.Left; tLbl.LayoutOrder = 1
-	local dLbl = Instance.new("TextLabel", block)
-	dLbl.Size = UDim2.new(1, 0, 0, 0); dLbl.AutomaticSize = Enum.AutomaticSize.Y
-	dLbl.BackgroundTransparency = 1; dLbl.Text = desc; dLbl.TextColor3 = Theme.TextSecondary
-	dLbl.Font = Enum.Font.Gotham; dLbl.TextSize = 12; dLbl.TextXAlignment = Enum.TextXAlignment.Left
-	dLbl.TextWrapped = true; dLbl.LayoutOrder = 2; dLbl.LineHeight = 1.12
-end
 function _VH_CreateVersionCard(parent, entry, order, isLatest)
 	local card = _VH_SurfaceCard(parent, order, isLatest)
 	local head = Instance.new("Frame", card)
@@ -5962,12 +6063,12 @@ function _VH_HowToCard(parent, title, desc, order, iconAsset)
 	stroke.Thickness = 0.9
 	pcall(function() stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
 	local pad = Instance.new("UIPadding", block)
-	pad.PaddingLeft = UDim.new(0, IsMobile and 13 or 15)
-	pad.PaddingRight = UDim.new(0, IsMobile and 13 or 15)
-	pad.PaddingTop = UDim.new(0, IsMobile and 12 or 13)
-	pad.PaddingBottom = UDim.new(0, IsMobile and 12 or 13)
+	pad.PaddingLeft = UDim.new(0, IsMobile and 11 or 14)
+	pad.PaddingRight = UDim.new(0, IsMobile and 11 or 14)
+	pad.PaddingTop = UDim.new(0, IsMobile and 11 or 13)
+	pad.PaddingBottom = UDim.new(0, IsMobile and 11 or 13)
 	local lay = Instance.new("UIListLayout", block)
-	lay.Padding = UDim.new(0, IsMobile and 8 or 9)
+	lay.Padding = UDim.new(0, IsMobile and 7 or 9)
 	lay.SortOrder = Enum.SortOrder.LayoutOrder
 
 	local titleRow = Instance.new("Frame", block)
@@ -7141,8 +7242,8 @@ local function _VH_CreateLaunchContext(scriptName, scriptId)
 		contextVersion = 1.0,
 		protocolToken = VELOX_LAUNCH_PROTOCOL_TOKEN,
 
-		hubVersion = "2.0.7",
-		hubRelease = "2.0.7",
+		hubVersion = HubVersion,
+		hubRelease = HubVersion,
 		scriptId = cleanId,
 		scriptName = cleanName,
 		scriptKey = scriptKey,
