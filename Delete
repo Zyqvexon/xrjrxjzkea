@@ -1742,6 +1742,141 @@ function _VH_QueueNotification(message, notifType)
 	_VH_FlushNotificationQueue()
 end
 
+function _VH_BuildToastCard(parent, nType, typeInfo, title, message)
+	local color = typeInfo.Color
+	local iconAsset = ({
+		Success = VeloxIcons.NotificationSuccess,
+		Error = VeloxIcons.NotificationError,
+		Warning = VeloxIcons.NotificationWarning,
+		Info = VeloxIcons.NotificationInfo,
+		System = VeloxIcons.NotificationSystem,
+		Execution = VeloxIcons.NotificationExecution
+	})[nType] or VeloxIcons.NotificationInfo
+	local descSize = IsMobile and 9 or 10
+	local cardWidth = IsMobile and 235 or 280
+	local descHeight = descSize * 2 + 4
+	local okMeasure, bounds = pcall(function()
+		return game:GetService("TextService"):GetTextSize(message, descSize, Enum.Font.Gotham, Vector2.new(cardWidth - 62, 1000))
+	end)
+	if okMeasure and bounds then descHeight = math.ceil(bounds.Y) end
+	descHeight = math.clamp(descHeight, descSize + 4, descSize * 4 + 8)
+	local cardHeight = 52 + descHeight
+
+	local box = Instance.new("Frame", parent)
+	box.Name = "Card"
+	box.Size = UDim2.new(1, 0, 1, 0)
+	box.Position = UDim2.new(1.08, 0, 0, 0)
+	box.BackgroundColor3 = Theme.Card
+	box.BorderSizePixel = 0
+	box.ClipsDescendants = true
+	box.ZIndex = 2002
+	Instance.new("UICorner", box).CornerRadius = UDim.new(0, 14)
+	local stroke = Instance.new("UIStroke", box)
+	stroke.Color = Theme.Stroke
+	stroke.Thickness = 1
+	stroke.Transparency = 0.2
+
+	local accent = Instance.new("Frame", box)
+	accent.Name = "Accent"
+	accent.Size = UDim2.new(0, 3, 1, -20)
+	accent.Position = UDim2.new(0, 0, 0, 10)
+	accent.BackgroundColor3 = color
+	accent.BorderSizePixel = 0
+	accent.ZIndex = 2004
+	Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
+
+	local tileSize = IsMobile and 26 or 28
+	local tile = Instance.new("Frame", box)
+	tile.Name = "IconTile"
+	tile.Size = UDim2.new(0, tileSize, 0, tileSize)
+	tile.Position = UDim2.new(0, 12, 0, 11)
+	tile.BackgroundColor3 = color
+	tile.BackgroundTransparency = 0.84
+	tile.BorderSizePixel = 0
+	tile.ZIndex = 2004
+	Instance.new("UICorner", tile).CornerRadius = UDim.new(0, 9)
+	local iconSize = IsMobile and 13 or 14
+	CreateVeloxIcon(tile, iconAsset, iconSize, color, UDim2.new(0.5, -iconSize / 2, 0.5, -iconSize / 2), nil, 2005, "NotificationIcon")
+
+	local typeLabel = Instance.new("TextLabel", box)
+	typeLabel.Name = "Type"
+	typeLabel.Size = UDim2.new(1, -84, 0, 11)
+	typeLabel.Position = UDim2.new(0, 48, 0, 9)
+	typeLabel.BackgroundTransparency = 1
+	typeLabel.Text = typeInfo.Label
+	typeLabel.TextColor3 = color
+	typeLabel.Font = Enum.Font.GothamBold
+	typeLabel.TextSize = IsMobile and 8 or 9
+	typeLabel.TextXAlignment = Enum.TextXAlignment.Left
+	typeLabel.ZIndex = 2004
+
+	local titleLabel = Instance.new("TextLabel", box)
+	titleLabel.Name = "Title"
+	titleLabel.Size = UDim2.new(1, -84, 0, 17)
+	titleLabel.Position = UDim2.new(0, 48, 0, 20)
+	titleLabel.BackgroundTransparency = 1
+	titleLabel.Text = title
+	titleLabel.TextColor3 = Theme.TextPrimary
+	titleLabel.Font = Enum.Font.GothamBold
+	titleLabel.TextSize = IsMobile and 11 or 12
+	titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+	titleLabel.TextTruncate = Enum.TextTruncate.AtEnd
+	titleLabel.ZIndex = 2004
+
+	local description = Instance.new("TextLabel", box)
+	description.Name = "Description"
+	description.Size = UDim2.new(1, -62, 0, descHeight)
+	description.Position = UDim2.new(0, 48, 0, 39)
+	description.BackgroundTransparency = 1
+	description.Text = message
+	description.TextColor3 = Theme.TextSecondary
+	description.Font = Enum.Font.Gotham
+	description.TextSize = descSize
+	description.TextWrapped = true
+	description.TextTruncate = Enum.TextTruncate.AtEnd
+	description.TextXAlignment = Enum.TextXAlignment.Left
+	description.TextYAlignment = Enum.TextYAlignment.Top
+	description.ZIndex = 2004
+
+	local closeButton = Instance.new("TextButton", box)
+	closeButton.Name = "Close"
+	closeButton.Size = UDim2.new(0, 22, 0, 22)
+	closeButton.Position = UDim2.new(1, -30, 0, 8)
+	closeButton.BackgroundColor3 = Theme.BackgroundMain
+	closeButton.BackgroundTransparency = 1
+	closeButton.BorderSizePixel = 0
+	closeButton.AutoButtonColor = false
+	closeButton.Text = ""
+	closeButton.ZIndex = 2006
+	Instance.new("UICorner", closeButton).CornerRadius = UDim.new(1, 0)
+	local closeIcon = CreateVeloxIcon(closeButton, VeloxIcons.Close, 11, Theme.TextSecondary, UDim2.new(0.5, -5.5, 0.5, -5.5), nil, 2007, "CloseIcon")
+	closeButton.MouseEnter:Connect(function()
+		_VH_SafeTween(closeButton, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 0.4 })
+	end)
+	closeButton.MouseLeave:Connect(function()
+		_VH_SafeTween(closeButton, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 })
+	end)
+
+	local progressTrack = Instance.new("Frame", box)
+	progressTrack.Name = "TimerProgressTrack"
+	progressTrack.Size = UDim2.new(1, -24, 0, 2)
+	progressTrack.Position = UDim2.new(0, 12, 1, -8)
+	progressTrack.BackgroundColor3 = Theme.BackgroundMain
+	progressTrack.BackgroundTransparency = 0.3
+	progressTrack.BorderSizePixel = 0
+	progressTrack.ZIndex = 2005
+	Instance.new("UICorner", progressTrack).CornerRadius = UDim.new(1, 0)
+	local progressFill = Instance.new("Frame", progressTrack)
+	progressFill.Name = "TimerProgress"
+	progressFill.Size = UDim2.new(1, 0, 1, 0)
+	progressFill.BackgroundColor3 = color
+	progressFill.BorderSizePixel = 0
+	progressFill.ZIndex = 2006
+	Instance.new("UICorner", progressFill).CornerRadius = UDim.new(1, 0)
+
+	return box, closeButton, closeIcon, progressFill, cardHeight
+end
+
 function EmergencyFallbackNotification(msg, title)
 	local payload = {
 		Title = title or "Velox Hub Notice",
@@ -1792,101 +1927,9 @@ function StandaloneBannerNotification(msg, notifType)
 		container.BackgroundTransparency = 1
 		container.ClipsDescendants = false
 
-		local box = Instance.new("Frame", container)
-		box.Size = UDim2.new(1, 0, 1, 0)
-		box.Position = UDim2.new(1.08, 0, 0, 0)
-		box.BackgroundColor3 = Theme.Card
-		box.BorderSizePixel = 0
-		box.ClipsDescendants = true
-		box.ZIndex = 2002
-		Instance.new("UICorner", box).CornerRadius = UDim.new(0, 14)
-
-		local stroke = Instance.new("UIStroke", box)
-		stroke.Color = Theme.Stroke
-		stroke.Thickness = 1
-		stroke.Transparency = 0.2
-
-		local iconCircle = Instance.new("Frame", box)
-		iconCircle.Size = UDim2.new(0, 22, 0, 22)
-		iconCircle.Position = UDim2.new(0, 10, 0, 9)
-		iconCircle.BackgroundColor3 = typeInfo.Color
-		iconCircle.BackgroundTransparency = 0.84
-		iconCircle.BorderSizePixel = 0
-		iconCircle.ZIndex = 2004
-		Instance.new("UICorner", iconCircle).CornerRadius = UDim.new(1, 0)
-
-		local notificationIconAsset = ({
-			Success = VeloxIcons.NotificationSuccess,
-			Error = VeloxIcons.NotificationError,
-			Warning = VeloxIcons.NotificationWarning,
-			Info = VeloxIcons.NotificationInfo,
-			System = VeloxIcons.NotificationSystem,
-			Execution = VeloxIcons.NotificationExecution
-		})[nType] or VeloxIcons.NotificationInfo
-		CreateVeloxIcon(iconCircle, notificationIconAsset, IsMobile and 11 or 12, typeInfo.Color, UDim2.new(0.5, IsMobile and -5.5 or -6, 0.5, IsMobile and -5.5 or -6), nil, 2005, "NotificationIcon")
-
-		local typeLabel = Instance.new("TextLabel", box)
-		typeLabel.Size = UDim2.new(1, -72, 0, 11)
-		typeLabel.Position = UDim2.new(0, 40, 0, 7)
-		typeLabel.BackgroundTransparency = 1
-		typeLabel.Text = typeInfo.Label
-		typeLabel.TextColor3 = typeInfo.Color
-		typeLabel.Font = Enum.Font.GothamBold
-		typeLabel.TextSize = IsMobile and 6 or 7
-		typeLabel.TextXAlignment = Enum.TextXAlignment.Left
-		typeLabel.ZIndex = 2004
-
-		local titleLabel = Instance.new("TextLabel", box)
-		titleLabel.Size = UDim2.new(1, -72, 0, 18)
-		titleLabel.Position = UDim2.new(0, 40, 0, 17)
-		titleLabel.BackgroundTransparency = 1
-		titleLabel.Text = title
-		titleLabel.TextColor3 = Theme.TextPrimary
-		titleLabel.Font = Enum.Font.GothamBold
-		titleLabel.TextSize = IsMobile and 10 or 11
-		titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-		titleLabel.TextTruncate = Enum.TextTruncate.AtEnd
-		titleLabel.ZIndex = 2004
-
+		local box, closeButton, closeIcon, progressFill, cardHeight = _VH_BuildToastCard(container, nType, typeInfo, title, message)
+		container.Size = UDim2.new(0, IsMobile and 235 or 280, 0, cardHeight)
 		local closeRequested = false
-		local closeButton = Instance.new("TextButton", box)
-		closeButton.Name = "Close"
-		closeButton.Size = UDim2.new(0, 20, 0, 20)
-		closeButton.Position = UDim2.new(1, -27, 0, 5)
-		closeButton.BackgroundTransparency = 1
-		closeButton.AutoButtonColor = false
-		closeButton.Text = ""
-		closeButton.ZIndex = 2006
-		local closeIcon = CreateVeloxIcon(closeButton, VeloxIcons.Close, 11, Theme.TextSecondary, UDim2.new(0.5, -5.5, 0.5, -5.5), nil, 2007, "CloseIcon")
-
-		local description = Instance.new("TextLabel", box)
-		description.Size = UDim2.new(1, -60, 0, IsMobile and 24 or 26)
-		description.Position = UDim2.new(0, 40, 0, 34)
-		description.BackgroundTransparency = 1
-		description.Text = message
-		description.TextColor3 = Theme.TextSecondary
-		description.Font = Enum.Font.Gotham
-		description.TextSize = IsMobile and 8 or 9
-		description.TextWrapped = true
-		description.TextXAlignment = Enum.TextXAlignment.Left
-		description.TextYAlignment = Enum.TextYAlignment.Top
-		description.ZIndex = 2004
-
-		local progressTrack = Instance.new("Frame", box)
-		progressTrack.Size = UDim2.new(1, -18, 0, 3)
-		progressTrack.Position = UDim2.new(0, 9, 1, -6)
-		progressTrack.BackgroundColor3 = Theme.BackgroundMain
-		progressTrack.BackgroundTransparency = 0.3
-		progressTrack.BorderSizePixel = 0
-		progressTrack.ZIndex = 2005
-		Instance.new("UICorner", progressTrack).CornerRadius = UDim.new(1, 0)
-
-		local progressFill = Instance.new("Frame", progressTrack)
-		progressFill.Size = UDim2.new(1, 0, 1, 0)
-		progressFill.BackgroundColor3 = typeInfo.Color
-		progressFill.BorderSizePixel = 0
-		progressFill.ZIndex = 2006
-		Instance.new("UICorner", progressFill).CornerRadius = UDim.new(1, 0)
 
 		local progressTween
 		local dismissTween
@@ -1943,7 +1986,6 @@ function ShowNotification(msg, notifType)
 	local typeInfo = NotificationTypeInfo[nType] or NotificationTypeInfo.Info
 	local message = GetNotificationMessage(msg)
 	local title = GetNotificationTitle(nType, message)
-	local indicatorColor = typeInfo.Color
 
 	if not _VH_IsVeloxNotificationReady() then
 		for _, item in ipairs(PendingNotifications) do
@@ -1966,109 +2008,10 @@ function ShowNotification(msg, notifType)
 		wrapper.Name = "Notification_" .. tostring(NotificationSequence)
 		wrapper:SetAttribute("VeloxNotification", true)
 		wrapper.LayoutOrder = NotificationSequence
-		wrapper.Size = UDim2.new(1, 0, 0, IsMobile and 66 or 70)
 		wrapper.BackgroundTransparency = 1
 		wrapper.ZIndex = 2001
-
-		local box = Instance.new("Frame", wrapper)
-		box.Name = "Card"
-		box.Size = UDim2.new(1, 0, 1, 0)
-		box.Position = UDim2.new(1.08, 0, 0, 0)
-		box.BackgroundColor3 = Theme.Card
-		box.BorderSizePixel = 0
-		box.ClipsDescendants = true
-		box.ZIndex = 2002
-		Instance.new("UICorner", box).CornerRadius = UDim.new(0, 14)
-
-		local stroke = Instance.new("UIStroke", box)
-		stroke.Color = Theme.Stroke
-		stroke.Thickness = 1
-		stroke.Transparency = 0.2
-
-		local iconCircle = Instance.new("Frame", box)
-		iconCircle.Size = UDim2.new(0, 22, 0, 22)
-		iconCircle.Position = UDim2.new(0, 10, 0, 9)
-		iconCircle.BackgroundColor3 = indicatorColor
-		iconCircle.BackgroundTransparency = 0.84
-		iconCircle.BorderSizePixel = 0
-		iconCircle.ZIndex = 2004
-		Instance.new("UICorner", iconCircle).CornerRadius = UDim.new(1, 0)
-
-		local notificationIconAsset = ({
-			Success = VeloxIcons.NotificationSuccess,
-			Error = VeloxIcons.NotificationError,
-			Warning = VeloxIcons.NotificationWarning,
-			Info = VeloxIcons.NotificationInfo,
-			System = VeloxIcons.NotificationSystem,
-			Execution = VeloxIcons.NotificationExecution
-		})[nType] or VeloxIcons.NotificationInfo
-		CreateVeloxIcon(iconCircle, notificationIconAsset, IsMobile and 11 or 12, indicatorColor, UDim2.new(0.5, IsMobile and -5.5 or -6, 0.5, IsMobile and -5.5 or -6), nil, 2005, "NotificationIcon")
-
-		local typeLabel = Instance.new("TextLabel", box)
-		typeLabel.Size = UDim2.new(1, -72, 0, 11)
-		typeLabel.Position = UDim2.new(0, 40, 0, 7)
-		typeLabel.BackgroundTransparency = 1
-		typeLabel.Text = typeInfo.Label
-		typeLabel.TextColor3 = indicatorColor
-		typeLabel.Font = Enum.Font.GothamBold
-		typeLabel.TextSize = IsMobile and 6 or 7
-		typeLabel.TextXAlignment = Enum.TextXAlignment.Left
-		typeLabel.ZIndex = 2004
-
-		local titleLabel = Instance.new("TextLabel", box)
-		titleLabel.Name = "Title"
-		titleLabel.Size = UDim2.new(1, -72, 0, 18)
-		titleLabel.Position = UDim2.new(0, 40, 0, 17)
-		titleLabel.BackgroundTransparency = 1
-		titleLabel.Text = title
-		titleLabel.TextColor3 = Theme.TextPrimary
-		titleLabel.Font = Enum.Font.GothamBold
-		titleLabel.TextSize = IsMobile and 10 or 11
-		titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-		titleLabel.TextTruncate = Enum.TextTruncate.AtEnd
-		titleLabel.ZIndex = 2004
-
-		local closeButton = Instance.new("TextButton", box)
-		closeButton.Name = "Close"
-		closeButton.Size = UDim2.new(0, 20, 0, 20)
-		closeButton.Position = UDim2.new(1, -27, 0, 5)
-		closeButton.BackgroundTransparency = 1
-		closeButton.AutoButtonColor = false
-		closeButton.Text = ""
-		closeButton.ZIndex = 2006
-		local closeIcon = CreateVeloxIcon(closeButton, VeloxIcons.Close, 11, Theme.TextSecondary, UDim2.new(0.5, -5.5, 0.5, -5.5), nil, 2007, "CloseIcon")
-
-		local description = Instance.new("TextLabel", box)
-		description.Name = "Description"
-		description.Size = UDim2.new(1, -60, 0, IsMobile and 24 or 26)
-		description.Position = UDim2.new(0, 40, 0, 34)
-		description.BackgroundTransparency = 1
-		description.Text = message
-		description.TextColor3 = Theme.TextSecondary
-		description.Font = Enum.Font.Gotham
-		description.TextSize = IsMobile and 8 or 9
-		description.TextWrapped = true
-		description.TextXAlignment = Enum.TextXAlignment.Left
-		description.TextYAlignment = Enum.TextYAlignment.Top
-		description.ZIndex = 2004
-
-		local progressTrack = Instance.new("Frame", box)
-		progressTrack.Name = "TimerProgressTrack"
-		progressTrack.Size = UDim2.new(1, -18, 0, 3)
-		progressTrack.Position = UDim2.new(0, 9, 1, -6)
-		progressTrack.BackgroundColor3 = Theme.BackgroundMain
-		progressTrack.BackgroundTransparency = 0.3
-		progressTrack.BorderSizePixel = 0
-		progressTrack.ZIndex = 2005
-		Instance.new("UICorner", progressTrack).CornerRadius = UDim.new(1, 0)
-
-		local progressFill = Instance.new("Frame", progressTrack)
-		progressFill.Name = "TimerProgress"
-		progressFill.Size = UDim2.new(1, 0, 1, 0)
-		progressFill.BackgroundColor3 = indicatorColor
-		progressFill.BorderSizePixel = 0
-		progressFill.ZIndex = 2006
-		Instance.new("UICorner", progressFill).CornerRadius = UDim.new(1, 0)
+		local box, closeButton, closeIcon, progressFill, cardHeight = _VH_BuildToastCard(wrapper, nType, typeInfo, title, message)
+		wrapper.Size = UDim2.new(1, 0, 0, cardHeight)
 
 		local closeRequested = false
 		local progressTween = nil
@@ -3597,6 +3540,7 @@ function CreateCanvas(name)
 	scroll.ScrollBarThickness = 3; scroll.ScrollBarImageColor3 = Theme.Stroke
 	scroll.Visible = (name == currentTab)
 	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y; scroll.CanvasSize = UDim2.new(0, 0, 0, 0); scroll.Active = true
+	scroll.ScrollingDirection = Enum.ScrollingDirection.Y
 	local layout = Instance.new("UIListLayout", scroll)
 	layout.Padding = UDim.new(0, IsMobile and 8 or 12); layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.HorizontalAlignment = Enum.HorizontalAlignment.Left; layout.VerticalAlignment = Enum.VerticalAlignment.Top
 	local pad = Instance.new("UIPadding", scroll)
@@ -3615,8 +3559,8 @@ HomeView:FindFirstChildOfClass("UIPadding").PaddingTop = UDim.new(0, IsMobile an
 SettingsView:FindFirstChildOfClass("UIPadding").PaddingTop = UDim.new(0, IsMobile and 7 or 8)
 HowToUseView:FindFirstChildOfClass("UIPadding").PaddingTop = UDim.new(0, IsMobile and 7 or 8)
 ScriptsView.AnchorPoint = Vector2.new(0, 0)
-ScriptsView.Position = IsMobile and UDim2.new(0, 14, 0, 172) or UDim2.new(0, 14, 0, 190)
-ScriptsView.Size = IsMobile and UDim2.new(1, -28, 1, -180) or UDim2.new(1, -28, 1, -200)
+ScriptsView.Position = IsMobile and UDim2.new(0, 14, 0, 174) or UDim2.new(0, 14, 0, 198)
+ScriptsView.Size = IsMobile and UDim2.new(1, -28, 1, -188) or UDim2.new(1, -28, 1, -206)
 EmptyStateMessage = Instance.new("TextLabel", ScriptsView)
 EmptyStateMessage.Name = "EmptyStateMessage"
 EmptyStateMessage.Size = UDim2.new(1, 0, 0, 40)
@@ -3912,7 +3856,7 @@ UpdateScriptCategoryButtons()
 
 SearchRow = Instance.new("Frame", MainContent)
 SearchRow.AnchorPoint = Vector2.new(0, 0)
-SearchRow.Size = UDim2.new(1, -28, 0, IsMobile and 30 or 34); SearchRow.Position = UDim2.new(0, 14, 0, IsMobile and 134 or 150)
+SearchRow.Size = UDim2.new(1, -28, 0, IsMobile and 30 or 34); SearchRow.Position = UDim2.new(0, 14, 0, IsMobile and 136 or 156)
 SearchRow.BackgroundTransparency = 1; SearchRow.Visible = false; SearchRow.Active = false; SearchRow.ZIndex = 50
 
 filterBtnWidth = IsMobile and 38 or 42
@@ -5247,16 +5191,17 @@ _VH_UpdateFilterControl()
 HubChangelog = {
 	{
 		Version = "v" .. HubVersion,
-		Title = "Game Thumbnail, Clean Text & Performance Update",
+		Title = "Game Thumbnail, Notifications & Navigation Update",
 		Items = {
 			"Added a current game thumbnail to the Home dashboard with an automatic fallback image.",
+			"Redesigned notifications with larger readable text, adaptive height, and clearer type indicators.",
+			"Redesigned How to Use navigation to match the Games and Utilities selector, with horizontal scrolling.",
+			"Added scroll tracking so the How to Use navigation follows the section you are reading.",
+			"Fixed clipping and overflow in How to Use and tightened Scripts Catalog spacing on smaller screens.",
 			"Removed text strokes and outlines across the entire interface for cleaner, sharper text.",
 			"Moved the Christmas tree beside the Velox Hub logo with a smaller, balanced size.",
-			"Improved Home status chips to fit smaller screens without overlapping or clipping.",
-			"Unified card and control styling for a more consistent interface.",
-			"Optimized holiday effects and Home updates to reduce redundant processing.",
-			"Removed unused variables and leftover code while keeping all fallback systems intact.",
-			"Improved background task cleanup for more stable shutdowns."
+			"Optimized holiday effects, Home updates, and event handling to reduce redundant processing.",
+			"Removed unused variables and leftover code while keeping all fallback systems intact."
 		}
 	},
 	{
@@ -6246,22 +6191,16 @@ function CreateHowToUseContent()
 		"Home is your dashboard. Scripts is the main catalog. Changelog shows recent updates. Settings contains preferences and actions. How to Use is this guide.",
 		"Tap a tab once to open it. The active tab is highlighted with your theme color so you can quickly see where you are.")
 	local tabsRow = Instance.new("Frame", tabs)
-	tabsRow.Size = UDim2.new(1, 0, 0, IsMobile and 116 or 38)
+	tabsRow.Size = UDim2.new(1, 0, 0, 0)
+	tabsRow.AutomaticSize = Enum.AutomaticSize.Y
 	tabsRow.BackgroundTransparency = 1
 	tabsRow.LayoutOrder = 4
-	local tabsLayout
-	if IsMobile then
-		tabsLayout = Instance.new("UIGridLayout", tabsRow)
-		tabsLayout.CellSize = UDim2.new(0.5, -4, 0, 34)
-		tabsLayout.CellPadding = UDim2.new(0, 7, 0, 7)
-		tabsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-		tabsLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-	else
-		tabsLayout = Instance.new("UIListLayout", tabsRow)
-		tabsLayout.FillDirection = Enum.FillDirection.Horizontal
-		tabsLayout.Padding = UDim.new(0, 6)
-		tabsLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-	end
+	local tabsLayout = Instance.new("UIGridLayout", tabsRow)
+	tabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	tabsLayout.CellSize = IsMobile and UDim2.new(0.5, -4, 0, 34) or UDim2.new(0, 112, 0, 34)
+	tabsLayout.CellPadding = UDim2.new(0, 7, 0, 7)
+	tabsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	tabsLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 	local tabInfo = {{"Home", VeloxIcons.AppBadge}, {"Scripts", VeloxIcons.Scripts}, {"Changelog", VeloxIcons.Changelog}, {"Settings", VeloxIcons.Settings}, {"How to Use", VeloxIcons.HowToUse}}
 	for i, item in ipairs(tabInfo) do
 		local name, asset = item[1], item[2]
@@ -6342,6 +6281,8 @@ function CreateHowToUseContent()
 	else
 		filterLayout = Instance.new("UIListLayout", filterRow)
 		filterLayout.FillDirection = Enum.FillDirection.Horizontal
+		pcall(function() filterLayout.Wraps = true end)
+		filterRow.AutomaticSize = Enum.AutomaticSize.Y
 		filterLayout.Padding = UDim.new(0, 6)
 		filterLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 	end
@@ -6415,6 +6356,8 @@ function CreateHowToUseContent()
 	else
 		badgeLayout = Instance.new("UIListLayout", badgeRow)
 		badgeLayout.FillDirection = Enum.FillDirection.Horizontal
+		pcall(function() badgeLayout.Wraps = true end)
+		badgeRow.AutomaticSize = Enum.AutomaticSize.Y
 		badgeLayout.Padding = UDim.new(0, 7)
 		badgeLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 	end
@@ -6441,6 +6384,8 @@ function CreateHowToUseContent()
 	else
 		compatLayout = Instance.new("UIListLayout", compatRow)
 		compatLayout.FillDirection = Enum.FillDirection.Horizontal
+		pcall(function() compatLayout.Wraps = true end)
+		compatRow.AutomaticSize = Enum.AutomaticSize.Y
 		compatLayout.Padding = UDim.new(0, 7)
 		compatLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 	end
@@ -6524,6 +6469,8 @@ function CreateHowToUseContent()
 	else
 		miscLayout = Instance.new("UIListLayout", miscRow)
 		miscLayout.FillDirection = Enum.FillDirection.Horizontal
+		pcall(function() miscLayout.Wraps = true end)
+		miscRow.AutomaticSize = Enum.AutomaticSize.Y
 		miscLayout.Padding = UDim.new(0, 9)
 		miscLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 	end
@@ -6593,59 +6540,202 @@ function _VH_BuildHowToNav()
 		["Status Colors & States"] = "States", ["Other Common Elements"] = "Elements", ["Quick Start"] = "Quick Start",
 		["When Something Looks Wrong"] = "Help", ["Quick Reference"] = "Reference"
 	}
+	local view = HowToUseView
+	local sections = HowToSections
+	local barHeight = IsMobile and 30 or 36
 	local top = IsMobile and 98 or 112
 	local bar = Instance.new("ScrollingFrame", MainContent)
 	bar.Name = "HowToNav"
-	bar.Size = UDim2.new(1, -28, 0, 28)
+	bar.Size = UDim2.new(1, -28, 0, barHeight)
 	bar.Position = UDim2.new(0, 14, 0, top)
-	bar.BackgroundTransparency = 1
+	bar.BackgroundColor3 = Theme.BackgroundMain
 	bar.BorderSizePixel = 0
 	bar.ScrollBarThickness = 0
 	bar.ScrollingDirection = Enum.ScrollingDirection.X
 	bar.AutomaticCanvasSize = Enum.AutomaticSize.X
 	bar.CanvasSize = UDim2.new(0, 0, 0, 0)
-	bar.Visible = HowToUseView.Visible
+	bar.ElasticBehavior = Enum.ElasticBehavior.Never
+	bar.Visible = view.Visible
+	Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 12)
+	local barStroke = Instance.new("UIStroke", bar)
+	barStroke.Color = Theme.Stroke
+	barStroke.Transparency = 0.35
+	barStroke.Thickness = 1
+	pcall(function() barStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
+	local barPad = Instance.new("UIPadding", bar)
+	barPad.PaddingLeft = UDim.new(0, 3)
+	barPad.PaddingRight = UDim.new(0, 3)
+	barPad.PaddingTop = UDim.new(0, 3)
+	barPad.PaddingBottom = UDim.new(0, 3)
 	local barLayout = Instance.new("UIListLayout", bar)
 	barLayout.FillDirection = Enum.FillDirection.Horizontal
 	barLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 	barLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	barLayout.Padding = UDim.new(0, 6)
-	HowToUseView.Position = UDim2.new(0, 14, 0, top + 34)
-	HowToUseView.Size = UDim2.new(1, -28, 1, (IsMobile and -112 or -120) - 34)
-	local function jumpTo(block)
-		if not block or not block.Parent then return end
-		local scale = (PanelUIScale and PanelUIScale.Scale) or 1
-		local delta = (block.AbsolutePosition.Y - HowToUseView.AbsolutePosition.Y) / scale
-		local target = math.max(0, HowToUseView.CanvasPosition.Y + delta - 2)
-		_VH_SafeTween(HowToUseView, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { CanvasPosition = Vector2.new(0, target) })
+	barLayout.Padding = UDim.new(0, 4)
+	view.Position = UDim2.new(0, 14, 0, top + barHeight + 8)
+	view.Size = UDim2.new(1, -28, 1, (IsMobile and -112 or -120) - (barHeight + 8))
+
+	local chips, tops = {}, {}
+	local activeIndex, lockUntil, topsDirty = 0, 0, true
+	local fadeInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	local function uiScale() return (PanelUIScale and PanelUIScale.Scale) or 1 end
+
+	local function paintChip(item, active, animate)
+		local fillTransparency, strokeTransparency = active and 0 or 1, active and 0.55 or 1
+		local labelColor = active and Color3.new(1, 1, 1) or Theme.TextSecondary
+		if animate then
+			_VH_SafeTween(item.Fill, fadeInfo, { BackgroundTransparency = fillTransparency })
+			_VH_SafeTween(item.Stroke, fadeInfo, { Transparency = strokeTransparency })
+			_VH_SafeTween(item.Label, fadeInfo, { TextColor3 = labelColor })
+		else
+			item.Fill.BackgroundTransparency = fillTransparency
+			item.Stroke.Transparency = strokeTransparency
+			item.Label.TextColor3 = labelColor
+		end
 	end
-	for index, section in ipairs(HowToSections) do
-		local chip = Instance.new("TextButton", bar)
-		chip.AutomaticSize = Enum.AutomaticSize.X
-		chip.Size = UDim2.new(0, 0, 0, 24)
-		chip.BackgroundColor3 = Theme.Card
-		chip.BorderSizePixel = 0
-		chip.AutoButtonColor = false
-		chip.Text = shortNames[section.Title] or section.Title
-		chip.TextColor3 = Theme.TextSecondary
-		chip.Font = Enum.Font.GothamBold
-		chip.TextSize = IsMobile and 9 or 10
-		chip.LayoutOrder = index
-		Instance.new("UICorner", chip).CornerRadius = UDim.new(1, 0)
-		local chipPad = Instance.new("UIPadding", chip)
+
+	local function refreshTops()
+		local scale = uiScale()
+		for index, section in ipairs(sections) do
+			local block = section.Block
+			if block and block.Parent then
+				tops[index] = (block.AbsolutePosition.Y - view.AbsolutePosition.Y) / scale + view.CanvasPosition.Y
+			end
+		end
+		topsDirty = false
+	end
+
+	local function revealChip(index)
+		local item = chips[index]
+		if not item or not item.Button.Parent then return end
+		local scale = uiScale()
+		local visibleWidth = bar.AbsoluteWindowSize.X / scale
+		local chipLeft = (item.Button.AbsolutePosition.X - bar.AbsolutePosition.X) / scale + bar.CanvasPosition.X
+		local chipWidth = item.Button.AbsoluteSize.X / scale
+		local current = bar.CanvasPosition.X
+		if chipLeft >= current + 6 and chipLeft + chipWidth <= current + visibleWidth - 6 then return end
+		local maxScroll = math.max(0, bar.AbsoluteCanvasSize.X / scale - visibleWidth)
+		local target = math.clamp(chipLeft + chipWidth / 2 - visibleWidth / 2, 0, maxScroll)
+		_VH_SafeTween(bar, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CanvasPosition = Vector2.new(target, 0) })
+	end
+
+	local function setActive(index)
+		if index == activeIndex then return end
+		local previous = chips[activeIndex]
+		if previous then paintChip(previous, false, true) end
+		activeIndex = index
+		local item = chips[index]
+		if item then
+			paintChip(item, true, true)
+			revealChip(index)
+		end
+	end
+
+	local function spy()
+		if isDestroying or not view.Parent or not view.Visible or os.clock() < lockUntil then return end
+		if topsDirty then refreshTops() end
+		local scale = uiScale()
+		local y = view.CanvasPosition.Y
+		local viewHeight = view.AbsoluteWindowSize.Y / scale
+		local canvasHeight = view.AbsoluteCanvasSize.Y / scale
+		local found = 1
+		if y > 2 and y + viewHeight >= canvasHeight - 2 then
+			found = #sections
+		else
+			local probe = y + 14
+			for index = #sections, 1, -1 do
+				if tops[index] and tops[index] <= probe then
+					found = index
+					break
+				end
+			end
+		end
+		setActive(found)
+	end
+
+	local function jumpTo(index)
+		local section = sections[index]
+		if not section or not section.Block or not section.Block.Parent or not view.Visible then return end
+		refreshTops()
+		local scale = uiScale()
+		local maxScroll = math.max(0, view.AbsoluteCanvasSize.Y / scale - view.AbsoluteWindowSize.Y / scale)
+		local target = math.clamp((tops[index] or 0) - 2, 0, maxScroll)
+		lockUntil = os.clock() + 0.5
+		setActive(index)
+		_VH_SafeTween(view, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { CanvasPosition = Vector2.new(0, target) })
+		task.delay(0.55, function()
+			if not isDestroying then spy() end
+		end)
+	end
+
+	for index, section in ipairs(sections) do
+		local button = Instance.new("TextButton", bar)
+		button.Name = "NavChip"
+		button.AutomaticSize = Enum.AutomaticSize.X
+		button.Size = UDim2.new(0, 0, 0, barHeight - 6)
+		button.BackgroundTransparency = 1
+		button.BorderSizePixel = 0
+		button.AutoButtonColor = false
+		button.Text = ""
+		button.LayoutOrder = index
+		local chipPad = Instance.new("UIPadding", button)
 		chipPad.PaddingLeft = UDim.new(0, 12)
 		chipPad.PaddingRight = UDim.new(0, 12)
-		local chipStroke = Instance.new("UIStroke", chip)
-		chipStroke.Color = Theme.Stroke
-		chipStroke.Transparency = 0.4
-		ApplyInteractiveAnimations(chip, Theme.Card, Theme.CardHover, Theme.AccentSoft, chipStroke, chipStroke.Color, Theme.Accent)
-		_VH_RegConn(chip.Activated:Connect(function()
-			if isDestroying then return end
-			jumpTo(section.Block)
+		local fill = Instance.new("Frame", button)
+		fill.Name = "Fill"
+		fill.Size = UDim2.new(1, 24, 1, 0)
+		fill.Position = UDim2.new(0, -12, 0, 0)
+		fill.BackgroundColor3 = Color3.new(1, 1, 1)
+		fill.BackgroundTransparency = 1
+		fill.BorderSizePixel = 0
+		fill.ZIndex = 1
+		Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 9)
+		local fillGradient = Instance.new("UIGradient", fill)
+		fillGradient.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, _VH_RGB(150, 118, 255)),
+			ColorSequenceKeypoint.new(1, _VH_RGB(106, 76, 240))
+		})
+		local fillStroke = Instance.new("UIStroke", fill)
+		fillStroke.Color = _VH_RGB(196, 178, 255)
+		fillStroke.Thickness = 1
+		fillStroke.Transparency = 1
+		local label = Instance.new("TextLabel", button)
+		label.Name = "Label"
+		label.AutomaticSize = Enum.AutomaticSize.X
+		label.Size = UDim2.new(0, 0, 1, 0)
+		label.BackgroundTransparency = 1
+		label.Text = shortNames[section.Title] or section.Title
+		label.TextColor3 = Theme.TextSecondary
+		label.Font = Enum.Font.GothamBold
+		label.TextSize = IsMobile and 9 or 10
+		label.ZIndex = 2
+		local item = { Button = button, Fill = fill, Stroke = fillStroke, Label = label }
+		chips[index] = item
+		if index == 1 then
+			activeIndex = 1
+			paintChip(item, true, false)
+		end
+		if not IsMobile then
+			_VH_RegConn(button.MouseEnter:Connect(function()
+				if activeIndex ~= index then _VH_SafeTween(label, fadeInfo, { TextColor3 = Theme.TextPrimary }) end
+			end))
+			_VH_RegConn(button.MouseLeave:Connect(function()
+				if activeIndex ~= index then _VH_SafeTween(label, fadeInfo, { TextColor3 = Theme.TextSecondary }) end
+			end))
+		end
+		_VH_RegConn(button.Activated:Connect(function()
+			if not isDestroying then jumpTo(index) end
 		end))
 	end
-	_VH_RegConn(HowToUseView:GetPropertyChangedSignal("Visible"):Connect(function()
-		bar.Visible = HowToUseView.Visible
+
+	_VH_RegConn(view:GetPropertyChangedSignal("CanvasPosition"):Connect(spy))
+	_VH_RegConn(view:GetPropertyChangedSignal("AbsoluteCanvasSize"):Connect(function() topsDirty = true end))
+	_VH_RegConn(view:GetPropertyChangedSignal("Visible"):Connect(function()
+		bar.Visible = view.Visible
+		if view.Visible then
+			topsDirty = true
+			task.defer(spy)
+		end
 	end))
 end
 _VH_BuildHowToNav()
