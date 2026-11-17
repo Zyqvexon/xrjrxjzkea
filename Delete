@@ -1326,11 +1326,8 @@ function GetPanelSize()
 	local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
 	local maxWidth = IsMobile and 600 or 1120
 	local maxHeight = IsMobile and 360 or 580
-	local uiScale = math.clamp(tonumber(SavedData and SavedData.Settings and SavedData.Settings.UIScale) or 1, 0.8, 1.2)
-	local availableWidth = math.max(1, viewport.X - 12)
-	local availableHeight = math.max(1, viewport.Y - 12)
-	local width = math.min(maxWidth, availableWidth / uiScale)
-	local height = math.min(maxHeight, availableHeight / uiScale)
+	local width = math.max(180, math.min(maxWidth, viewport.X - 12))
+	local height = math.max(220, math.min(maxHeight, viewport.Y - 12))
 	return UDim2.fromOffset(width, height)
 end
 HoverTweens = setmetatable({}, { __mode = "k" })
@@ -1545,17 +1542,6 @@ do
 end
 PanelUIScale = Instance.new("UIScale", MainPanel)
 PanelUIScale.Scale = math.clamp(tonumber(SavedData.Settings.UIScale) or 1, 0.8, 1.2)
-
-PopupLayer = Instance.new("Frame", ScreenGui)
-PopupLayer.Name = "VeloxPopupLayer"
-PopupLayer.Size = UDim2.fromScale(1, 1)
-PopupLayer.Position = UDim2.fromOffset(0, 0)
-PopupLayer.BackgroundTransparency = 1
-PopupLayer.BorderSizePixel = 0
-PopupLayer.Active = false
-PopupLayer.ClipsDescendants = false
-PopupLayer.ZIndex = 2
-
 function ApplyPanelUIScale(scaleValue)
 	local nextScale = math.clamp(tonumber(scaleValue) or 1, 0.8, 1.2)
 	SavedData.Settings.UIScale = nextScale
@@ -1567,14 +1553,21 @@ function ApplyPanelUIScale(scaleValue)
 	end
 	task.delay(0.24, function()
 		if isDestroying or not MainPanel or not MainPanel.Parent then return end
-		if RefreshViewportLayout then
-			RefreshViewportLayout()
-		else
-			local camera = workspace.CurrentCamera
-			local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
-			_VH_ClampGuiToViewport(MainPanel, viewport)
-			if PositionOpenPanels then PositionOpenPanels() end
-		end
+		local camera = workspace.CurrentCamera
+		local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
+		-- Use the panel's design size: AbsoluteSize already contains the new scale once the tween has finished.
+		local baseWidth, baseHeight = MainPanel.Size.X.Offset, MainPanel.Size.Y.Offset
+		if baseWidth <= 0 or baseHeight <= 0 then baseWidth, baseHeight = MainPanel.AbsoluteSize.X / nextScale, MainPanel.AbsoluteSize.Y / nextScale end
+		local visualWidth, visualHeight = baseWidth * nextScale, baseHeight * nextScale
+		local halfX, halfY = visualWidth * MainPanel.AnchorPoint.X, visualHeight * MainPanel.AnchorPoint.Y
+		local position = MainPanel.Position
+		local currentX = position.X.Scale * viewport.X + position.X.Offset
+		local currentY = position.Y.Scale * viewport.Y + position.Y.Offset
+		local minX, minY = halfX, halfY
+		local maxX = math.max(minX, viewport.X - (visualWidth - halfX))
+		local maxY = math.max(minY, viewport.Y - (visualHeight - halfY))
+		MainPanel.Position = UDim2.new(0, math.clamp(currentX, minX, maxX), 0, math.clamp(currentY, minY, maxY))
+		if PositionOpenPanels then PositionOpenPanels() end
 	end)
 end
 SearchInput = nil
@@ -4158,7 +4151,7 @@ SortTileGap = 6
 SortPanelWidth = 20 + SortPanelColumns * SortTileWidth + (SortPanelColumns - 1) * SortTileGap
 SortPanelHeight = 40 + SortTileHeight * 2 + SortTileGap + 12
 
-DropdownContainer = Instance.new("Frame", PopupLayer)
+DropdownContainer = Instance.new("Frame", MainContent)
 DropdownContainer.Name = "SortScriptsPanel"
 DropdownContainer.Size = UDim2.new(0, SortPanelWidth, 0, SortPanelHeight)
 DropdownContainer.BackgroundColor3 = _VH_RGB(16, 17, 30)
@@ -4166,14 +4159,6 @@ DropdownContainer.Visible = false
 DropdownContainer.ZIndex = 1600
 DropdownContainer.BorderSizePixel = 0
 DropdownContainer.ClipsDescendants = true
-SortPanelContent = Instance.new("Frame", DropdownContainer)
-SortPanelContent.Name = "SortPanelContent"
-SortPanelContent.Size = UDim2.fromOffset(SortPanelWidth, SortPanelHeight)
-SortPanelContent.BackgroundTransparency = 1
-SortPanelContent.BorderSizePixel = 0
-SortPanelContent.ZIndex = 1601
-SortPanelContentScale = Instance.new("UIScale", SortPanelContent)
-SortPanelContentScale.Scale = PanelUIScale and PanelUIScale.Scale or 1
 Instance.new("UICorner", DropdownContainer).CornerRadius = UDim.new(0, 14)
 SortPanelStroke = Instance.new("UIStroke", DropdownContainer)
 SortPanelStroke.Color = _VH_RGB(150, 125, 255)
@@ -4181,7 +4166,7 @@ SortPanelStroke.Transparency = 0.18
 SortPanelStroke.Thickness = 0.8
 pcall(function() SortPanelStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
 
-SortPanelHeader = Instance.new("Frame", SortPanelContent)
+SortPanelHeader = Instance.new("Frame", DropdownContainer)
 SortPanelHeader.Name = "SortHeader"
 SortPanelHeader.Size = UDim2.new(1, -20, 0, 26)
 SortPanelHeader.Position = UDim2.new(0, 10, 0, 8)
@@ -4201,39 +4186,32 @@ SortPanelCaption.TextXAlignment = Enum.TextXAlignment.Left
 SortPanelCaption.TextTruncate = Enum.TextTruncate.AtEnd
 SortPanelCaption.ZIndex = 1603
 
-SortGrid = Instance.new("ScrollingFrame", SortPanelContent)
+SortGrid = Instance.new("ScrollingFrame", DropdownContainer)
 SortGrid.Name = "SortGrid"
-SortGrid.Size = UDim2.new(1, -20, 1, -48)
-SortGrid.Position = UDim2.new(0, 10, 0, 40)
+SortGrid.Size = UDim2.new(1, -16, 1, -44)
+SortGrid.Position = UDim2.new(0, 8, 0, 38)
 SortGrid.BackgroundTransparency = 1
 SortGrid.BorderSizePixel = 0
 SortGrid.ScrollBarThickness = 2
 SortGrid.ScrollBarImageColor3 = _VH_RGB(84, 80, 140)
 SortGrid.AutomaticCanvasSize = Enum.AutomaticSize.None
-SortGrid.CanvasSize = UDim2.new(0, 0, 0, SortTileHeight * 2 + SortTileGap)
+SortGrid.CanvasSize = UDim2.new(0, 0, 0, SortTileHeight * 2 + SortTileGap + 4)
 SortGrid.ScrollingDirection = Enum.ScrollingDirection.Y
 SortGrid.ZIndex = 1602
 
 FilterPanelWidth = IsMobile and 244 or 268
 FilterPanelDesiredHeight = 160
-FilterListWidth = FilterPanelWidth - 26
+FilterListWidth = FilterPanelWidth - 30
+FilterPanelColor = _VH_RGB(16, 17, 30)
 
-FilterPanel = Instance.new("Frame", PopupLayer)
+FilterPanel = Instance.new("Frame", MainContent)
 FilterPanel.Name = "ScriptFilterPanel"
 FilterPanel.Size = UDim2.new(0, FilterPanelWidth, 0, FilterPanelDesiredHeight)
-FilterPanel.BackgroundColor3 = _VH_RGB(16, 17, 30)
+FilterPanel.BackgroundColor3 = FilterPanelColor
 FilterPanel.Visible = false
 FilterPanel.ZIndex = 1550
 FilterPanel.BorderSizePixel = 0
 FilterPanel.ClipsDescendants = true
-FilterPanelContent = Instance.new("Frame", FilterPanel)
-FilterPanelContent.Name = "FilterPanelContent"
-FilterPanelContent.Size = UDim2.fromOffset(FilterPanelWidth, FilterPanelDesiredHeight)
-FilterPanelContent.BackgroundTransparency = 1
-FilterPanelContent.BorderSizePixel = 0
-FilterPanelContent.ZIndex = 1551
-FilterPanelContentScale = Instance.new("UIScale", FilterPanelContent)
-FilterPanelContentScale.Scale = PanelUIScale and PanelUIScale.Scale or 1
 Instance.new("UICorner", FilterPanel).CornerRadius = UDim.new(0, 14)
 FilterPanelStroke = Instance.new("UIStroke", FilterPanel)
 FilterPanelStroke.Color = _VH_RGB(150, 125, 255)
@@ -4241,10 +4219,10 @@ FilterPanelStroke.Transparency = 0.18
 FilterPanelStroke.Thickness = 0.8
 pcall(function() FilterPanelStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
 
-FilterHeader = Instance.new("Frame", FilterPanelContent)
+FilterHeader = Instance.new("Frame", FilterPanel)
 FilterHeader.Name = "FilterHeader"
-FilterHeader.Size = UDim2.new(1, -20, 0, 34)
-FilterHeader.Position = UDim2.new(0, 10, 0, 6)
+FilterHeader.Size = UDim2.new(1, -20, 0, 32)
+FilterHeader.Position = UDim2.new(0, 10, 0, 4)
 FilterHeader.BackgroundTransparency = 1
 FilterHeader.ZIndex = 1552
 FilterHeaderIcon = CreateVeloxIcon(FilterHeader, VeloxIcons.Filter, 15, Theme.AccentText, UDim2.new(0, 0, 0.5, -7.5), nil, 1553, "FilterHeaderIcon")
@@ -4266,7 +4244,7 @@ function _VH_MakeHeaderIconButton(parent, name, asset, iconSize, rightOffset)
 	local button = Instance.new("TextButton", parent)
 	button.Name = name
 	button.Size = UDim2.new(0, 28, 0, 28)
-	button.Position = UDim2.new(1, -(28 + rightOffset), 0.5, -14)
+	button.Position = UDim2.new(1, -(28 + rightOffset + 2), 0.5, -14)
 	button.BackgroundColor3 = _VH_RGB(28, 30, 50)
 	button.BorderSizePixel = 0
 	button.AutoButtonColor = false
@@ -4283,45 +4261,59 @@ end
 FilterFavButton, FilterFavIcon, FilterFavStroke = _VH_MakeHeaderIconButton(FilterHeader, "FavoritesToggle", VeloxIcons.Favorite, 14, 34)
 FilterClearButton, FilterClearIcon, FilterClearStroke = _VH_MakeHeaderIconButton(FilterHeader, "ClearFilters", VeloxIcons.Close, 12, 0)
 
-FilterHeaderDivider = Instance.new("Frame", FilterPanelContent)
+FilterHeaderDivider = Instance.new("Frame", FilterPanel)
 FilterHeaderDivider.Name = "HeaderDivider"
 FilterHeaderDivider.Size = UDim2.new(1, -20, 0, 1)
-FilterHeaderDivider.Position = UDim2.new(0, 10, 0, 44)
+FilterHeaderDivider.Position = UDim2.new(0, 10, 0, 38)
 FilterHeaderDivider.BackgroundColor3 = Theme.Stroke
 FilterHeaderDivider.BackgroundTransparency = 0.4
 FilterHeaderDivider.BorderSizePixel = 0
 FilterHeaderDivider.ZIndex = 1552
 
-FilterScroll = Instance.new("ScrollingFrame", FilterPanelContent)
+FilterScroll = Instance.new("ScrollingFrame", FilterPanel)
 FilterScroll.Name = "FilterScroll"
-FilterScroll.Size = UDim2.new(1, -20, 1, -58)
-FilterScroll.Position = UDim2.new(0, 10, 0, 52)
+FilterScroll.Size = UDim2.new(1, -20, 1, -52)
+FilterScroll.Position = UDim2.new(0, 10, 0, 44)
 FilterScroll.BackgroundTransparency = 1
 FilterScroll.BorderSizePixel = 0
-FilterScroll.ScrollBarThickness = IsMobile and 3 or 2
-FilterScroll.ScrollBarImageColor3 = _VH_RGB(122, 90, 250)
-FilterScroll.ScrollBarImageTransparency = 0.12
+FilterScroll.ScrollBarThickness = 2
+FilterScroll.ScrollBarImageColor3 = _VH_RGB(84, 80, 140)
 FilterScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
-FilterScroll.ScrollingEnabled = true
 FilterScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 FilterScroll.ScrollingDirection = Enum.ScrollingDirection.Y
 FilterScroll.ZIndex = 1552
 
+-- A 2 unit inset keeps the outline of chips on the edges from being cut by the scroll frame.
 FilterList = Instance.new("Frame", FilterScroll)
 FilterList.Name = "FilterList"
-FilterList.Size = UDim2.new(1, -6, 0, 0)
+FilterList.Size = UDim2.new(0, FilterListWidth, 0, 0)
+FilterList.Position = UDim2.new(0, 2, 0, 2)
 FilterList.BackgroundTransparency = 1
 FilterList.ZIndex = 1553
 
-PopupCatcher = Instance.new("TextButton", PopupLayer)
+-- Soft fade at the bottom edge so a partly visible chip row reads as "more below" instead of looking cut off.
+FilterFade = Instance.new("Frame", FilterPanel)
+FilterFade.Name = "FilterFade"
+FilterFade.Size = UDim2.new(1, -20, 0, 20)
+FilterFade.Position = UDim2.new(0, 10, 1, -28)
+FilterFade.BackgroundColor3 = FilterPanelColor
+FilterFade.BorderSizePixel = 0
+FilterFade.Active = false
+FilterFade.Visible = false
+FilterFade.ZIndex = 1553
+FilterFadeGradient = Instance.new("UIGradient", FilterFade)
+FilterFadeGradient.Rotation = 90
+FilterFadeGradient.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) })
+
+PopupRowBottom = SearchRow.Position.Y.Offset + SearchRow.Size.Y.Offset
+PopupCatcher = Instance.new("TextButton", MainContent)
 PopupCatcher.Name = "PopupCatcher"
-PopupCatcher.Size = UDim2.fromScale(1, 1)
-PopupCatcher.Position = UDim2.fromOffset(0, 0)
+PopupCatcher.Size = UDim2.new(1, 0, 1, -PopupRowBottom)
+PopupCatcher.Position = UDim2.new(0, 0, 0, PopupRowBottom)
 PopupCatcher.BackgroundTransparency = 1
 PopupCatcher.BorderSizePixel = 0
 PopupCatcher.AutoButtonColor = false
 PopupCatcher.Text = ""
-PopupCatcher.Active = true
 PopupCatcher.Visible = false
 PopupCatcher.ZIndex = 1540
 
@@ -4332,7 +4324,6 @@ FilterState = {
 	Status = {}
 }
 FilterPanelConnections = {}
-FilterTagCache = setmetatable({}, { __mode = "k" })
 function _VH_FilterRegConn(connection)
 	if connection and typeof(connection) == "RBXScriptConnection" then
 		table.insert(FilterPanelConnections, connection)
@@ -4348,9 +4339,6 @@ function _VH_NormalizeFilterKey(value)
 end
 
 function _VH_GetScriptTags(data)
-	if type(data) ~= "table" then return {} end
-	local cached = FilterTagCache[data]
-	if cached then return cached end
 	local result, seen = {}, {}
 	local function add(value)
 		local clean = _VH_NormalizeFilterKey(value)
@@ -4366,7 +4354,6 @@ function _VH_GetScriptTags(data)
 			for item in string.gmatch(data.Tags, "[^,;|]+") do add(item) end
 		end
 	end
-	FilterTagCache[data] = result
 	return result
 end
 
@@ -4433,14 +4420,10 @@ end
 
 function _VH_GetFilterCount()
 	local count = FilterState.Favorites and 1 or 0
-	for _, enabled in pairs(FilterState.Categories) do
-		if enabled then count = count + 1 end
-	end
-	for _, enabled in pairs(FilterState.Tags) do
-		if enabled then count = count + 1 end
-	end
-	for _, enabled in pairs(FilterState.Status) do
-		if enabled then count = count + 1 end
+	for _, group in pairs({FilterState.Categories, FilterState.Tags, FilterState.Status}) do
+		for _, enabled in pairs(group) do
+			if enabled then count = count + 1 end
+		end
 	end
 	return count
 end
@@ -4562,7 +4545,7 @@ function _VH_AddFilterSection(sectionIcon, options, stateMap, startY, chipIcons)
 	if #options == 0 then return startY end
 	local header = Instance.new("Frame", FilterList)
 	header.Name = "SectionHeader"
-	header.Size = UDim2.new(1, 0, 0, 16)
+	header.Size = UDim2.new(1, 0, 0, 14)
 	header.Position = UDim2.new(0, 0, 0, startY)
 	header.BackgroundTransparency = 1
 	header.ZIndex = 1554
@@ -4576,9 +4559,9 @@ function _VH_AddFilterSection(sectionIcon, options, stateMap, startY, chipIcons)
 	line.BorderSizePixel = 0
 	line.ZIndex = 1554
 
-	local chipHeight = IsMobile and 26 or 24
-	local gapPx = 5
-	local x, y = 0, startY + 16 + 6
+	local chipHeight = 24
+	local gapPx = 4
+	local x, y = 0, startY + 14 + 4
 	for _, option in ipairs(options) do
 		local iconAsset = chipIcons and chipIcons[option.Key] or nil
 		local labelText = L(option.Label)
@@ -4591,11 +4574,32 @@ function _VH_AddFilterSection(sectionIcon, options, stateMap, startY, chipIcons)
 		_VH_MakeFilterChip(FilterList, x, y, chipWidth, chipHeight, option.Label, option.Key, stateMap, iconAsset)
 		x = x + chipWidth + gapPx
 	end
-	return y + chipHeight + 10
+	return y + chipHeight + 6
+end
+
+function _VH_UpdateFilterPanelWidth()
+	-- The panel spans the whole search row (more chips per line, fewer rows to scroll through).
+	local scale = (PanelUIScale and PanelUIScale.Scale) or 1
+	if scale <= 0 then scale = 1 end
+	local contentWidth = MainContent.AbsoluteSize.X / scale
+	if contentWidth <= 0 then contentWidth = MainPanel.Size.X.Offset - SideWidth end
+	local rowWidth = contentWidth * SearchRow.Size.X.Scale + SearchRow.Size.X.Offset
+	FilterPanelWidth = math.floor(math.clamp(rowWidth, 220, IsMobile and 440 or 520))
+	FilterListWidth = FilterPanelWidth - 30
+end
+
+function _VH_UpdateFilterFade()
+	if not FilterFade or not FilterFade.Parent or not FilterScroll or not FilterScroll.Parent then return end
+	local scale = (PanelUIScale and PanelUIScale.Scale) or 1
+	if scale <= 0 then scale = 1 end
+	local windowHeight = FilterScroll.AbsoluteWindowSize.Y / scale
+	local remaining = FilterScroll.CanvasSize.Y.Offset - windowHeight - FilterScroll.CanvasPosition.Y
+	FilterFade.Visible = FilterPanel.Visible and windowHeight > 0 and remaining > 6
 end
 
 function RebuildFilterPanel()
 	if not FilterPanel or not FilterPanel.Parent then return end
+	_VH_UpdateFilterPanelWidth()
 	_VH_ClearFilterButtons()
 	local categories, tags, status = _VH_GetFilterOptions()
 	local y = 0
@@ -4603,55 +4607,49 @@ function RebuildFilterPanel()
 	y = _VH_AddFilterSection(VeloxIcons.Tag, tags, FilterState.Tags, y, nil)
 	y = _VH_AddFilterSection(VeloxIcons.Checklist, status, FilterState.Status, y, FilterStatusIcons)
 	if y == 0 then
-		local emptyIcon = CreateVeloxIcon(FilterList, VeloxIcons.Info, 20, _VH_RGB(92, 98, 130), UDim2.new(0.5, -10, 0, 18), nil, 1555, "FilterEmptyIcon")
+		local emptyIcon = CreateVeloxIcon(FilterList, VeloxIcons.Info, 20, _VH_RGB(92, 98, 130), UDim2.new(0, FilterListWidth / 2 - 10, 0, 14), nil, 1555, "FilterEmptyIcon")
 		emptyIcon.Name = "FilterEmptyIcon"
-		y = 56
+		y = 48
 	end
-	FilterList.Size = UDim2.new(1, -6, 0, y)
-	FilterScroll.CanvasSize = UDim2.new(0, 0, 0, y)
+	FilterList.Size = UDim2.new(0, FilterListWidth, 0, y)
+	FilterScroll.CanvasSize = UDim2.new(0, 0, 0, y + 4)
 	FilterScroll.CanvasPosition = Vector2.new(0, 0)
-	FilterPanelDesiredHeight = math.clamp(y + 66, 110, IsMobile and 300 or 340)
+	FilterPanelDesiredHeight = math.clamp(y + 4 + 52, 110, IsMobile and 300 or 340)
 	_VH_UpdateFilterControl()
 	if FilterPanel.Visible then PositionOpenPanels() end
+	_VH_UpdateFilterFade()
 end
 
+_VH_RegConn(FilterScroll:GetPropertyChangedSignal("CanvasPosition"):Connect(_VH_UpdateFilterFade))
+pcall(function() _VH_RegConn(FilterScroll:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(_VH_UpdateFilterFade)) end)
+_VH_RegConn(FilterPanel:GetPropertyChangedSignal("Visible"):Connect(_VH_UpdateFilterFade))
+
 function _VH_SetPopupPosition(panel, anchor, preferredWidth, preferredHeight, margin)
-	if not panel or not panel.Parent or not anchor or not anchor.Parent then return end
-	local camera = workspace.CurrentCamera
-	local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
+	if not panel or not panel.Parent or not SearchRow or not SearchRow.Parent then return end
+	margin = margin or 10
 	local scale = (PanelUIScale and PanelUIScale.Scale) or 1
 	if scale <= 0 then scale = 1 end
-	local safeMargin = (margin or 10) * scale
-	local gap = 6 * scale
-	local anchorPosition = anchor.AbsolutePosition
-	local anchorSize = anchor.AbsoluteSize
-	local anchorTop = anchorPosition.Y
-	local anchorBottom = anchorTop + anchorSize.Y
-	local anchorRight = anchorPosition.X + anchorSize.X
-	local maxWidth = math.max(120 * scale, viewport.X - safeMargin * 2)
-	local width = math.min(preferredWidth * scale, maxWidth)
-	local desiredHeight = preferredHeight * scale
-	local belowTop = anchorBottom + gap
-	local belowSpace = math.max(0, viewport.Y - safeMargin - belowTop)
-	local aboveSpace = math.max(0, anchorTop - gap - safeMargin)
-	local useAbove = belowSpace < desiredHeight and aboveSpace > belowSpace
-	local availableHeight = useAbove and aboveSpace or belowSpace
-	if availableHeight < 80 * scale and aboveSpace > availableHeight then
-		useAbove = true
-		availableHeight = aboveSpace
+	local contentSize = MainContent.AbsoluteSize
+	local contentWidth, contentHeight = contentSize.X / scale, contentSize.Y / scale
+	if contentWidth <= 0 or contentHeight <= 0 then
+		local panelSize = MainPanel.Size
+		contentWidth, contentHeight = panelSize.X.Offset - SideWidth, panelSize.Y.Offset
 	end
-	local height = math.min(desiredHeight, math.max(80 * scale, availableHeight))
-	local logicalWidth = width / scale
-	local logicalHeight = height / scale
-	local x = math.clamp(anchorRight - width, safeMargin, math.max(safeMargin, viewport.X - width - safeMargin))
-	local y = useAbove and (anchorTop - gap - height) or belowTop
-	y = math.clamp(y, safeMargin, math.max(safeMargin, viewport.Y - height - safeMargin))
-	panel.Size = UDim2.fromOffset(width, height)
-	panel.Position = UDim2.fromOffset(x, y)
-	local content = panel == FilterPanel and FilterPanelContent or SortPanelContent
-	local contentScale = panel == FilterPanel and FilterPanelContentScale or SortPanelContentScale
-	if content and content.Parent then content.Size = UDim2.fromOffset(logicalWidth, logicalHeight) end
-	if contentScale and contentScale.Parent then contentScale.Scale = scale end
+	-- The popups live inside MainContent and are placed with its own layout numbers, so nothing depends on
+	-- AbsolutePosition / GuiInset (which differ from Position on some devices) and they scale and move with the hub.
+	local rowBottom = SearchRow.Position.Y.Offset + SearchRow.Size.Y.Offset
+	local rowRight = contentWidth * (SearchRow.Position.X.Scale + SearchRow.Size.X.Scale) + SearchRow.Position.X.Offset + SearchRow.Size.X.Offset
+	local top = rowBottom + 6
+	local width = math.min(preferredWidth, math.max(120, contentWidth - margin * 2))
+	-- The panel shrinks (its content scrolls) to stay below the search row. Only on extremely short screens,
+	-- where less than minHeight is available, is it allowed to rise over the row so it stays usable.
+	local minHeight = 96
+	local height = math.min(preferredHeight, math.max(minHeight, contentHeight - margin - top))
+	if top + height > contentHeight - margin then
+		top = math.max(margin, contentHeight - margin - height)
+	end
+	panel.Size = UDim2.new(0, width, 0, height)
+	panel.Position = UDim2.new(0, math.max(margin, rowRight - width), 0, top)
 end
 
 function PositionOpenPanels()
@@ -4660,28 +4658,11 @@ function PositionOpenPanels()
 	end
 	if FilterPanel and FilterPanel.Visible then
 		_VH_SetPopupPosition(FilterPanel, FilterBtn, FilterPanelWidth, FilterPanelDesiredHeight, 10)
+		_VH_UpdateFilterFade()
 	end
 	if PositionManualRefreshDropdown and ManualRefreshDropdown and ManualRefreshDropdown.Visible then
 		PositionManualRefreshDropdown()
 	end
-end
-
-_VH_RegConn(MainPanel:GetPropertyChangedSignal("Position"):Connect(function()
-	if isDestroying then return end
-	if (DropdownContainer and DropdownContainer.Visible) or (FilterPanel and FilterPanel.Visible) then
-		PositionOpenPanels()
-	end
-end))
-
-if PanelUIScale then
-	_VH_RegConn(PanelUIScale:GetPropertyChangedSignal("Scale"):Connect(function()
-		if isDestroying then return end
-		if FilterPanelContentScale then FilterPanelContentScale.Scale = PanelUIScale.Scale end
-		if SortPanelContentScale then SortPanelContentScale.Scale = PanelUIScale.Scale end
-		if (DropdownContainer and DropdownContainer.Visible) or (FilterPanel and FilterPanel.Visible) then
-			PositionOpenPanels()
-		end
-	end))
 end
 
 function _VH_ClampGuiToViewport(gui, viewport)
@@ -4842,7 +4823,6 @@ function UpdateFilter()
 
 		local matches = {}
 		local currentSort = SortMode
-		local usesDateWindow = currentSort == "Updated Today" or currentSort == "Updated This Week" or currentSort == "Updated This Month"
 
 		for _, scr in ipairs(RegisteredScripts) do
 			if currentVersion ~= filterVersion then return end
@@ -4851,12 +4831,7 @@ function UpdateFilter()
 			local visible = searchMatch and filterPass
 			scr.SearchRelevance = relevance
 			if scr.Instance.Visible ~= visible then scr.Instance.Visible = visible end
-			if visible then
-				if usesDateWindow then
-					scr.SortWindowPriority = _VH_SortPriority(scr, currentSort)
-				end
-				matches[#matches + 1] = scr
-			end
+			if visible then matches[#matches + 1] = scr end
 		end
 
 		if currentVersion ~= filterVersion then return end
@@ -4878,9 +4853,9 @@ function UpdateFilter()
 				if a.SearchTitle ~= b.SearchTitle then return a.SearchTitle > b.SearchTitle end
 			elseif currentSort == "Oldest" then
 				if a.LastUpdatedNumber ~= b.LastUpdatedNumber then return a.LastUpdatedNumber < b.LastUpdatedNumber end
-			elseif usesDateWindow then
-				local aWindow = a.SortWindowPriority or 0
-				local bWindow = b.SortWindowPriority or 0
+			elseif currentSort == "Updated Today" or currentSort == "Updated This Week" or currentSort == "Updated This Month" then
+				local aWindow = _VH_SortPriority(a, currentSort)
+				local bWindow = _VH_SortPriority(b, currentSort)
 				if aWindow ~= bWindow then return aWindow > bWindow end
 				if a.LastUpdatedNumber ~= b.LastUpdatedNumber then return a.LastUpdatedNumber > b.LastUpdatedNumber end
 			else
@@ -4999,7 +4974,7 @@ function _VH_BuildSortTile(order, option)
 	local btn = Instance.new("TextButton", SortGrid)
 	btn.Name = "Sort_" .. tostring(order)
 	btn.Size = UDim2.new(0, SortTileWidth, 0, SortTileHeight)
-	btn.Position = UDim2.new(0, column * (SortTileWidth + SortTileGap), 0, row * (SortTileHeight + SortTileGap))
+	btn.Position = UDim2.new(0, 2 + column * (SortTileWidth + SortTileGap), 0, 2 + row * (SortTileHeight + SortTileGap))
 	btn.BackgroundColor3 = Theme.BackgroundSecondary
 	btn.BorderSizePixel = 0
 	btn.AutoButtonColor = false
@@ -5078,7 +5053,7 @@ end
 
 function _VH_SyncPopupCatcher()
 	if PopupCatcher and PopupCatcher.Parent then
-		PopupCatcher.Visible = (DropdownContainer and DropdownContainer.Visible == true) or (FilterPanel and FilterPanel.Visible == true)
+		PopupCatcher.Visible = (DropdownContainer and DropdownContainer.Visible) or (FilterPanel and FilterPanel.Visible) or false
 	end
 end
 
@@ -5221,6 +5196,7 @@ function _VH_SwitchTab(name)
 	end
 	currentTab = name
 	if name == "How to Use" then _VH_EnsureHowToContent() end
+	if name == "Changelog" then _VH_EnsureChangelogContent() end
 	DropdownContainer.Visible = false
 	if FilterPanel then FilterPanel.Visible = false end
 	_VH_SafeTween(TabIndicator, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = UDim2.new(0, 0, 0, indicatorY) })
@@ -5350,7 +5326,10 @@ HubChangelog = {
 			"Redesigned notifications as slim icon-led toasts and moved them to the top right so they no longer sit over the mobile controls.",
 			"Fixed the Filters and Sort panels clamping over the Games and Utilities selector and search bar; they now open inside the hub directly below the search row, scale and move with it, and close when the list is tapped.",
 			"Fixed the language and refresh dropdowns in Settings appearing offset above their buttons on some devices.",
-			"Made startup lighter: the How to Use guide now builds the first time it is opened (about 30% fewer interface elements at launch) and style cleanup runs in batches.",
+			"Fixed the Featured label in Recommended for You breaking into two lines.",
+			"Fixed the hub being clamped to the wrong screen bounds after changing the UI scale, which could leave it partly off-screen.",
+			"Fixed outlines being cut off at the edges of the Filters and Sort panels, widened Filters to the full search row with tighter spacing, and added a soft fade so a half-visible row no longer looks clipped.",
+			"Made startup lighter: the How to Use guide and Changelog now build the first time they are opened, script cards skip badge elements they do not need, and style cleanup runs in batches.",
 			"Fixed Scripts Catalog card outlines clipping at the top of the list and card buttons clipping on narrow screens in Games and Utilities.",
 			"Filters and Sort now close automatically when switching between Games and Utilities.",
 			"Updated the How to Use Sort and Filters guides to match the new design.",
@@ -6159,7 +6138,6 @@ function CreateChangelogContent()
 		_VH_OpenCreditLink("https://discord.gg/duXxnUp4Vq", "Discord link opened.")
 	end)
 end
-CreateChangelogContent()
 HowToSections = {}
 function _VH_HowToCard(parent, title, desc, order, iconAsset)
 	local block = Instance.new("Frame", parent)
@@ -6918,7 +6896,13 @@ function _VH_EnsureHowToContent()
 	_VH_SafeTabBorders(HowToUseView)
 end
 _VH_SafeTabBorders(HomeView)
-_VH_SafeTabBorders(ChangelogsView)
+ChangelogContentBuilt = false
+function _VH_EnsureChangelogContent()
+	if ChangelogContentBuilt or isDestroying then return end
+	ChangelogContentBuilt = true
+	CreateChangelogContent()
+	_VH_SafeTabBorders(ChangelogsView)
+end
 _VH_SafeTabBorders(ScriptsView)
 _VH_SafeTabBorders(SettingsView)
 
@@ -7270,6 +7254,7 @@ function _VH_RefreshRecommendationPanel(items, currentCount)
 			reasonLabel.TextTruncate = Enum.TextTruncate.None
 			reasonLabel.TextXAlignment = Enum.TextXAlignment.Left
 			reasonLabel.TextScaled = true
+			reasonLabel.TextWrapped = false
 			reasonLabel.ZIndex = 8
 			local reasonTextConstraint = Instance.new("UITextSizeConstraint", reasonLabel)
 			reasonTextConstraint.MinTextSize = IsMobile and 5 or 6
@@ -7643,49 +7628,64 @@ function CreateScriptCard(data, renderParent, registerImmediately, originalIndex
 	titleLbl.TextSize = IsMobile and 12 or 13; titleLbl.TextWrapped = true; titleLbl.TextXAlignment = Enum.TextXAlignment.Left
 	titleLbl.LayoutOrder = 1; titleLbl.ZIndex = 3
 
-	local recommendBadge = Instance.new("Frame", titleContainer)
-	recommendBadge.Size = UDim2.new(0, IsMobile and 88 or 96, 0, 20)
-	recommendBadge.BackgroundColor3 = _VH_RGB(104, 72, 235)
-	recommendBadge.Visible = isRecommended
-	recommendBadge.LayoutOrder = 2
-	recommendBadge.ZIndex = 4
-	Instance.new("UICorner", recommendBadge).CornerRadius = UDim.new(0, 9)
-	local recommendStroke = Instance.new("UIStroke", recommendBadge)
-	recommendStroke.Color = _VH_RGB(190, 170, 255)
-	recommendStroke.Transparency = 0.05
-	recommendStroke.Thickness = 1
-	local recommendGradient = Instance.new("UIGradient", recommendBadge)
-	recommendGradient.Rotation = 0
-	recommendGradient.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, _VH_RGB(160, 132, 255)),
-		ColorSequenceKeypoint.new(1, _VH_RGB(104, 72, 235))
-	})
-	local recommendText = Instance.new("TextLabel", recommendBadge)
-	recommendText.Size = UDim2.new(1, 0, 1, 0)
-	recommendText.BackgroundTransparency = 1
-	recommendText.Text = recommendationType == "SMART" and "YOU MAY LIKE" or "FOR YOU"
-	recommendText.TextColor3 = _VH_RGB(255, 255, 255)
-	recommendText.Font = Enum.Font.GothamBold
-	recommendText.TextSize = IsMobile and 8 or 9
-	recommendText.TextXAlignment = Enum.TextXAlignment.Center
-	recommendText.ZIndex = 5
-
-	local badgeRow = Instance.new("Frame", titleContainer)
-	badgeRow.Size = UDim2.new(1, 0, 0, 20)
-	badgeRow.BackgroundTransparency = 1
-	badgeRow.LayoutOrder = 2
-	badgeRow.Visible = isRecommended or tagType ~= "NONE"
-	local badgeLay = Instance.new("UIListLayout", badgeRow)
-	badgeLay.FillDirection = Enum.FillDirection.Horizontal
-	badgeLay.HorizontalAlignment = Enum.HorizontalAlignment.Left
-	badgeLay.VerticalAlignment = Enum.VerticalAlignment.Center
-	badgeLay.SortOrder = Enum.SortOrder.LayoutOrder
-	badgeLay.Padding = UDim.new(0, 5)
-	recommendBadge.Parent = badgeRow
-	recommendBadge.LayoutOrder = 1
+	local badgeRow, recommendBadge, recommendText = nil, nil, nil
+	local function EnsureBadgeRow()
+		if badgeRow then return badgeRow end
+		badgeRow = Instance.new("Frame", titleContainer)
+		badgeRow.Size = UDim2.new(1, 0, 0, 20)
+		badgeRow.BackgroundTransparency = 1
+		badgeRow.LayoutOrder = 2
+		local badgeLay = Instance.new("UIListLayout", badgeRow)
+		badgeLay.FillDirection = Enum.FillDirection.Horizontal
+		badgeLay.HorizontalAlignment = Enum.HorizontalAlignment.Left
+		badgeLay.VerticalAlignment = Enum.VerticalAlignment.Center
+		badgeLay.SortOrder = Enum.SortOrder.LayoutOrder
+		badgeLay.Padding = UDim.new(0, 5)
+		return badgeRow
+	end
+	local function EnsureRecommendBadge()
+		if recommendBadge then return recommendBadge end
+		recommendBadge = Instance.new("Frame", EnsureBadgeRow())
+		recommendBadge.Size = UDim2.new(0, IsMobile and 88 or 96, 0, 20)
+		recommendBadge.BackgroundColor3 = _VH_RGB(104, 72, 235)
+		recommendBadge.LayoutOrder = 1
+		recommendBadge.ZIndex = 4
+		Instance.new("UICorner", recommendBadge).CornerRadius = UDim.new(0, 9)
+		local recommendStroke = Instance.new("UIStroke", recommendBadge)
+		recommendStroke.Color = _VH_RGB(190, 170, 255)
+		recommendStroke.Transparency = 0.05
+		recommendStroke.Thickness = 1
+		local recommendGradient = Instance.new("UIGradient", recommendBadge)
+		recommendGradient.Rotation = 0
+		recommendGradient.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, _VH_RGB(160, 132, 255)),
+			ColorSequenceKeypoint.new(1, _VH_RGB(104, 72, 235))
+		})
+		recommendText = Instance.new("TextLabel", recommendBadge)
+		recommendText.Size = UDim2.new(1, 0, 1, 0)
+		recommendText.BackgroundTransparency = 1
+		recommendText.TextColor3 = _VH_RGB(255, 255, 255)
+		recommendText.Font = Enum.Font.GothamBold
+		recommendText.TextSize = IsMobile and 8 or 9
+		recommendText.TextXAlignment = Enum.TextXAlignment.Center
+		recommendText.ZIndex = 5
+		return recommendBadge
+	end
+	-- Badge widgets are created only for cards that actually show a tag or a recommendation.
+	local function SyncBadges()
+		local needsRow = isRecommended or tagType ~= "NONE"
+		if needsRow then EnsureBadgeRow() end
+		if badgeRow then badgeRow.Visible = needsRow end
+		if isRecommended then
+			EnsureRecommendBadge().Visible = true
+			recommendText.Text = recommendationType == "SMART" and "YOU MAY LIKE" or "FOR YOU"
+		elseif recommendBadge then
+			recommendBadge.Visible = false
+		end
+	end
 
 	if tagType ~= "NONE" then
-		local tag = Instance.new("Frame", badgeRow)
+		local tag = Instance.new("Frame", EnsureBadgeRow())
 		tag.AutomaticSize = Enum.AutomaticSize.X; tag.Size = UDim2.new(0, 0, 0, 20)
 		Instance.new("UICorner", tag).CornerRadius = UDim.new(0, 8)
 		local tPad = Instance.new("UIPadding", tag)
@@ -7698,6 +7698,7 @@ function CreateScriptCard(data, renderParent, registerImmediately, originalIndex
 		tag.LayoutOrder = 2
 		tag.ZIndex = 4
 	end
+	SyncBadges()
 
 	local metaRightContainer = Instance.new("Frame", topRow)
 	metaRightContainer.Size = UDim2.new(0, metaWidth, 0, 18); metaRightContainer.BackgroundTransparency = 1; metaRightContainer.LayoutOrder = 2
@@ -7720,8 +7721,7 @@ function CreateScriptCard(data, renderParent, registerImmediately, originalIndex
 
 		titleLine.Size = UDim2.new(1, 0, 0, 0)
 		titleLbl.Size = UDim2.new(1, 0, 0, 0)
-		recommendBadge.Visible = isRecommended
-		badgeRow.Visible = isRecommended or tagType ~= "NONE"
+		SyncBadges()
 	end
 	RegEntryConn(topRow:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateCardMetaLayout))
 	UpdateCardMetaLayout()
@@ -7825,9 +7825,7 @@ function CreateScriptCard(data, renderParent, registerImmediately, originalIndex
 		local isON = compatible and _VH_IsAutoExecuteActive(scriptId)
 		ApplyTagBorder(card, tagType, cardStroke)
 		card.BackgroundColor3 = tagConfig.CardColor
-		recommendBadge.Visible = isRecommended
-		recommendText.Text = recommendationType == "SMART" and "YOU MAY LIKE" or "FOR YOU"
-		badgeRow.Visible = isRecommended or tagType ~= "NONE"
+		SyncBadges()
 		scriptEntry.Compatible = compatible
 		starBtn.Text = isFav and "★" or "☆"; starBtn.TextColor3 = isFav and _VH_RGB(250, 204, 21) or Theme.TextSecondary
 		aeLbl.Text = compatible and "Auto Execute" or "Wrong Game"
