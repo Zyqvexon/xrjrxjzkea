@@ -1326,8 +1326,11 @@ function GetPanelSize()
 	local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
 	local maxWidth = IsMobile and 600 or 1120
 	local maxHeight = IsMobile and 360 or 580
-	local width = math.max(180, math.min(maxWidth, viewport.X - 12))
-	local height = math.max(220, math.min(maxHeight, viewport.Y - 12))
+	local uiScale = math.clamp(tonumber(SavedData and SavedData.Settings and SavedData.Settings.UIScale) or 1, 0.8, 1.2)
+	local availableWidth = math.max(1, viewport.X - 12)
+	local availableHeight = math.max(1, viewport.Y - 12)
+	local width = math.min(maxWidth, availableWidth / uiScale)
+	local height = math.min(maxHeight, availableHeight / uiScale)
 	return UDim2.fromOffset(width, height)
 end
 HoverTweens = setmetatable({}, { __mode = "k" })
@@ -1542,6 +1545,17 @@ do
 end
 PanelUIScale = Instance.new("UIScale", MainPanel)
 PanelUIScale.Scale = math.clamp(tonumber(SavedData.Settings.UIScale) or 1, 0.8, 1.2)
+
+PopupLayer = Instance.new("Frame", ScreenGui)
+PopupLayer.Name = "VeloxPopupLayer"
+PopupLayer.Size = UDim2.fromScale(1, 1)
+PopupLayer.Position = UDim2.fromOffset(0, 0)
+PopupLayer.BackgroundTransparency = 1
+PopupLayer.BorderSizePixel = 0
+PopupLayer.Active = false
+PopupLayer.ClipsDescendants = false
+PopupLayer.ZIndex = 2
+
 function ApplyPanelUIScale(scaleValue)
 	local nextScale = math.clamp(tonumber(scaleValue) or 1, 0.8, 1.2)
 	SavedData.Settings.UIScale = nextScale
@@ -1553,19 +1567,14 @@ function ApplyPanelUIScale(scaleValue)
 	end
 	task.delay(0.24, function()
 		if isDestroying or not MainPanel or not MainPanel.Parent then return end
-		local camera = workspace.CurrentCamera
-		local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
-		local baseWidth, baseHeight = MainPanel.AbsoluteSize.X, MainPanel.AbsoluteSize.Y
-		local visualWidth, visualHeight = baseWidth * nextScale, baseHeight * nextScale
-		local halfX, halfY = visualWidth * MainPanel.AnchorPoint.X, visualHeight * MainPanel.AnchorPoint.Y
-		local position = MainPanel.Position
-		local currentX = position.X.Scale * viewport.X + position.X.Offset
-		local currentY = position.Y.Scale * viewport.Y + position.Y.Offset
-		local minX, minY = halfX, halfY
-		local maxX = math.max(minX, viewport.X - (visualWidth - halfX))
-		local maxY = math.max(minY, viewport.Y - (visualHeight - halfY))
-		MainPanel.Position = UDim2.new(0, math.clamp(currentX, minX, maxX), 0, math.clamp(currentY, minY, maxY))
-		if PositionOpenPanels then PositionOpenPanels() end
+		if RefreshViewportLayout then
+			RefreshViewportLayout()
+		else
+			local camera = workspace.CurrentCamera
+			local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
+			_VH_ClampGuiToViewport(MainPanel, viewport)
+			if PositionOpenPanels then PositionOpenPanels() end
+		end
 	end)
 end
 SearchInput = nil
@@ -4149,7 +4158,7 @@ SortTileGap = 6
 SortPanelWidth = 20 + SortPanelColumns * SortTileWidth + (SortPanelColumns - 1) * SortTileGap
 SortPanelHeight = 40 + SortTileHeight * 2 + SortTileGap + 12
 
-DropdownContainer = Instance.new("Frame", MainContent)
+DropdownContainer = Instance.new("Frame", PopupLayer)
 DropdownContainer.Name = "SortScriptsPanel"
 DropdownContainer.Size = UDim2.new(0, SortPanelWidth, 0, SortPanelHeight)
 DropdownContainer.BackgroundColor3 = _VH_RGB(16, 17, 30)
@@ -4157,6 +4166,14 @@ DropdownContainer.Visible = false
 DropdownContainer.ZIndex = 1600
 DropdownContainer.BorderSizePixel = 0
 DropdownContainer.ClipsDescendants = true
+SortPanelContent = Instance.new("Frame", DropdownContainer)
+SortPanelContent.Name = "SortPanelContent"
+SortPanelContent.Size = UDim2.fromOffset(SortPanelWidth, SortPanelHeight)
+SortPanelContent.BackgroundTransparency = 1
+SortPanelContent.BorderSizePixel = 0
+SortPanelContent.ZIndex = 1601
+SortPanelContentScale = Instance.new("UIScale", SortPanelContent)
+SortPanelContentScale.Scale = PanelUIScale and PanelUIScale.Scale or 1
 Instance.new("UICorner", DropdownContainer).CornerRadius = UDim.new(0, 14)
 SortPanelStroke = Instance.new("UIStroke", DropdownContainer)
 SortPanelStroke.Color = _VH_RGB(150, 125, 255)
@@ -4164,7 +4181,7 @@ SortPanelStroke.Transparency = 0.18
 SortPanelStroke.Thickness = 0.8
 pcall(function() SortPanelStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
 
-SortPanelHeader = Instance.new("Frame", DropdownContainer)
+SortPanelHeader = Instance.new("Frame", SortPanelContent)
 SortPanelHeader.Name = "SortHeader"
 SortPanelHeader.Size = UDim2.new(1, -20, 0, 26)
 SortPanelHeader.Position = UDim2.new(0, 10, 0, 8)
@@ -4184,7 +4201,7 @@ SortPanelCaption.TextXAlignment = Enum.TextXAlignment.Left
 SortPanelCaption.TextTruncate = Enum.TextTruncate.AtEnd
 SortPanelCaption.ZIndex = 1603
 
-SortGrid = Instance.new("ScrollingFrame", DropdownContainer)
+SortGrid = Instance.new("ScrollingFrame", SortPanelContent)
 SortGrid.Name = "SortGrid"
 SortGrid.Size = UDim2.new(1, -20, 1, -48)
 SortGrid.Position = UDim2.new(0, 10, 0, 40)
@@ -4201,7 +4218,7 @@ FilterPanelWidth = IsMobile and 244 or 268
 FilterPanelDesiredHeight = 160
 FilterListWidth = FilterPanelWidth - 26
 
-FilterPanel = Instance.new("Frame", MainContent)
+FilterPanel = Instance.new("Frame", PopupLayer)
 FilterPanel.Name = "ScriptFilterPanel"
 FilterPanel.Size = UDim2.new(0, FilterPanelWidth, 0, FilterPanelDesiredHeight)
 FilterPanel.BackgroundColor3 = _VH_RGB(16, 17, 30)
@@ -4209,6 +4226,14 @@ FilterPanel.Visible = false
 FilterPanel.ZIndex = 1550
 FilterPanel.BorderSizePixel = 0
 FilterPanel.ClipsDescendants = true
+FilterPanelContent = Instance.new("Frame", FilterPanel)
+FilterPanelContent.Name = "FilterPanelContent"
+FilterPanelContent.Size = UDim2.fromOffset(FilterPanelWidth, FilterPanelDesiredHeight)
+FilterPanelContent.BackgroundTransparency = 1
+FilterPanelContent.BorderSizePixel = 0
+FilterPanelContent.ZIndex = 1551
+FilterPanelContentScale = Instance.new("UIScale", FilterPanelContent)
+FilterPanelContentScale.Scale = PanelUIScale and PanelUIScale.Scale or 1
 Instance.new("UICorner", FilterPanel).CornerRadius = UDim.new(0, 14)
 FilterPanelStroke = Instance.new("UIStroke", FilterPanel)
 FilterPanelStroke.Color = _VH_RGB(150, 125, 255)
@@ -4216,7 +4241,7 @@ FilterPanelStroke.Transparency = 0.18
 FilterPanelStroke.Thickness = 0.8
 pcall(function() FilterPanelStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
 
-FilterHeader = Instance.new("Frame", FilterPanel)
+FilterHeader = Instance.new("Frame", FilterPanelContent)
 FilterHeader.Name = "FilterHeader"
 FilterHeader.Size = UDim2.new(1, -20, 0, 34)
 FilterHeader.Position = UDim2.new(0, 10, 0, 6)
@@ -4258,7 +4283,7 @@ end
 FilterFavButton, FilterFavIcon, FilterFavStroke = _VH_MakeHeaderIconButton(FilterHeader, "FavoritesToggle", VeloxIcons.Favorite, 14, 34)
 FilterClearButton, FilterClearIcon, FilterClearStroke = _VH_MakeHeaderIconButton(FilterHeader, "ClearFilters", VeloxIcons.Close, 12, 0)
 
-FilterHeaderDivider = Instance.new("Frame", FilterPanel)
+FilterHeaderDivider = Instance.new("Frame", FilterPanelContent)
 FilterHeaderDivider.Name = "HeaderDivider"
 FilterHeaderDivider.Size = UDim2.new(1, -20, 0, 1)
 FilterHeaderDivider.Position = UDim2.new(0, 10, 0, 44)
@@ -4267,15 +4292,17 @@ FilterHeaderDivider.BackgroundTransparency = 0.4
 FilterHeaderDivider.BorderSizePixel = 0
 FilterHeaderDivider.ZIndex = 1552
 
-FilterScroll = Instance.new("ScrollingFrame", FilterPanel)
+FilterScroll = Instance.new("ScrollingFrame", FilterPanelContent)
 FilterScroll.Name = "FilterScroll"
 FilterScroll.Size = UDim2.new(1, -20, 1, -58)
 FilterScroll.Position = UDim2.new(0, 10, 0, 52)
 FilterScroll.BackgroundTransparency = 1
 FilterScroll.BorderSizePixel = 0
-FilterScroll.ScrollBarThickness = 2
-FilterScroll.ScrollBarImageColor3 = _VH_RGB(84, 80, 140)
+FilterScroll.ScrollBarThickness = IsMobile and 3 or 2
+FilterScroll.ScrollBarImageColor3 = _VH_RGB(122, 90, 250)
+FilterScroll.ScrollBarImageTransparency = 0.12
 FilterScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
+FilterScroll.ScrollingEnabled = true
 FilterScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 FilterScroll.ScrollingDirection = Enum.ScrollingDirection.Y
 FilterScroll.ZIndex = 1552
@@ -4286,15 +4313,15 @@ FilterList.Size = UDim2.new(1, -6, 0, 0)
 FilterList.BackgroundTransparency = 1
 FilterList.ZIndex = 1553
 
-PopupRowBottom = SearchRow.Position.Y.Offset + SearchRow.Size.Y.Offset
-PopupCatcher = Instance.new("TextButton", MainContent)
+PopupCatcher = Instance.new("TextButton", PopupLayer)
 PopupCatcher.Name = "PopupCatcher"
-PopupCatcher.Size = UDim2.new(1, 0, 1, -PopupRowBottom)
-PopupCatcher.Position = UDim2.new(0, 0, 0, PopupRowBottom)
+PopupCatcher.Size = UDim2.fromScale(1, 1)
+PopupCatcher.Position = UDim2.fromOffset(0, 0)
 PopupCatcher.BackgroundTransparency = 1
 PopupCatcher.BorderSizePixel = 0
 PopupCatcher.AutoButtonColor = false
 PopupCatcher.Text = ""
+PopupCatcher.Active = true
 PopupCatcher.Visible = false
 PopupCatcher.ZIndex = 1540
 
@@ -4305,6 +4332,7 @@ FilterState = {
 	Status = {}
 }
 FilterPanelConnections = {}
+FilterTagCache = setmetatable({}, { __mode = "k" })
 function _VH_FilterRegConn(connection)
 	if connection and typeof(connection) == "RBXScriptConnection" then
 		table.insert(FilterPanelConnections, connection)
@@ -4320,6 +4348,9 @@ function _VH_NormalizeFilterKey(value)
 end
 
 function _VH_GetScriptTags(data)
+	if type(data) ~= "table" then return {} end
+	local cached = FilterTagCache[data]
+	if cached then return cached end
 	local result, seen = {}, {}
 	local function add(value)
 		local clean = _VH_NormalizeFilterKey(value)
@@ -4335,6 +4366,7 @@ function _VH_GetScriptTags(data)
 			for item in string.gmatch(data.Tags, "[^,;|]+") do add(item) end
 		end
 	end
+	FilterTagCache[data] = result
 	return result
 end
 
@@ -4401,10 +4433,14 @@ end
 
 function _VH_GetFilterCount()
 	local count = FilterState.Favorites and 1 or 0
-	for _, group in pairs({FilterState.Categories, FilterState.Tags, FilterState.Status}) do
-		for _, enabled in pairs(group) do
-			if enabled then count = count + 1 end
-		end
+	for _, enabled in pairs(FilterState.Categories) do
+		if enabled then count = count + 1 end
+	end
+	for _, enabled in pairs(FilterState.Tags) do
+		if enabled then count = count + 1 end
+	end
+	for _, enabled in pairs(FilterState.Status) do
+		if enabled then count = count + 1 end
 	end
 	return count
 end
@@ -4580,31 +4616,42 @@ function RebuildFilterPanel()
 end
 
 function _VH_SetPopupPosition(panel, anchor, preferredWidth, preferredHeight, margin)
-	if not panel or not panel.Parent or not SearchRow or not SearchRow.Parent then return end
-	margin = margin or 10
+	if not panel or not panel.Parent or not anchor or not anchor.Parent then return end
+	local camera = workspace.CurrentCamera
+	local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
 	local scale = (PanelUIScale and PanelUIScale.Scale) or 1
 	if scale <= 0 then scale = 1 end
-	local contentSize = MainContent.AbsoluteSize
-	local contentWidth, contentHeight = contentSize.X / scale, contentSize.Y / scale
-	if contentWidth <= 0 or contentHeight <= 0 then
-		local panelSize = MainPanel.Size
-		contentWidth, contentHeight = panelSize.X.Offset - SideWidth, panelSize.Y.Offset
+	local safeMargin = (margin or 10) * scale
+	local gap = 6 * scale
+	local anchorPosition = anchor.AbsolutePosition
+	local anchorSize = anchor.AbsoluteSize
+	local anchorTop = anchorPosition.Y
+	local anchorBottom = anchorTop + anchorSize.Y
+	local anchorRight = anchorPosition.X + anchorSize.X
+	local maxWidth = math.max(120 * scale, viewport.X - safeMargin * 2)
+	local width = math.min(preferredWidth * scale, maxWidth)
+	local desiredHeight = preferredHeight * scale
+	local belowTop = anchorBottom + gap
+	local belowSpace = math.max(0, viewport.Y - safeMargin - belowTop)
+	local aboveSpace = math.max(0, anchorTop - gap - safeMargin)
+	local useAbove = belowSpace < desiredHeight and aboveSpace > belowSpace
+	local availableHeight = useAbove and aboveSpace or belowSpace
+	if availableHeight < 80 * scale and aboveSpace > availableHeight then
+		useAbove = true
+		availableHeight = aboveSpace
 	end
-	-- The popups live inside MainContent and are placed with its own layout numbers, so nothing depends on
-	-- AbsolutePosition / GuiInset (which differ from Position on some devices) and they scale and move with the hub.
-	local rowBottom = SearchRow.Position.Y.Offset + SearchRow.Size.Y.Offset
-	local rowRight = contentWidth * (SearchRow.Position.X.Scale + SearchRow.Size.X.Scale) + SearchRow.Position.X.Offset + SearchRow.Size.X.Offset
-	local top = rowBottom + 6
-	local width = math.min(preferredWidth, math.max(120, contentWidth - margin * 2))
-	-- The panel shrinks (its content scrolls) to stay below the search row. Only on extremely short screens,
-	-- where less than minHeight is available, is it allowed to rise over the row so it stays usable.
-	local minHeight = 96
-	local height = math.min(preferredHeight, math.max(minHeight, contentHeight - margin - top))
-	if top + height > contentHeight - margin then
-		top = math.max(margin, contentHeight - margin - height)
-	end
-	panel.Size = UDim2.new(0, width, 0, height)
-	panel.Position = UDim2.new(0, math.max(margin, rowRight - width), 0, top)
+	local height = math.min(desiredHeight, math.max(80 * scale, availableHeight))
+	local logicalWidth = width / scale
+	local logicalHeight = height / scale
+	local x = math.clamp(anchorRight - width, safeMargin, math.max(safeMargin, viewport.X - width - safeMargin))
+	local y = useAbove and (anchorTop - gap - height) or belowTop
+	y = math.clamp(y, safeMargin, math.max(safeMargin, viewport.Y - height - safeMargin))
+	panel.Size = UDim2.fromOffset(width, height)
+	panel.Position = UDim2.fromOffset(x, y)
+	local content = panel == FilterPanel and FilterPanelContent or SortPanelContent
+	local contentScale = panel == FilterPanel and FilterPanelContentScale or SortPanelContentScale
+	if content and content.Parent then content.Size = UDim2.fromOffset(logicalWidth, logicalHeight) end
+	if contentScale and contentScale.Parent then contentScale.Scale = scale end
 end
 
 function PositionOpenPanels()
@@ -4617,6 +4664,24 @@ function PositionOpenPanels()
 	if PositionManualRefreshDropdown and ManualRefreshDropdown and ManualRefreshDropdown.Visible then
 		PositionManualRefreshDropdown()
 	end
+end
+
+_VH_RegConn(MainPanel:GetPropertyChangedSignal("Position"):Connect(function()
+	if isDestroying then return end
+	if (DropdownContainer and DropdownContainer.Visible) or (FilterPanel and FilterPanel.Visible) then
+		PositionOpenPanels()
+	end
+end))
+
+if PanelUIScale then
+	_VH_RegConn(PanelUIScale:GetPropertyChangedSignal("Scale"):Connect(function()
+		if isDestroying then return end
+		if FilterPanelContentScale then FilterPanelContentScale.Scale = PanelUIScale.Scale end
+		if SortPanelContentScale then SortPanelContentScale.Scale = PanelUIScale.Scale end
+		if (DropdownContainer and DropdownContainer.Visible) or (FilterPanel and FilterPanel.Visible) then
+			PositionOpenPanels()
+		end
+	end))
 end
 
 function _VH_ClampGuiToViewport(gui, viewport)
@@ -4777,6 +4842,7 @@ function UpdateFilter()
 
 		local matches = {}
 		local currentSort = SortMode
+		local usesDateWindow = currentSort == "Updated Today" or currentSort == "Updated This Week" or currentSort == "Updated This Month"
 
 		for _, scr in ipairs(RegisteredScripts) do
 			if currentVersion ~= filterVersion then return end
@@ -4785,7 +4851,12 @@ function UpdateFilter()
 			local visible = searchMatch and filterPass
 			scr.SearchRelevance = relevance
 			if scr.Instance.Visible ~= visible then scr.Instance.Visible = visible end
-			if visible then matches[#matches + 1] = scr end
+			if visible then
+				if usesDateWindow then
+					scr.SortWindowPriority = _VH_SortPriority(scr, currentSort)
+				end
+				matches[#matches + 1] = scr
+			end
 		end
 
 		if currentVersion ~= filterVersion then return end
@@ -4807,9 +4878,9 @@ function UpdateFilter()
 				if a.SearchTitle ~= b.SearchTitle then return a.SearchTitle > b.SearchTitle end
 			elseif currentSort == "Oldest" then
 				if a.LastUpdatedNumber ~= b.LastUpdatedNumber then return a.LastUpdatedNumber < b.LastUpdatedNumber end
-			elseif currentSort == "Updated Today" or currentSort == "Updated This Week" or currentSort == "Updated This Month" then
-				local aWindow = _VH_SortPriority(a, currentSort)
-				local bWindow = _VH_SortPriority(b, currentSort)
+			elseif usesDateWindow then
+				local aWindow = a.SortWindowPriority or 0
+				local bWindow = b.SortWindowPriority or 0
 				if aWindow ~= bWindow then return aWindow > bWindow end
 				if a.LastUpdatedNumber ~= b.LastUpdatedNumber then return a.LastUpdatedNumber > b.LastUpdatedNumber end
 			else
@@ -5007,7 +5078,7 @@ end
 
 function _VH_SyncPopupCatcher()
 	if PopupCatcher and PopupCatcher.Parent then
-		PopupCatcher.Visible = (DropdownContainer and DropdownContainer.Visible) or (FilterPanel and FilterPanel.Visible) or false
+		PopupCatcher.Visible = (DropdownContainer and DropdownContainer.Visible == true) or (FilterPanel and FilterPanel.Visible == true)
 	end
 end
 
