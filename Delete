@@ -4221,11 +4221,11 @@ pcall(function() FilterPanelStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 FilterHeader = Instance.new("Frame", FilterPanel)
 FilterHeader.Name = "FilterHeader"
-FilterHeader.Size = UDim2.new(1, -20, 0, 32)
-FilterHeader.Position = UDim2.new(0, 10, 0, 4)
+FilterHeader.Size = UDim2.new(1, -20, 0, 27)
+FilterHeader.Position = UDim2.new(0, 10, 0, 3)
 FilterHeader.BackgroundTransparency = 1
 FilterHeader.ZIndex = 1552
-FilterHeaderIcon = CreateVeloxIcon(FilterHeader, VeloxIcons.Filter, 15, Theme.AccentText, UDim2.new(0, 0, 0.5, -7.5), nil, 1553, "FilterHeaderIcon")
+FilterHeaderIcon = CreateVeloxIcon(FilterHeader, VeloxIcons.Filter, 14, Theme.AccentText, UDim2.new(0, 0, 0.5, -7.5), nil, 1553, "FilterHeaderIcon")
 FilterHeaderCount = Instance.new("TextLabel", FilterHeader)
 FilterHeaderCount.Name = "FilterHeaderCount"
 FilterHeaderCount.Size = UDim2.new(0, 20, 0, 16)
@@ -4243,8 +4243,8 @@ Instance.new("UICorner", FilterHeaderCount).CornerRadius = UDim.new(1, 0)
 function _VH_MakeHeaderIconButton(parent, name, asset, iconSize, rightOffset)
 	local button = Instance.new("TextButton", parent)
 	button.Name = name
-	button.Size = UDim2.new(0, 28, 0, 28)
-	button.Position = UDim2.new(1, -(28 + rightOffset + 2), 0.5, -14)
+	button.Size = UDim2.new(0, 25, 0, 25)
+	button.Position = UDim2.new(1, -(25 + rightOffset + 2), 0.5, -12.5)
 	button.BackgroundColor3 = _VH_RGB(28, 30, 50)
 	button.BorderSizePixel = 0
 	button.AutoButtonColor = false
@@ -4258,13 +4258,13 @@ function _VH_MakeHeaderIconButton(parent, name, asset, iconSize, rightOffset)
 	local icon = CreateVeloxIcon(button, asset, iconSize, Theme.TextSecondary, UDim2.new(0.5, -iconSize / 2, 0.5, -iconSize / 2), nil, 1555, name .. "Icon")
 	return button, icon, stroke
 end
-FilterFavButton, FilterFavIcon, FilterFavStroke = _VH_MakeHeaderIconButton(FilterHeader, "FavoritesToggle", VeloxIcons.Favorite, 14, 34)
-FilterClearButton, FilterClearIcon, FilterClearStroke = _VH_MakeHeaderIconButton(FilterHeader, "ClearFilters", VeloxIcons.Close, 12, 0)
+FilterFavButton, FilterFavIcon, FilterFavStroke = _VH_MakeHeaderIconButton(FilterHeader, "FavoritesToggle", VeloxIcons.Favorite, 12, 30)
+FilterClearButton, FilterClearIcon, FilterClearStroke = _VH_MakeHeaderIconButton(FilterHeader, "ClearFilters", VeloxIcons.Close, 11, 0)
 
 FilterHeaderDivider = Instance.new("Frame", FilterPanel)
 FilterHeaderDivider.Name = "HeaderDivider"
 FilterHeaderDivider.Size = UDim2.new(1, -20, 0, 1)
-FilterHeaderDivider.Position = UDim2.new(0, 10, 0, 38)
+FilterHeaderDivider.Position = UDim2.new(0, 10, 0, 33)
 FilterHeaderDivider.BackgroundColor3 = Theme.Stroke
 FilterHeaderDivider.BackgroundTransparency = 0.4
 FilterHeaderDivider.BorderSizePixel = 0
@@ -4272,11 +4272,11 @@ FilterHeaderDivider.ZIndex = 1552
 
 FilterScroll = Instance.new("ScrollingFrame", FilterPanel)
 FilterScroll.Name = "FilterScroll"
-FilterScroll.Size = UDim2.new(1, -20, 1, -52)
-FilterScroll.Position = UDim2.new(0, 10, 0, 44)
+FilterScroll.Size = UDim2.new(1, -20, 1, -47)
+FilterScroll.Position = UDim2.new(0, 10, 0, 38)
 FilterScroll.BackgroundTransparency = 1
 FilterScroll.BorderSizePixel = 0
-FilterScroll.ScrollBarThickness = 2
+FilterScroll.ScrollBarThickness = 1
 FilterScroll.ScrollBarImageColor3 = _VH_RGB(84, 80, 140)
 FilterScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
 FilterScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -4294,8 +4294,8 @@ FilterList.ZIndex = 1553
 -- Soft fade at the bottom edge so a partly visible chip row reads as "more below" instead of looking cut off.
 FilterFade = Instance.new("Frame", FilterPanel)
 FilterFade.Name = "FilterFade"
-FilterFade.Size = UDim2.new(1, -20, 0, 20)
-FilterFade.Position = UDim2.new(0, 10, 1, -28)
+FilterFade.Size = UDim2.new(1, -20, 0, 16)
+FilterFade.Position = UDim2.new(0, 10, 1, -23)
 FilterFade.BackgroundColor3 = FilterPanelColor
 FilterFade.BorderSizePixel = 0
 FilterFade.Active = false
@@ -4420,10 +4420,14 @@ end
 
 function _VH_GetFilterCount()
 	local count = FilterState.Favorites and 1 or 0
-	for _, group in pairs({FilterState.Categories, FilterState.Tags, FilterState.Status}) do
-		for _, enabled in pairs(group) do
-			if enabled then count = count + 1 end
-		end
+	for _, enabled in pairs(FilterState.Categories) do
+		if enabled then count = count + 1 end
+	end
+	for _, enabled in pairs(FilterState.Tags) do
+		if enabled then count = count + 1 end
+	end
+	for _, enabled in pairs(FilterState.Status) do
+		if enabled then count = count + 1 end
 	end
 	return count
 end
@@ -4501,19 +4505,19 @@ function _VH_MakeFilterChip(parent, x, y, width, height, label, key, stateMap, i
 	local textX = 9
 	local icon = nil
 	if iconAsset then
-		icon = CreateVeloxIcon(chip, iconAsset, 11, Theme.TextSecondary, UDim2.new(0, 8, 0.5, -5.5), nil, 1557, "ChipIcon")
-		textX = 23
+		icon = CreateVeloxIcon(chip, iconAsset, 10, Theme.TextSecondary, UDim2.new(0, 7, 0.5, -5), nil, 1557, "ChipIcon")
+		textX = 20
 	end
 	local labelObject = Instance.new("TextLabel", chip)
 	labelObject.Name = "ChipLabel"
-	labelObject.Size = UDim2.new(1, -(textX + 8), 1, 0)
+	labelObject.Size = UDim2.new(1, -(textX + 7), 1, 0)
 	labelObject.Position = UDim2.new(0, textX, 0, 0)
 	labelObject.BackgroundTransparency = 1
 	labelObject.Text = L(label)
 	labelObject:SetAttribute("VeloxTranslationKey", label)
 	labelObject.TextColor3 = Theme.TextPrimary
 	labelObject.Font = Enum.Font.GothamMedium
-	labelObject.TextSize = 10
+	labelObject.TextSize = 9
 	labelObject.TextXAlignment = Enum.TextXAlignment.Left
 	labelObject.TextTruncate = Enum.TextTruncate.AtEnd
 	labelObject.ZIndex = 1557
@@ -4545,27 +4549,27 @@ function _VH_AddFilterSection(sectionIcon, options, stateMap, startY, chipIcons)
 	if #options == 0 then return startY end
 	local header = Instance.new("Frame", FilterList)
 	header.Name = "SectionHeader"
-	header.Size = UDim2.new(1, 0, 0, 14)
+	header.Size = UDim2.new(1, 0, 0, 12)
 	header.Position = UDim2.new(0, 0, 0, startY)
 	header.BackgroundTransparency = 1
 	header.ZIndex = 1554
-	CreateVeloxIcon(header, sectionIcon, 12, Theme.TextSecondary, UDim2.new(0, 0, 0.5, -6), nil, 1555, "SectionIcon")
+	CreateVeloxIcon(header, sectionIcon, 11, Theme.TextSecondary, UDim2.new(0, 0, 0.5, -5.5), nil, 1555, "SectionIcon")
 	local line = Instance.new("Frame", header)
 	line.Name = "SectionLine"
-	line.Size = UDim2.new(1, -20, 0, 1)
-	line.Position = UDim2.new(0, 20, 0.5, 0)
+	line.Size = UDim2.new(1, -18, 0, 1)
+	line.Position = UDim2.new(0, 18, 0.5, 0)
 	line.BackgroundColor3 = Theme.Stroke
 	line.BackgroundTransparency = 0.35
 	line.BorderSizePixel = 0
 	line.ZIndex = 1554
 
-	local chipHeight = 24
-	local gapPx = 4
-	local x, y = 0, startY + 14 + 4
+	local chipHeight = 20
+	local gapPx = 3
+	local x, y = 0, startY + 12 + 3
 	for _, option in ipairs(options) do
 		local iconAsset = chipIcons and chipIcons[option.Key] or nil
 		local labelText = L(option.Label)
-		local chipWidth = math.ceil(_VH_MeasureTextWidth(labelText, 10, Enum.Font.GothamMedium)) + 20 + (iconAsset and 14 or 0)
+		local chipWidth = math.ceil(_VH_MeasureTextWidth(labelText, 9, Enum.Font.GothamMedium)) + 16 + (iconAsset and 12 or 0)
 		chipWidth = math.min(chipWidth, FilterListWidth)
 		if x > 0 and x + chipWidth > FilterListWidth then
 			x = 0
@@ -4574,18 +4578,21 @@ function _VH_AddFilterSection(sectionIcon, options, stateMap, startY, chipIcons)
 		_VH_MakeFilterChip(FilterList, x, y, chipWidth, chipHeight, option.Label, option.Key, stateMap, iconAsset)
 		x = x + chipWidth + gapPx
 	end
-	return y + chipHeight + 6
+	return y + chipHeight + 4
 end
 
 function _VH_UpdateFilterPanelWidth()
-	-- The panel spans the whole search row (more chips per line, fewer rows to scroll through).
+	-- Keep the popup narrower than the search row so it feels compact without clipping its chips.
 	local scale = (PanelUIScale and PanelUIScale.Scale) or 1
 	if scale <= 0 then scale = 1 end
 	local contentWidth = MainContent.AbsoluteSize.X / scale
 	if contentWidth <= 0 then contentWidth = MainPanel.Size.X.Offset - SideWidth end
-	local rowWidth = contentWidth * SearchRow.Size.X.Scale + SearchRow.Size.X.Offset
-	FilterPanelWidth = math.floor(math.clamp(rowWidth, 220, IsMobile and 440 or 520))
-	FilterListWidth = FilterPanelWidth - 30
+	local rowWidth = math.max(120, contentWidth * SearchRow.Size.X.Scale + SearchRow.Size.X.Offset)
+	local maxWidth = math.min(IsMobile and 360 or 420, rowWidth)
+	local minWidth = math.min(IsMobile and 250 or 290, maxWidth)
+	local widthRatio = IsMobile and 0.8 or 0.84
+	FilterPanelWidth = math.floor(math.clamp(rowWidth * widthRatio, minWidth, maxWidth))
+	FilterListWidth = math.max(96, FilterPanelWidth - 24)
 end
 
 function _VH_UpdateFilterFade()
@@ -4607,14 +4614,14 @@ function RebuildFilterPanel()
 	y = _VH_AddFilterSection(VeloxIcons.Tag, tags, FilterState.Tags, y, nil)
 	y = _VH_AddFilterSection(VeloxIcons.Checklist, status, FilterState.Status, y, FilterStatusIcons)
 	if y == 0 then
-		local emptyIcon = CreateVeloxIcon(FilterList, VeloxIcons.Info, 20, _VH_RGB(92, 98, 130), UDim2.new(0, FilterListWidth / 2 - 10, 0, 14), nil, 1555, "FilterEmptyIcon")
+		local emptyIcon = CreateVeloxIcon(FilterList, VeloxIcons.Info, 18, _VH_RGB(92, 98, 130), UDim2.new(0, FilterListWidth / 2 - 9, 0, 11), nil, 1555, "FilterEmptyIcon")
 		emptyIcon.Name = "FilterEmptyIcon"
-		y = 48
+		y = 40
 	end
 	FilterList.Size = UDim2.new(0, FilterListWidth, 0, y)
 	FilterScroll.CanvasSize = UDim2.new(0, 0, 0, y + 4)
 	FilterScroll.CanvasPosition = Vector2.new(0, 0)
-	FilterPanelDesiredHeight = math.clamp(y + 4 + 52, 110, IsMobile and 300 or 340)
+	FilterPanelDesiredHeight = math.clamp(y + 4 + 46, 100, IsMobile and 190 or 240)
 	_VH_UpdateFilterControl()
 	if FilterPanel.Visible then PositionOpenPanels() end
 	_VH_UpdateFilterFade()
@@ -4686,7 +4693,11 @@ function RefreshViewportLayout()
 	local camera = workspace.CurrentCamera
 	local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
 	_VH_ClampGuiToViewport(MainPanel, viewport)
-	if PositionOpenPanels then PositionOpenPanels() end
+	if FilterPanel and FilterPanel.Visible and RebuildFilterPanel then
+		RebuildFilterPanel()
+	elseif PositionOpenPanels then
+		PositionOpenPanels()
+	end
 end
 
 viewportConn = nil
@@ -4778,6 +4789,22 @@ local function _VH_MapMatch(map, key)
 	return map[_VH_NormalizeFilterKey(key)] == true
 end
 
+local function _VH_HasSelectedTag(data, selectedTags)
+	local tags = type(data) == "table" and data.Tags or nil
+	if type(tags) == "table" then
+		for _, tag in ipairs(tags) do
+			local key = _VH_NormalizeFilterKey(tag)
+			if key ~= "" and selectedTags[key] == true then return true end
+		end
+	elseif type(tags) == "string" then
+		for tag in string.gmatch(tags, "[^,;|]+") do
+			local key = _VH_NormalizeFilterKey(tag)
+			if key ~= "" and selectedTags[key] == true then return true end
+		end
+	end
+	return false
+end
+
 function _VH_ScriptPassesFilters(scr)
 	if FilterState.Favorites and SavedData.Favorites[scr.Id] ~= true then return false end
 
@@ -4786,12 +4813,8 @@ function _VH_ScriptPassesFilters(scr)
 		if not _VH_MapMatch(FilterState.Categories, data.Category) then return false end
 	end
 
-	if _VH_FilterMapHasSelection(FilterState.Tags) then
-		local tagPass = false
-		for _, tag in ipairs(_VH_GetScriptTags(data)) do
-			if FilterState.Tags[tag] then tagPass = true break end
-		end
-		if not tagPass then return false end
+	if _VH_FilterMapHasSelection(FilterState.Tags) and not _VH_HasSelectedTag(data, FilterState.Tags) then
+		return false
 	end
 
 	if not _VH_StatusPass(scr) then return false end
@@ -6699,6 +6722,8 @@ function _VH_BuildHowToNav()
 	bar.BackgroundColor3 = Theme.BackgroundMain
 	bar.BorderSizePixel = 0
 	bar.ScrollBarThickness = 0
+	bar.ScrollBarImageTransparency = 1
+	bar.ScrollBarImageColor3 = Theme.BackgroundMain
 	bar.ScrollingDirection = Enum.ScrollingDirection.X
 	bar.AutomaticCanvasSize = Enum.AutomaticSize.X
 	bar.CanvasSize = UDim2.new(0, 0, 0, 0)
