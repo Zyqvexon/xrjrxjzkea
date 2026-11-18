@@ -5196,9 +5196,11 @@ function _VH_LayoutTabs()
 	end
 	local indicatorHeight = math.max(12, height - 10)
 	TabIndicator.Size = UDim2.new(0, 3, 0, indicatorHeight)
-	local activeIndex = TabIndexByName[currentTab]
-	if activeIndex then
-		TabIndicator.Position = UDim2.new(0, 0, 0, (activeIndex - 1) * step + (height - indicatorHeight) / 2)
+	local activeButton = TabButtonCache[currentTab]
+	if activeButton and activeButton.Parent then
+		local buttonY = activeButton.Position.Y.Offset
+		local buttonHeight = activeButton.Size.Y.Offset
+		TabIndicator.Position = UDim2.new(0, 0, 0, buttonY + (buttonHeight - indicatorHeight) / 2)
 	end
 	if SidebarCredits then
 		SidebarCredits.Size = UDim2.new(1, -20, 0, compact and cardHeight or (IsMobile and 106 or 126))
@@ -5212,7 +5214,9 @@ function _VH_SwitchTab(name)
 	if isDestroying then return end
 	local index = TabIndexByName[name]
 	if not index then return end
-	local indicatorY = (index - 1) * TabLayout.Step + (TabLayout.Height - TabIndicator.Size.Y.Offset) / 2
+	local targetButton = TabButtonCache[name]
+	local indicatorY = targetButton and (targetButton.Position.Y.Offset + (targetButton.Size.Y.Offset - TabIndicator.Size.Y.Offset) / 2)
+		or ((index - 1) * TabLayout.Step + (TabLayout.Height - TabIndicator.Size.Y.Offset) / 2)
 	if currentTab == name then
 		_VH_SafeTween(TabIndicator, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = UDim2.new(0, 0, 0, indicatorY) })
 		return
@@ -6750,29 +6754,33 @@ function _VH_BuildHowToNav()
 
 	local chips, tops = {}, {}
 	local activeIndex, lockUntil, topsDirty = 0, 0, true
+	local refreshQueued = false
 	local fadeInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	local function uiScale() return (PanelUIScale and PanelUIScale.Scale) or 1 end
 
 	local function paintChip(item, active, animate)
-		local fillTransparency, strokeTransparency = active and 0 or 1, active and 0.55 or 1
+		local fillTransparency = active and 0 or 1
+		local strokeTransparency = active and 0.55 or 1
 		local labelColor = active and Color3.new(1, 1, 1) or Theme.TextSecondary
 		if animate then
-			_VH_SafeTween(item.Fill, fadeInfo, { BackgroundTransparency = fillTransparency })
+			_VH_SafeTween(item.Button, fadeInfo, { BackgroundTransparency = fillTransparency })
 			_VH_SafeTween(item.Stroke, fadeInfo, { Transparency = strokeTransparency })
 			_VH_SafeTween(item.Label, fadeInfo, { TextColor3 = labelColor })
 		else
-			item.Fill.BackgroundTransparency = fillTransparency
+			item.Button.BackgroundTransparency = fillTransparency
 			item.Stroke.Transparency = strokeTransparency
 			item.Label.TextColor3 = labelColor
 		end
 	end
 
 	local function refreshTops()
-		local scale = uiScale()
+		local scale = math.max(uiScale(), 0.01)
+		local scrollY = view.CanvasPosition.Y
 		for index, section in ipairs(sections) do
 			local block = section.Block
-			if block and block.Parent then
-				tops[index] = (block.AbsolutePosition.Y - view.AbsolutePosition.Y) / scale + view.CanvasPosition.Y
+			if block and block.Parent == view then
+				-- Convert the visible absolute position back to stable canvas coordinates.
+				tops[index] = ((block.AbsolutePosition.Y - view.AbsolutePosition.Y) + scrollY * scale) / scale
 			end
 		end
 		topsDirty = false
@@ -6781,7 +6789,7 @@ function _VH_BuildHowToNav()
 	local function revealChip(index)
 		local item = chips[index]
 		if not item or not item.Button.Parent then return end
-		local scale = uiScale()
+		local scale = math.max(uiScale(), 0.01)
 		local visibleWidth = bar.AbsoluteWindowSize.X / scale
 		local chipLeft = (item.Button.AbsolutePosition.X - bar.AbsolutePosition.X) / scale + bar.CanvasPosition.X
 		local chipWidth = item.Button.AbsoluteSize.X / scale
@@ -6793,7 +6801,7 @@ function _VH_BuildHowToNav()
 	end
 
 	local function setActive(index)
-		if index == activeIndex then return end
+		if index < 1 or index > #chips or index == activeIndex then return end
 		local previous = chips[activeIndex]
 		if previous then paintChip(previous, false, true) end
 		activeIndex = index
@@ -6807,15 +6815,16 @@ function _VH_BuildHowToNav()
 	local function spy()
 		if isDestroying or not view.Parent or not view.Visible or os.clock() < lockUntil then return end
 		if topsDirty then refreshTops() end
-		local scale = uiScale()
 		local y = view.CanvasPosition.Y
+		local scale = math.max(uiScale(), 0.01)
 		local viewHeight = view.AbsoluteWindowSize.Y / scale
 		local canvasHeight = view.AbsoluteCanvasSize.Y / scale
 		local found = 1
-		if y > 2 and y + viewHeight >= canvasHeight - 2 then
+		if y + viewHeight >= canvasHeight - 3 then
 			found = #sections
 		else
-			local probe = y + 14
+			-- The active section is the last section whose top has reached the reading line.
+			local probe = y + math.max(18, math.min(34, viewHeight * 0.08))
 			for index = #sections, 1, -1 do
 				if tops[index] and tops[index] <= probe then
 					found = index
@@ -6828,16 +6837,20 @@ function _VH_BuildHowToNav()
 
 	local function jumpTo(index)
 		local section = sections[index]
-		if not section or not section.Block or not section.Block.Parent or not view.Visible then return end
+		if not section or not section.Block or section.Block.Parent ~= view or not view.Visible then return end
+		topsDirty = true
 		refreshTops()
-		local scale = uiScale()
+		local scale = math.max(uiScale(), 0.01)
 		local maxScroll = math.max(0, view.AbsoluteCanvasSize.Y / scale - view.AbsoluteWindowSize.Y / scale)
 		local target = math.clamp((tops[index] or 0) - 2, 0, maxScroll)
-		lockUntil = os.clock() + 0.5
+		lockUntil = os.clock() + 0.38
 		setActive(index)
 		_VH_SafeTween(view, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { CanvasPosition = Vector2.new(0, target) })
-		task.delay(0.55, function()
-			if not isDestroying then spy() end
+		task.delay(0.4, function()
+			if not isDestroying and view.Parent and view.Visible then
+				topsDirty = true
+				spy()
+			end
 		end)
 	end
 
@@ -6846,29 +6859,25 @@ function _VH_BuildHowToNav()
 		button.Name = "NavChip"
 		button.AutomaticSize = Enum.AutomaticSize.X
 		button.Size = UDim2.new(0, 0, 0, barHeight - 6)
+		button.BackgroundColor3 = Color3.new(1, 1, 1)
 		button.BackgroundTransparency = 1
 		button.BorderSizePixel = 0
 		button.AutoButtonColor = false
+		button.ClipsDescendants = true
 		button.Text = ""
 		button.LayoutOrder = index
+		button.ZIndex = 1
+		local chipCorner = Instance.new("UICorner", button)
+		chipCorner.CornerRadius = UDim.new(0, 9)
 		local chipPad = Instance.new("UIPadding", button)
 		chipPad.PaddingLeft = UDim.new(0, 12)
 		chipPad.PaddingRight = UDim.new(0, 12)
-		local fill = Instance.new("Frame", button)
-		fill.Name = "Fill"
-		fill.Size = UDim2.new(1, 24, 1, 0)
-		fill.Position = UDim2.new(0, -12, 0, 0)
-		fill.BackgroundColor3 = Color3.new(1, 1, 1)
-		fill.BackgroundTransparency = 1
-		fill.BorderSizePixel = 0
-		fill.ZIndex = 1
-		Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 9)
-		local fillGradient = Instance.new("UIGradient", fill)
+		local fillGradient = Instance.new("UIGradient", button)
 		fillGradient.Color = ColorSequence.new({
 			ColorSequenceKeypoint.new(0, _VH_RGB(150, 118, 255)),
 			ColorSequenceKeypoint.new(1, _VH_RGB(106, 76, 240))
 		})
-		local fillStroke = Instance.new("UIStroke", fill)
+		local fillStroke = Instance.new("UIStroke", button)
 		fillStroke.Color = _VH_RGB(196, 178, 255)
 		fillStroke.Thickness = 1
 		fillStroke.Transparency = 1
@@ -6882,7 +6891,7 @@ function _VH_BuildHowToNav()
 		label.Font = Enum.Font.GothamBold
 		label.TextSize = IsMobile and 9 or 10
 		label.ZIndex = 2
-		local item = { Button = button, Fill = fill, Stroke = fillStroke, Label = label }
+		local item = { Button = button, Stroke = fillStroke, Label = label }
 		chips[index] = item
 		if index == 1 then
 			activeIndex = 1
@@ -6901,14 +6910,34 @@ function _VH_BuildHowToNav()
 		end))
 	end
 
+	local function invalidateTops()
+		topsDirty = true
+		if refreshQueued then return end
+		refreshQueued = true
+		task.defer(function()
+			refreshQueued = false
+			if not isDestroying and view.Parent and view.Visible then spy() end
+		end)
+	end
+
+	local contentLayout = view:FindFirstChildOfClass("UIListLayout")
+	if contentLayout then
+		_VH_RegConn(contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(invalidateTops))
+	end
+	_VH_RegConn(view:GetPropertyChangedSignal("AbsoluteCanvasSize"):Connect(invalidateTops))
+	_VH_RegConn(view:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(invalidateTops))
 	_VH_RegConn(view:GetPropertyChangedSignal("CanvasPosition"):Connect(spy))
-	_VH_RegConn(view:GetPropertyChangedSignal("AbsoluteCanvasSize"):Connect(function() topsDirty = true end))
 	_VH_RegConn(view:GetPropertyChangedSignal("Visible"):Connect(function()
 		bar.Visible = view.Visible
 		if view.Visible then
 			topsDirty = true
-			task.defer(spy)
+			task.defer(function()
+				if not isDestroying and view.Parent and view.Visible then spy() end
+			end)
 		end
+	end))
+	_VH_RegConn(bar:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(function()
+		if view.Visible then revealChip(activeIndex) end
 	end))
 end
 HowToContentBuilt = false
