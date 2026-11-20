@@ -15,6 +15,25 @@
     ]
   },
   {
+  "Name": "Throw Food For Animals",
+  "Description": "Throw food as far as you can to attract and collect animals from different areas! Earn money from your animals, buy better food to attract rarer animals, train your Throw Power, and unlock new areas with stronger and rarer animals.",
+  "RawUrl": "https://raw.githubusercontent.com/Zyqvexon/q7vx2n9k4m8z/refs/heads/main/013.lua",
+  "ImageAssetId": "rbxassetid://123958946000050",
+  "TagType": "HOT",
+  "LastUpdated": 1795176310,
+  "PlaceId": 120219252362013,
+  "Category": "Simulator",
+  "Tags": [
+    "Simulator",
+    "Tycoon",
+    "Animals",
+    "Food Throwing",
+    "Collection",
+    "Pets",
+    "Progression"
+  ]
+  }, 
+  {
     "Name": "[🎃] Steal A Pet And Ride It",
     "Description": "Automate your gameplay with Velox Hub! Enjoy convenient features designed to improve your gaming experience. More improvements and updates are coming.",
     "RawUrl": "https://raw.githubusercontent.com/Zyqvexon/q7vx2n9k4m8z/refs/heads/main/011.lua",
