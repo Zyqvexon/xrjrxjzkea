@@ -2589,13 +2589,44 @@ do
 	ScriptDetailsContent.BorderSizePixel = 0
 	ScriptDetailsContent.ScrollBarThickness = 3
 	ScriptDetailsContent.ScrollBarImageColor3 = Theme.Stroke
-	ScriptDetailsContent.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	ScriptDetailsContent.AutomaticCanvasSize = Enum.AutomaticSize.None
 	ScriptDetailsContent.CanvasSize = UDim2.new(0, 0, 0, 0)
 	ScriptDetailsContent.ClipsDescendants = true
 	ScriptDetailsContent.ZIndex = 502
 	ScriptDetailsLayout = Instance.new("UIListLayout", ScriptDetailsContent)
 	ScriptDetailsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	ScriptDetailsLayout.Padding = UDim.new(0, 10)
+	local ScriptDetailsCanvasSyncQueued = false
+	function _VH_SyncScriptDetailsCanvas()
+		if isDestroying or not ScriptDetailsContent or not ScriptDetailsContent.Parent or not ScriptDetailsLayout then return end
+		local scale = ScriptDetailsUIScale and tonumber(ScriptDetailsUIScale.Scale) or 1
+		if not scale or scale <= 0 then scale = 1 end
+		local windowHeight = ScriptDetailsContent.AbsoluteWindowSize.Y / scale
+		local contentHeight = ScriptDetailsLayout.AbsoluteContentSize.Y / scale
+		local canvasHeight = math.max(windowHeight, math.ceil(contentHeight + 4))
+		if math.abs(ScriptDetailsContent.CanvasSize.Y.Offset - canvasHeight) > 1 then
+			ScriptDetailsContent.CanvasSize = UDim2.new(0, 0, 0, canvasHeight)
+		end
+		local maxScroll = math.max(0, canvasHeight - windowHeight)
+		if ScriptDetailsContent.CanvasPosition.Y > maxScroll then
+			ScriptDetailsContent.CanvasPosition = Vector2.new(0, maxScroll)
+		end
+	end
+	function _VH_QueueScriptDetailsCanvasSync()
+		if ScriptDetailsCanvasSyncQueued or isDestroying then return end
+		ScriptDetailsCanvasSyncQueued = true
+		task.defer(function()
+			ScriptDetailsCanvasSyncQueued = false
+			_VH_SyncScriptDetailsCanvas()
+		end)
+	end
+	_VH_RegConn(ScriptDetailsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(_VH_QueueScriptDetailsCanvasSync))
+	_VH_RegConn(ScriptDetailsContent:GetPropertyChangedSignal("AbsoluteSize"):Connect(_VH_QueueScriptDetailsCanvasSync))
+	pcall(function() _VH_RegConn(ScriptDetailsContent:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(_VH_QueueScriptDetailsCanvasSync)) end)
+	if ScriptDetailsUIScale and ScriptDetailsUIScale.Parent then
+		_VH_RegConn(ScriptDetailsUIScale:GetPropertyChangedSignal("Scale"):Connect(_VH_QueueScriptDetailsCanvasSync))
+	end
+	_VH_QueueScriptDetailsCanvasSync()
 
 	ScriptDetailsAbout = Instance.new("Frame", ScriptDetailsContent)
 	ScriptDetailsAbout.Size = UDim2.new(1, -2, 0, 0)
@@ -2862,6 +2893,7 @@ function _VH_OpenScriptDetails(data, entry)
 		ScriptDetailsTagsText.TextColor3 = #tagValues > 0 and Theme.TextPrimary or Theme.TextSecondary
 	end
 	ScriptDetailsContent.CanvasPosition = Vector2.new(0, 0)
+	_VH_QueueScriptDetailsCanvasSync()
 	local camera = workspace.CurrentCamera
 	local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
 	local uiScale = math.max(0.8, math.min(1.2, tonumber(ScriptDetailsUIScale.Scale) or 1))
@@ -3538,13 +3570,50 @@ function CreateCanvas(name)
 	scroll.BackgroundTransparency = 1; scroll.BorderSizePixel = 0
 	scroll.ScrollBarThickness = 3; scroll.ScrollBarImageColor3 = Theme.Stroke
 	scroll.Visible = (name == currentTab)
-	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y; scroll.CanvasSize = UDim2.new(0, 0, 0, 0); scroll.Active = true
+	scroll.AutomaticCanvasSize = Enum.AutomaticSize.None; scroll.CanvasSize = UDim2.new(0, 0, 0, 0); scroll.Active = true
 	scroll.ScrollingDirection = Enum.ScrollingDirection.Y
 	local layout = Instance.new("UIListLayout", scroll)
 	layout.Padding = UDim.new(0, IsMobile and 8 or 12); layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.HorizontalAlignment = Enum.HorizontalAlignment.Left; layout.VerticalAlignment = Enum.VerticalAlignment.Top
 	local pad = Instance.new("UIPadding", scroll)
 	pad.PaddingLeft = UDim.new(0, 3); pad.PaddingRight = UDim.new(0, 6); pad.PaddingBottom = UDim.new(0, 16)
 	TabViews[name] = scroll
+	if name ~= "How to Use" then
+		-- Manual sizing avoids AutomaticCanvasSize drift under the panel's UIScale.
+		local syncQueued = false
+		local function syncCanvas()
+			if isDestroying or not scroll.Parent then return end
+			local scale = PanelUIScale and tonumber(PanelUIScale.Scale) or 1
+			if not scale or scale <= 0 then scale = 1 end
+			local logicalHeight = scroll.AbsoluteSize.Y / scale
+			local windowHeight = scroll.AbsoluteWindowSize.Y / scale
+			local paddingTop = pad.PaddingTop.Offset + pad.PaddingTop.Scale * logicalHeight
+			local paddingBottom = pad.PaddingBottom.Offset + pad.PaddingBottom.Scale * logicalHeight
+			local contentHeight = layout.AbsoluteContentSize.Y / scale
+			local canvasHeight = math.max(windowHeight, math.ceil(contentHeight + paddingTop + paddingBottom + 2))
+			if math.abs(scroll.CanvasSize.Y.Offset - canvasHeight) > 1 then
+				scroll.CanvasSize = UDim2.new(0, 0, 0, canvasHeight)
+			end
+			local maxScroll = math.max(0, canvasHeight - windowHeight)
+			if scroll.CanvasPosition.Y > maxScroll then
+				scroll.CanvasPosition = Vector2.new(0, maxScroll)
+			end
+		end
+		local function queueSync()
+			if syncQueued or isDestroying then return end
+			syncQueued = true
+			task.defer(function()
+				syncQueued = false
+				if not isDestroying and scroll.Parent then syncCanvas() end
+			end)
+		end
+		_VH_RegConn(layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(queueSync))
+		_VH_RegConn(scroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(queueSync))
+		pcall(function() _VH_RegConn(scroll:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(queueSync)) end)
+		if PanelUIScale and PanelUIScale.Parent then
+			_VH_RegConn(PanelUIScale:GetPropertyChangedSignal("Scale"):Connect(queueSync))
+		end
+		queueSync()
+	end
 	return scroll
 end
 HomeView = CreateCanvas("Home")
@@ -5198,9 +5267,8 @@ function _VH_LayoutTabs()
 	TabIndicator.Size = UDim2.new(0, 3, 0, indicatorHeight)
 	local activeButton = TabButtonCache[currentTab]
 	if activeButton and activeButton.Parent then
-		local buttonY = activeButton.Position.Y.Offset
-		local buttonHeight = activeButton.Size.Y.Offset
-		TabIndicator.Position = UDim2.new(0, 0, 0, buttonY + (buttonHeight - indicatorHeight) / 2)
+		local indicatorY = activeButton.Position.Y.Offset + (activeButton.Size.Y.Offset - indicatorHeight) / 2
+		_VH_SafeTween(TabIndicator, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = UDim2.new(0, 0, 0, indicatorY) })
 	end
 	if SidebarCredits then
 		SidebarCredits.Size = UDim2.new(1, -20, 0, compact and cardHeight or (IsMobile and 106 or 126))
@@ -5214,9 +5282,9 @@ function _VH_SwitchTab(name)
 	if isDestroying then return end
 	local index = TabIndexByName[name]
 	if not index then return end
-	local targetButton = TabButtonCache[name]
-	local indicatorY = targetButton and (targetButton.Position.Y.Offset + (targetButton.Size.Y.Offset - TabIndicator.Size.Y.Offset) / 2)
-		or ((index - 1) * TabLayout.Step + (TabLayout.Height - TabIndicator.Size.Y.Offset) / 2)
+	local indicatorButton = TabButtonCache[name]
+	local indicatorY = indicatorButton and indicatorButton.Position.Y.Offset + (indicatorButton.Size.Y.Offset - TabIndicator.Size.Y.Offset) / 2
+		or (index - 1) * TabLayout.Step + (TabLayout.Height - TabIndicator.Size.Y.Offset) / 2
 	if currentTab == name then
 		_VH_SafeTween(TabIndicator, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = UDim2.new(0, 0, 0, indicatorY) })
 		return
@@ -6725,62 +6793,221 @@ function _VH_BuildHowToNav()
 	bar.Position = UDim2.new(0, 14, 0, top)
 	bar.BackgroundColor3 = Theme.BackgroundMain
 	bar.BorderSizePixel = 0
-	bar.ScrollBarThickness = 0
+	bar.ScrollBarThickness = 1
 	bar.ScrollBarImageTransparency = 1
 	bar.ScrollBarImageColor3 = Theme.BackgroundMain
 	bar.ScrollingDirection = Enum.ScrollingDirection.X
-	bar.AutomaticCanvasSize = Enum.AutomaticSize.X
+	bar.ScrollingEnabled = true
+	bar.Active = true
+	bar.AutomaticCanvasSize = Enum.AutomaticSize.None
 	bar.CanvasSize = UDim2.new(0, 0, 0, 0)
 	bar.ElasticBehavior = Enum.ElasticBehavior.Never
 	bar.Visible = view.Visible
+	bar.ClipsDescendants = true
 	Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 12)
 	local barStroke = Instance.new("UIStroke", bar)
 	barStroke.Color = Theme.Stroke
 	barStroke.Transparency = 0.35
 	barStroke.Thickness = 1
 	pcall(function() barStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
-	local barPad = Instance.new("UIPadding", bar)
+
+	-- Keep the chip layout and its moving selection pill in the same scrolling canvas.
+	-- This avoids an independently positioned highlight drifting away from its chip.
+	local pillLayer = Instance.new("Frame", bar)
+	pillLayer.Name = "SelectionPillLayer"
+	pillLayer.Size = UDim2.new(0, 0, 1, 0)
+	pillLayer.Position = UDim2.new(0, 0, 0, 0)
+	pillLayer.BackgroundTransparency = 1
+	pillLayer.BorderSizePixel = 0
+	pillLayer.Active = false
+	pillLayer.ZIndex = 1
+
+	local selectionPill = Instance.new("Frame", pillLayer)
+	selectionPill.Name = "SelectionPill"
+	selectionPill.Size = UDim2.new(0, 0, 0, barHeight - 6)
+	selectionPill.Position = UDim2.new(0, 0, 0, 3)
+	selectionPill.BackgroundColor3 = Color3.new(1, 1, 1)
+	selectionPill.BorderSizePixel = 0
+	selectionPill.ZIndex = 1
+	selectionPill.Active = false
+	Instance.new("UICorner", selectionPill).CornerRadius = UDim.new(0, 9)
+	local pillGradient = Instance.new("UIGradient", selectionPill)
+	pillGradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, _VH_RGB(150, 118, 255)),
+		ColorSequenceKeypoint.new(1, _VH_RGB(106, 76, 240))
+	})
+	local pillStroke = Instance.new("UIStroke", selectionPill)
+	pillStroke.Color = _VH_RGB(196, 178, 255)
+	pillStroke.Thickness = 1
+	pillStroke.Transparency = 0.55
+	pcall(function() pillStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
+
+	local chipContainer = Instance.new("Frame", bar)
+	chipContainer.Name = "ChipContainer"
+	chipContainer.Size = UDim2.new(0, 0, 1, 0)
+	chipContainer.Position = UDim2.new(0, 0, 0, 0)
+	chipContainer.BackgroundTransparency = 1
+	chipContainer.BorderSizePixel = 0
+	chipContainer.ZIndex = 2
+	local barPad = Instance.new("UIPadding", chipContainer)
 	barPad.PaddingLeft = UDim.new(0, 3)
 	barPad.PaddingRight = UDim.new(0, 3)
 	barPad.PaddingTop = UDim.new(0, 3)
 	barPad.PaddingBottom = UDim.new(0, 3)
-	local barLayout = Instance.new("UIListLayout", bar)
+	local barLayout = Instance.new("UIListLayout", chipContainer)
 	barLayout.FillDirection = Enum.FillDirection.Horizontal
 	barLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 	barLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	barLayout.Padding = UDim.new(0, 4)
+
 	view.Position = UDim2.new(0, 14, 0, top + barHeight + 8)
 	view.Size = UDim2.new(1, -28, 1, (IsMobile and -112 or -120) - (barHeight + 8))
 
+	-- AutomaticCanvasSize under the panel's UIScale can report a stale or short canvas.
+	-- Measure the list layout and assign a logical-pixel canvas size instead.
+	view.AutomaticCanvasSize = Enum.AutomaticSize.None
+	view.CanvasSize = UDim2.new(0, 0, 0, 0)
+	local viewLayout = view:FindFirstChildOfClass("UIListLayout")
+	local viewPadding = view:FindFirstChildOfClass("UIPadding")
 	local chips, tops = {}, {}
-	local activeIndex, lockUntil, topsDirty = 0, 0, true
-	local refreshQueued = false
-	local fadeInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-	local function uiScale() return (PanelUIScale and PanelUIScale.Scale) or 1 end
+	local activeIndex, topsDirty = 0, true
+	local refreshActiveFromScroll
+	local fadeInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	local pillInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+	local barSyncQueued, viewSyncQueued = false, false
+
+	local function uiScale()
+		local scale = PanelUIScale and tonumber(PanelUIScale.Scale) or 1
+		if not scale or scale <= 0 then return 1 end
+		return scale
+	end
+
+	local function cancelTrackedTween(instance)
+		local data = ActiveTweens[instance]
+		if not data then return end
+		ActiveTweens[instance] = nil
+		if data.Connection then pcall(function() data.Connection:Disconnect() end) end
+		if data.Tween then
+			pcall(function()
+				data.Tween:Cancel()
+				data.Tween:Destroy()
+			end)
+		end
+	end
+
+	local function udimPixels(value, referenceSize)
+		return value.Offset + value.Scale * referenceSize
+	end
+
+	local function getChipRect(item)
+		local button = item and item.Button
+		if not button or not button.Parent then return nil end
+		local scale = uiScale()
+		local scroll = bar.CanvasPosition
+		return (button.AbsolutePosition.X - bar.AbsolutePosition.X) / scale + scroll.X,
+			(button.AbsolutePosition.Y - bar.AbsolutePosition.Y) / scale + scroll.Y,
+			button.AbsoluteSize.X / scale,
+			button.AbsoluteSize.Y / scale
+	end
+
+	local function movePill(item, animate)
+		if not item or not selectionPill.Parent then return end
+		local x, y, width, height = getChipRect(item)
+		if not x then return end
+		local position = UDim2.new(0, math.floor(x + 0.5), 0, math.floor(y + 0.5))
+		local size = UDim2.new(0, math.max(1, math.ceil(width)), 0, math.max(1, math.ceil(height)))
+		if animate then
+			_VH_SafeTween(selectionPill, pillInfo, { Position = position, Size = size })
+		else
+			selectionPill.Position = position
+			selectionPill.Size = size
+		end
+	end
+
+	local function syncBarCanvas()
+		if isDestroying or not bar.Parent then return end
+		local scale = uiScale()
+		local logicalContentWidth = barLayout.AbsoluteContentSize.X / scale
+		local logicalFrameWidth = bar.AbsoluteSize.X / scale
+		local leftPadding = udimPixels(barPad.PaddingLeft, logicalFrameWidth)
+		local rightPadding = udimPixels(barPad.PaddingRight, logicalFrameWidth)
+		local contentWidth = math.max(0, math.ceil(logicalContentWidth + leftPadding + rightPadding + 1))
+		chipContainer.Size = UDim2.new(0, contentWidth, 1, 0)
+		pillLayer.Size = UDim2.new(0, contentWidth, 1, 0)
+		bar.CanvasSize = UDim2.new(0, contentWidth, 0, 0)
+		local visibleWidth = bar.AbsoluteWindowSize.X / scale
+		local maxScroll = math.max(0, contentWidth - visibleWidth)
+		if bar.CanvasPosition.X > maxScroll then
+			cancelTrackedTween(bar)
+			bar.CanvasPosition = Vector2.new(maxScroll, 0)
+		end
+		if activeIndex > 0 then movePill(chips[activeIndex], false) end
+	end
+
+	local function queueBarSync()
+		if barSyncQueued or isDestroying then return end
+		barSyncQueued = true
+		task.defer(function()
+			barSyncQueued = false
+			if not isDestroying and bar.Parent then syncBarCanvas() end
+		end)
+	end
+
+	local function syncViewCanvas()
+		if isDestroying or not view.Parent or not viewLayout then return end
+		local scale = uiScale()
+		local logicalHeight = view.AbsoluteSize.Y / scale
+		local logicalWindowHeight = view.AbsoluteWindowSize.Y / scale
+		local topPadding, bottomPadding = 0, 0
+		if viewPadding then
+			topPadding = udimPixels(viewPadding.PaddingTop, logicalHeight)
+			bottomPadding = udimPixels(viewPadding.PaddingBottom, logicalHeight)
+		end
+		local contentHeight = viewLayout.AbsoluteContentSize.Y / scale
+		local canvasHeight = math.max(logicalWindowHeight, math.ceil(contentHeight + topPadding + bottomPadding + 2))
+		if math.abs(view.CanvasSize.Y.Offset - canvasHeight) > 1 then
+			view.CanvasSize = UDim2.new(0, 0, 0, canvasHeight)
+		end
+		local maxScroll = math.max(0, canvasHeight - logicalWindowHeight)
+		if view.CanvasPosition.Y > maxScroll then
+			cancelTrackedTween(view)
+			view.CanvasPosition = Vector2.new(0, maxScroll)
+		end
+		topsDirty = true
+	end
+
+	local function queueViewSync()
+		if viewSyncQueued or isDestroying then return end
+		viewSyncQueued = true
+		task.defer(function()
+			viewSyncQueued = false
+			if isDestroying or not view.Parent then return end
+			syncViewCanvas()
+			if view.Visible then
+				task.defer(function()
+					if isDestroying or not view.Visible then return end
+					if refreshActiveFromScroll then refreshActiveFromScroll() end
+					if activeIndex > 0 then movePill(chips[activeIndex], false) end
+				end)
+			end
+		end)
+	end
 
 	local function paintChip(item, active, animate)
-		local fillTransparency = active and 0 or 1
-		local strokeTransparency = active and 0.55 or 1
 		local labelColor = active and Color3.new(1, 1, 1) or Theme.TextSecondary
 		if animate then
-			_VH_SafeTween(item.Button, fadeInfo, { BackgroundTransparency = fillTransparency })
-			_VH_SafeTween(item.Stroke, fadeInfo, { Transparency = strokeTransparency })
 			_VH_SafeTween(item.Label, fadeInfo, { TextColor3 = labelColor })
 		else
-			item.Button.BackgroundTransparency = fillTransparency
-			item.Stroke.Transparency = strokeTransparency
 			item.Label.TextColor3 = labelColor
 		end
 	end
 
 	local function refreshTops()
-		local scale = math.max(uiScale(), 0.01)
-		local scrollY = view.CanvasPosition.Y
+		local scale = uiScale()
 		for index, section in ipairs(sections) do
 			local block = section.Block
-			if block and block.Parent == view then
-				-- Convert the visible absolute position back to stable canvas coordinates.
-				tops[index] = ((block.AbsolutePosition.Y - view.AbsolutePosition.Y) + scrollY * scale) / scale
+			if block and block.Parent then
+				tops[index] = (block.AbsolutePosition.Y - view.AbsolutePosition.Y) / scale + view.CanvasPosition.Y
 			end
 		end
 		topsDirty = false
@@ -6789,42 +7016,47 @@ function _VH_BuildHowToNav()
 	local function revealChip(index)
 		local item = chips[index]
 		if not item or not item.Button.Parent then return end
-		local scale = math.max(uiScale(), 0.01)
+		local scale = uiScale()
 		local visibleWidth = bar.AbsoluteWindowSize.X / scale
 		local chipLeft = (item.Button.AbsolutePosition.X - bar.AbsolutePosition.X) / scale + bar.CanvasPosition.X
 		local chipWidth = item.Button.AbsoluteSize.X / scale
 		local current = bar.CanvasPosition.X
 		if chipLeft >= current + 6 and chipLeft + chipWidth <= current + visibleWidth - 6 then return end
-		local maxScroll = math.max(0, bar.AbsoluteCanvasSize.X / scale - visibleWidth)
+		local maxScroll = math.max(0, bar.CanvasSize.X.Offset - visibleWidth)
 		local target = math.clamp(chipLeft + chipWidth / 2 - visibleWidth / 2, 0, maxScroll)
 		_VH_SafeTween(bar, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CanvasPosition = Vector2.new(target, 0) })
 	end
 
-	local function setActive(index)
-		if index < 1 or index > #chips or index == activeIndex then return end
+	local function setActive(index, animate)
+		if index < 1 or index > #chips then return end
+		if index == activeIndex then
+			movePill(chips[index], false)
+			return
+		end
 		local previous = chips[activeIndex]
-		if previous then paintChip(previous, false, true) end
+		if previous then paintChip(previous, false, animate) end
 		activeIndex = index
 		local item = chips[index]
 		if item then
-			paintChip(item, true, true)
+			paintChip(item, true, animate)
+			movePill(item, animate)
 			revealChip(index)
 		end
 	end
 
-	local function spy()
-		if isDestroying or not view.Parent or not view.Visible or os.clock() < lockUntil then return end
+	refreshActiveFromScroll = function()
+		if isDestroying or not view.Parent or not view.Visible then return end
 		if topsDirty then refreshTops() end
+		local scale = uiScale()
 		local y = view.CanvasPosition.Y
-		local scale = math.max(uiScale(), 0.01)
 		local viewHeight = view.AbsoluteWindowSize.Y / scale
-		local canvasHeight = view.AbsoluteCanvasSize.Y / scale
+		local canvasHeight = view.CanvasSize.Y.Offset
+		local maxScroll = math.max(0, canvasHeight - viewHeight)
 		local found = 1
-		if y + viewHeight >= canvasHeight - 3 then
+		if maxScroll > 0 and y >= maxScroll - 2 then
 			found = #sections
 		else
-			-- The active section is the last section whose top has reached the reading line.
-			local probe = y + math.max(18, math.min(34, viewHeight * 0.08))
+			local probe = y + math.min(14, math.max(8, viewHeight * 0.025))
 			for index = #sections, 1, -1 do
 				if tops[index] and tops[index] <= probe then
 					found = index
@@ -6832,55 +7064,37 @@ function _VH_BuildHowToNav()
 				end
 			end
 		end
-		setActive(found)
+		setActive(found, true)
 	end
 
 	local function jumpTo(index)
 		local section = sections[index]
-		if not section or not section.Block or section.Block.Parent ~= view or not view.Visible then return end
-		topsDirty = true
+		if not section or not section.Block or not section.Block.Parent or not view.Visible then return end
+		syncViewCanvas()
 		refreshTops()
-		local scale = math.max(uiScale(), 0.01)
-		local maxScroll = math.max(0, view.AbsoluteCanvasSize.Y / scale - view.AbsoluteWindowSize.Y / scale)
-		local target = math.clamp((tops[index] or 0) - 2, 0, maxScroll)
-		lockUntil = os.clock() + 0.38
-		setActive(index)
-		_VH_SafeTween(view, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { CanvasPosition = Vector2.new(0, target) })
-		task.delay(0.4, function()
-			if not isDestroying and view.Parent and view.Visible then
-				topsDirty = true
-				spy()
-			end
-		end)
+		local scale = uiScale()
+		local viewHeight = view.AbsoluteWindowSize.Y / scale
+		local maxScroll = math.max(0, view.CanvasSize.Y.Offset - viewHeight)
+		local target = math.clamp((tops[index] or 0) - 3, 0, maxScroll)
+		-- Let the normal scroll tracker animate the pill through the same sections
+		-- that are actually passing the top edge during this scroll.
+		_VH_SafeTween(view, TweenInfo.new(0.38, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { CanvasPosition = Vector2.new(0, target) })
 	end
 
 	for index, section in ipairs(sections) do
-		local button = Instance.new("TextButton", bar)
+		local button = Instance.new("TextButton", chipContainer)
 		button.Name = "NavChip"
 		button.AutomaticSize = Enum.AutomaticSize.X
 		button.Size = UDim2.new(0, 0, 0, barHeight - 6)
-		button.BackgroundColor3 = Color3.new(1, 1, 1)
 		button.BackgroundTransparency = 1
 		button.BorderSizePixel = 0
 		button.AutoButtonColor = false
-		button.ClipsDescendants = true
 		button.Text = ""
 		button.LayoutOrder = index
-		button.ZIndex = 1
-		local chipCorner = Instance.new("UICorner", button)
-		chipCorner.CornerRadius = UDim.new(0, 9)
+		button.ZIndex = 3
 		local chipPad = Instance.new("UIPadding", button)
 		chipPad.PaddingLeft = UDim.new(0, 12)
 		chipPad.PaddingRight = UDim.new(0, 12)
-		local fillGradient = Instance.new("UIGradient", button)
-		fillGradient.Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, _VH_RGB(150, 118, 255)),
-			ColorSequenceKeypoint.new(1, _VH_RGB(106, 76, 240))
-		})
-		local fillStroke = Instance.new("UIStroke", button)
-		fillStroke.Color = _VH_RGB(196, 178, 255)
-		fillStroke.Thickness = 1
-		fillStroke.Transparency = 1
 		local label = Instance.new("TextLabel", button)
 		label.Name = "Label"
 		label.AutomaticSize = Enum.AutomaticSize.X
@@ -6890,13 +7104,9 @@ function _VH_BuildHowToNav()
 		label.TextColor3 = Theme.TextSecondary
 		label.Font = Enum.Font.GothamBold
 		label.TextSize = IsMobile and 9 or 10
-		label.ZIndex = 2
-		local item = { Button = button, Stroke = fillStroke, Label = label }
+		label.ZIndex = 4
+		local item = { Button = button, Label = label }
 		chips[index] = item
-		if index == 1 then
-			activeIndex = 1
-			paintChip(item, true, false)
-		end
 		if not IsMobile then
 			_VH_RegConn(button.MouseEnter:Connect(function()
 				if activeIndex ~= index then _VH_SafeTween(label, fadeInfo, { TextColor3 = Theme.TextPrimary }) end
@@ -6910,35 +7120,50 @@ function _VH_BuildHowToNav()
 		end))
 	end
 
-	local function invalidateTops()
-		topsDirty = true
-		if refreshQueued then return end
-		refreshQueued = true
-		task.defer(function()
-			refreshQueued = false
-			if not isDestroying and view.Parent and view.Visible then spy() end
-		end)
-	end
-
-	local contentLayout = view:FindFirstChildOfClass("UIListLayout")
-	if contentLayout then
-		_VH_RegConn(contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(invalidateTops))
-	end
-	_VH_RegConn(view:GetPropertyChangedSignal("AbsoluteCanvasSize"):Connect(invalidateTops))
-	_VH_RegConn(view:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(invalidateTops))
-	_VH_RegConn(view:GetPropertyChangedSignal("CanvasPosition"):Connect(spy))
+	_VH_RegConn(barLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(queueBarSync))
+	_VH_RegConn(bar:GetPropertyChangedSignal("AbsoluteSize"):Connect(queueBarSync))
+	pcall(function() _VH_RegConn(bar:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(queueBarSync)) end)
+	_VH_RegConn(viewLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(queueViewSync))
+	_VH_RegConn(view:GetPropertyChangedSignal("AbsoluteSize"):Connect(queueViewSync))
+	pcall(function() _VH_RegConn(view:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(queueViewSync)) end)
+	_VH_RegConn(view:GetPropertyChangedSignal("CanvasPosition"):Connect(refreshActiveFromScroll))
+	_VH_RegConn(view.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+			cancelTrackedTween(view)
+		end
+	end))
+	_VH_RegConn(view.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseWheel then cancelTrackedTween(view) end
+	end))
+	_VH_RegConn(bar.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+			cancelTrackedTween(bar)
+		end
+	end))
 	_VH_RegConn(view:GetPropertyChangedSignal("Visible"):Connect(function()
 		bar.Visible = view.Visible
 		if view.Visible then
-			topsDirty = true
-			task.defer(function()
-				if not isDestroying and view.Parent and view.Visible then spy() end
-			end)
+			queueBarSync()
+			queueViewSync()
+			task.defer(refreshActiveFromScroll)
 		end
 	end))
-	_VH_RegConn(bar:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(function()
-		if view.Visible then revealChip(activeIndex) end
-	end))
+	if PanelUIScale and PanelUIScale.Parent then
+		_VH_RegConn(PanelUIScale:GetPropertyChangedSignal("Scale"):Connect(function()
+			queueBarSync()
+			queueViewSync()
+		end))
+	end
+
+	queueBarSync()
+	queueViewSync()
+	task.defer(function()
+		if isDestroying or not view.Parent then return end
+		syncBarCanvas()
+		syncViewCanvas()
+		refreshTops()
+		setActive(1, false)
+	end)
 end
 HowToContentBuilt = false
 function _VH_EnsureHowToContent()
