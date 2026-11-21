@@ -6820,6 +6820,7 @@ function _VH_BuildHowToNav()
 	pillLayer.BackgroundTransparency = 1
 	pillLayer.BorderSizePixel = 0
 	pillLayer.Active = false
+	pillLayer.ClipsDescendants = true
 	pillLayer.ZIndex = 1
 
 	local selectionPill = Instance.new("Frame", pillLayer)
@@ -6869,9 +6870,11 @@ function _VH_BuildHowToNav()
 	view.CanvasSize = UDim2.new(0, 0, 0, 0)
 	local viewLayout = view:FindFirstChildOfClass("UIListLayout")
 	local viewPadding = view:FindFirstChildOfClass("UIPadding")
-	local chips, tops = {}, {}
-	local activeIndex, topsDirty = 0, true
+	local chips = {}
+	local activeIndex = 0
 	local refreshActiveFromScroll
+	local navigationTarget, navigationTweenConnection = nil, nil
+	local navigationGeneration = 0
 	local fadeInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	local pillInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 	local barSyncQueued, viewSyncQueued = false, false
@@ -6899,26 +6902,21 @@ function _VH_BuildHowToNav()
 		return value.Offset + value.Scale * referenceSize
 	end
 
-	local function getChipRect(item)
-		local button = item and item.Button
-		if not button or not button.Parent then return nil end
-		local scale = uiScale()
-		local scroll = bar.CanvasPosition
-		return (button.AbsolutePosition.X - bar.AbsolutePosition.X) / scale + scroll.X,
-			(button.AbsolutePosition.Y - bar.AbsolutePosition.Y) / scale + scroll.Y,
-			button.AbsoluteSize.X / scale,
-			button.AbsoluteSize.Y / scale
-	end
-
 	local function movePill(item, animate)
-		if not item or not selectionPill.Parent then return end
-		local x, y, width, height = getChipRect(item)
-		if not x then return end
-		local position = UDim2.new(0, math.floor(x + 0.5), 0, math.floor(y + 0.5))
-		local size = UDim2.new(0, math.max(1, math.ceil(width)), 0, math.max(1, math.ceil(height)))
+		local button = item and item.Button
+		if not button or not button.Parent or not selectionPill.Parent or not pillLayer.Parent then return end
+		local scale = uiScale()
+		-- Both objects live in the same scrolling canvas. Their absolute-position
+		-- difference already removes horizontal scrolling, avoiding double offsets.
+		local relative = button.AbsolutePosition - pillLayer.AbsolutePosition
+		local position = UDim2.new(0, math.floor(relative.X / scale + 0.5), 0, math.floor(relative.Y / scale + 0.5))
+		local size = UDim2.new(0, math.max(1, math.floor(button.AbsoluteSize.X / scale + 0.5)), 0, math.max(1, math.floor(button.AbsoluteSize.Y / scale + 0.5)))
 		if animate then
 			_VH_SafeTween(selectionPill, pillInfo, { Position = position, Size = size })
 		else
+			-- A previous animation must not keep writing stale coordinates after a
+			-- layout/scale correction snaps the pill to its exact target.
+			cancelTrackedTween(selectionPill)
 			selectionPill.Position = position
 			selectionPill.Size = size
 		end
@@ -6973,7 +6971,6 @@ function _VH_BuildHowToNav()
 			cancelTrackedTween(view)
 			view.CanvasPosition = Vector2.new(0, maxScroll)
 		end
-		topsDirty = true
 	end
 
 	local function queueViewSync()
@@ -6987,7 +6984,6 @@ function _VH_BuildHowToNav()
 				task.defer(function()
 					if isDestroying or not view.Visible then return end
 					if refreshActiveFromScroll then refreshActiveFromScroll() end
-					if activeIndex > 0 then movePill(chips[activeIndex], false) end
 				end)
 			end
 		end)
@@ -7002,37 +6998,37 @@ function _VH_BuildHowToNav()
 		end
 	end
 
-	local function refreshTops()
-		local scale = uiScale()
-		for index, section in ipairs(sections) do
-			local block = section.Block
-			if block and block.Parent then
-				tops[index] = (block.AbsolutePosition.Y - view.AbsolutePosition.Y) / scale + view.CanvasPosition.Y
-			end
-		end
-		topsDirty = false
-	end
-
 	local function revealChip(index)
 		local item = chips[index]
-		if not item or not item.Button.Parent then return end
+		local button = item and item.Button
+		if not button or not button.Parent then return end
 		local scale = uiScale()
-		local visibleWidth = bar.AbsoluteWindowSize.X / scale
-		local chipLeft = (item.Button.AbsolutePosition.X - bar.AbsolutePosition.X) / scale + bar.CanvasPosition.X
-		local chipWidth = item.Button.AbsoluteSize.X / scale
+		local visibleWidth = bar.AbsoluteWindowSize.X
+		local left = button.AbsolutePosition.X - bar.AbsolutePosition.X
+		local right = left + button.AbsoluteSize.X
+		local margin = 6 * scale
+		local delta = 0
+		if left < margin then
+			delta = left - margin
+		elseif right > visibleWidth - margin then
+			delta = right - (visibleWidth - margin)
+		else
+			return
+		end
+		local logicalVisibleWidth = visibleWidth / scale
+		local maxScroll = math.max(0, bar.CanvasSize.X.Offset - logicalVisibleWidth)
 		local current = bar.CanvasPosition.X
-		if chipLeft >= current + 6 and chipLeft + chipWidth <= current + visibleWidth - 6 then return end
-		local maxScroll = math.max(0, bar.CanvasSize.X.Offset - visibleWidth)
-		local target = math.clamp(chipLeft + chipWidth / 2 - visibleWidth / 2, 0, maxScroll)
-		_VH_SafeTween(bar, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CanvasPosition = Vector2.new(target, 0) })
+		local target = math.clamp(current + delta / scale, 0, maxScroll)
+		if math.abs(target - current) > 0.5 then
+			_VH_SafeTween(bar, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CanvasPosition = Vector2.new(target, 0) })
+		end
 	end
 
 	local function setActive(index, animate)
 		if index < 1 or index > #chips then return end
-		if index == activeIndex then
-			movePill(chips[index], false)
-			return
-		end
+		-- Do not restart/cancel a valid pill tween on every scroll event while the
+		-- same section remains active. Geometry changes are handled by queueBarSync.
+		if index == activeIndex then return end
 		local previous = chips[activeIndex]
 		if previous then paintChip(previous, false, animate) end
 		activeIndex = index
@@ -7046,39 +7042,90 @@ function _VH_BuildHowToNav()
 
 	refreshActiveFromScroll = function()
 		if isDestroying or not view.Parent or not view.Visible then return end
-		if topsDirty then refreshTops() end
+		-- A tab click owns the active state until its scroll tween completes. Manual
+		-- input clears this lock so real scrolling immediately takes control again.
+		if navigationTarget then return end
 		local scale = uiScale()
-		local y = view.CanvasPosition.Y
-		local viewHeight = view.AbsoluteWindowSize.Y / scale
-		local canvasHeight = view.CanvasSize.Y.Offset
-		local maxScroll = math.max(0, canvasHeight - viewHeight)
+		local viewTop = view.AbsolutePosition.Y
+		local viewBottom = viewTop + view.AbsoluteWindowSize.Y
+		local probe = viewTop + math.min(14 * scale, math.max(8 * scale, view.AbsoluteWindowSize.Y * 0.025))
 		local found = 1
-		if maxScroll > 0 and y >= maxScroll - 2 then
-			found = #sections
-		else
-			local probe = y + math.min(14, math.max(8, viewHeight * 0.025))
-			for index = #sections, 1, -1 do
-				if tops[index] and tops[index] <= probe then
-					found = index
-					break
-				end
+		for index = #sections, 1, -1 do
+			local block = sections[index].Block
+			if block and block.Parent and block.AbsolutePosition.Y <= probe then
+				found = index
+				break
+			end
+		end
+
+		-- Detect the real visual bottom from the final card and viewport bounds.
+		-- This remains accurate when the last sections are shorter than the viewport
+		-- and avoids relying on a UIScale-sensitive calculated max-scroll value.
+		local lastBlock = sections[#sections] and sections[#sections].Block
+		if lastBlock and lastBlock.Parent then
+			local contentBottom = lastBlock.AbsolutePosition.Y + lastBlock.AbsoluteSize.Y
+			if viewPadding then
+				contentBottom = contentBottom + udimPixels(viewPadding.PaddingBottom, view.AbsoluteSize.Y / scale) * scale
+			end
+			local canScroll = view.CanvasSize.Y.Offset * scale > view.AbsoluteWindowSize.Y + 1
+			if canScroll and contentBottom <= viewBottom + math.max(2, 2 * scale) then
+				found = #sections
 			end
 		end
 		setActive(found, true)
+	end
+
+	local function cancelNavigationJump(cancelScroll)
+		navigationGeneration = navigationGeneration + 1
+		navigationTarget = nil
+		if navigationTweenConnection then
+			pcall(function() navigationTweenConnection:Disconnect() end)
+			navigationTweenConnection = nil
+		end
+		if cancelScroll then cancelTrackedTween(view) end
 	end
 
 	local function jumpTo(index)
 		local section = sections[index]
 		if not section or not section.Block or not section.Block.Parent or not view.Visible then return end
 		syncViewCanvas()
-		refreshTops()
 		local scale = uiScale()
 		local viewHeight = view.AbsoluteWindowSize.Y / scale
 		local maxScroll = math.max(0, view.CanvasSize.Y.Offset - viewHeight)
-		local target = math.clamp((tops[index] or 0) - 3, 0, maxScroll)
-		-- Let the normal scroll tracker animate the pill through the same sections
-		-- that are actually passing the top edge during this scroll.
-		_VH_SafeTween(view, TweenInfo.new(0.38, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { CanvasPosition = Vector2.new(0, target) })
+		local current = view.CanvasPosition.Y
+		local sectionOffset = (section.Block.AbsolutePosition.Y - view.AbsolutePosition.Y) / scale
+		local target = math.clamp(current + sectionOffset - 3, 0, maxScroll)
+
+		cancelNavigationJump(true)
+		navigationGeneration = navigationGeneration + 1
+		local generation = navigationGeneration
+		navigationTarget = index
+		setActive(index, true)
+		if math.abs(target - current) <= 0.5 then
+			navigationTarget = nil
+			refreshActiveFromScroll()
+			return
+		end
+
+		local tween = _VH_SafeTween(view, TweenInfo.new(0.38, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { CanvasPosition = Vector2.new(0, target) })
+		if not tween then
+			navigationTarget = nil
+			refreshActiveFromScroll()
+			return
+		end
+		local completionConnection
+		completionConnection = tween.Completed:Connect(function()
+			if generation ~= navigationGeneration then return end
+			navigationTarget = nil
+			if navigationTweenConnection then
+				pcall(function() navigationTweenConnection:Disconnect() end)
+			end
+			navigationTweenConnection = nil
+			task.defer(function()
+				if not isDestroying and view.Parent and view.Visible then refreshActiveFromScroll() end
+			end)
+		end)
+		navigationTweenConnection = completionConnection
 	end
 
 	for index, section in ipairs(sections) do
@@ -7129,11 +7176,15 @@ function _VH_BuildHowToNav()
 	_VH_RegConn(view:GetPropertyChangedSignal("CanvasPosition"):Connect(refreshActiveFromScroll))
 	_VH_RegConn(view.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-			cancelTrackedTween(view)
+			cancelNavigationJump(true)
+			if refreshActiveFromScroll then refreshActiveFromScroll() end
 		end
 	end))
 	_VH_RegConn(view.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseWheel then cancelTrackedTween(view) end
+		if input.UserInputType == Enum.UserInputType.MouseWheel then
+			cancelNavigationJump(true)
+			if refreshActiveFromScroll then refreshActiveFromScroll() end
+		end
 	end))
 	_VH_RegConn(bar.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -7146,6 +7197,8 @@ function _VH_BuildHowToNav()
 			queueBarSync()
 			queueViewSync()
 			task.defer(refreshActiveFromScroll)
+		else
+			cancelNavigationJump(true)
 		end
 	end))
 	if PanelUIScale and PanelUIScale.Parent then
@@ -7161,7 +7214,6 @@ function _VH_BuildHowToNav()
 		if isDestroying or not view.Parent then return end
 		syncBarCanvas()
 		syncViewCanvas()
-		refreshTops()
 		setActive(1, false)
 	end)
 end
