@@ -6787,10 +6787,26 @@ function _VH_BuildHowToNav()
 	local sections = HowToSections
 	local barHeight = IsMobile and 30 or 36
 	local top = IsMobile and 98 or 112
-	local bar = Instance.new("ScrollingFrame", MainContent)
+	-- CanvasGroup provides true rounded-corner clipping for descendants.
+	-- ClipsDescendants on a regular GuiObject only clips to a rectangle, which
+	-- allowed the moving violet pill to show through the rounded track corners.
+	local navClipGroup = Instance.new("CanvasGroup", MainContent)
+	navClipGroup.Name = "HowToNavRoundedClipGroup"
+	navClipGroup.Size = UDim2.new(1, -28, 0, barHeight)
+	navClipGroup.Position = UDim2.new(0, 14, 0, top)
+	navClipGroup.BackgroundTransparency = 1
+	navClipGroup.BorderSizePixel = 0
+	navClipGroup.ClipsDescendants = true
+	navClipGroup.GroupTransparency = 0
+	navClipGroup.Active = false
+	navClipGroup.Selectable = false
+	navClipGroup.Visible = view.Visible
+	Instance.new("UICorner", navClipGroup).CornerRadius = UDim.new(0, 12)
+
+	local bar = Instance.new("ScrollingFrame", navClipGroup)
 	bar.Name = "HowToNav"
-	bar.Size = UDim2.new(1, -28, 0, barHeight)
-	bar.Position = UDim2.new(0, 14, 0, top)
+	bar.Size = UDim2.new(1, 0, 1, 0)
+	bar.Position = UDim2.new(0, 0, 0, 0)
 	bar.BackgroundColor3 = Theme.BackgroundMain
 	bar.BorderSizePixel = 0
 	bar.ScrollBarThickness = 1
@@ -6802,32 +6818,31 @@ function _VH_BuildHowToNav()
 	bar.AutomaticCanvasSize = Enum.AutomaticSize.None
 	bar.CanvasSize = UDim2.new(0, 0, 0, 0)
 	bar.ElasticBehavior = Enum.ElasticBehavior.Never
+	navClipGroup.Visible = view.Visible
 	bar.Visible = view.Visible
 	bar.ClipsDescendants = true
-	Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 12)
 	local barStroke = Instance.new("UIStroke", bar)
 	barStroke.Color = Theme.Stroke
 	barStroke.Transparency = 1 -- The visible stroke is drawn by a fixed overlay above the scrolling content.
 	barStroke.Thickness = 1
 	pcall(function() barStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
 
-	-- Draw the navigation track outline in a fixed layer above the scrolling canvas.
-	-- ScrollingFrame clipping already limits the pill to the viewport, but its child
-	-- content can visually overlap the track's UIStroke while moving near an edge.
-	-- This overlay keeps the thin outer border visible without changing the tab layout.
+	-- Draw the track outline in a fixed layer above the rounded clipping group.
+	-- The CanvasGroup clips the pill and tab content to the same rounded viewport,
+	-- so separate rectangular edge masks are no longer needed.
 	local barBorderOverlay = Instance.new("Frame", MainContent)
 	barBorderOverlay.Name = "HowToNavBorderOverlay"
-	barBorderOverlay.Position = bar.Position
-	barBorderOverlay.Size = bar.Size
-	barBorderOverlay.AnchorPoint = bar.AnchorPoint
-	barBorderOverlay.Rotation = bar.Rotation
+	barBorderOverlay.Position = navClipGroup.Position
+	barBorderOverlay.Size = navClipGroup.Size
+	barBorderOverlay.AnchorPoint = navClipGroup.AnchorPoint
+	barBorderOverlay.Rotation = navClipGroup.Rotation
 	barBorderOverlay.BackgroundTransparency = 1
 	barBorderOverlay.BorderSizePixel = 0
 	barBorderOverlay.Active = false
 	barBorderOverlay.Selectable = false
 	barBorderOverlay.ClipsDescendants = false
-	barBorderOverlay.Visible = bar.Visible
-	barBorderOverlay.ZIndex = bar.ZIndex + 10
+	barBorderOverlay.Visible = navClipGroup.Visible
+	barBorderOverlay.ZIndex = navClipGroup.ZIndex + 10
 	Instance.new("UICorner", barBorderOverlay).CornerRadius = UDim.new(0, 12)
 	local barBorderOverlayStroke = Instance.new("UIStroke", barBorderOverlay)
 	barBorderOverlayStroke.Color = barStroke.Color
@@ -6835,62 +6850,14 @@ function _VH_BuildHowToNav()
 	barBorderOverlayStroke.Thickness = 1
 	pcall(function() barBorderOverlayStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
 
-	-- UIStroke can render slightly beyond the rounded ScrollingFrame viewport.
-	-- These fixed edge masks cover that bleed (and the first few pixels inside
-	-- the track) while the border overlay remains on top. They are siblings of
-	-- the ScrollingFrame, so horizontal CanvasPosition changes cannot move them.
-	local navEdgeMaskWidth = 4
-	local navEdgeMaskOutside = 2
-	local function createNavEdgeMask(name)
-		local mask = Instance.new("Frame", MainContent)
-		mask.Name = name
-		mask.BackgroundColor3 = bar.BackgroundColor3
-		mask.BackgroundTransparency = bar.BackgroundTransparency
-		mask.BorderSizePixel = 0
-		mask.Active = false
-		mask.Selectable = false
-		mask.Visible = bar.Visible
-		mask.ZIndex = bar.ZIndex + 5
-		return mask
-	end
-	local navLeftClipMask = createNavEdgeMask("HowToNavLeftClipMask")
-	local navRightClipMask = createNavEdgeMask("HowToNavRightClipMask")
-
 	local function syncBarBorderOverlay()
-		if not bar.Parent or not barBorderOverlay.Parent then return end
-		barBorderOverlay.Position = bar.Position
-		barBorderOverlay.Size = bar.Size
-		barBorderOverlay.AnchorPoint = bar.AnchorPoint
-		barBorderOverlay.Rotation = bar.Rotation
-		barBorderOverlay.Visible = bar.Visible
-		barBorderOverlay.ZIndex = bar.ZIndex + 10
-
-		local maskSize = UDim2.new(0, navEdgeMaskWidth, bar.Size.Y.Scale, bar.Size.Y.Offset)
-		local anchor = bar.AnchorPoint
-		local topLeftXScale = bar.Position.X.Scale - bar.Size.X.Scale * anchor.X
-		local topLeftXOffset = bar.Position.X.Offset - bar.Size.X.Offset * anchor.X
-		local topLeftYScale = bar.Position.Y.Scale - bar.Size.Y.Scale * anchor.Y
-		local topLeftYOffset = bar.Position.Y.Offset - bar.Size.Y.Offset * anchor.Y
-		local leftPosition = UDim2.new(
-			topLeftXScale, topLeftXOffset - navEdgeMaskOutside,
-			topLeftYScale, topLeftYOffset
-		)
-		local rightPosition = UDim2.new(
-			topLeftXScale + bar.Size.X.Scale,
-			topLeftXOffset + bar.Size.X.Offset - (navEdgeMaskWidth - navEdgeMaskOutside),
-			topLeftYScale, topLeftYOffset
-		)
-		for _, mask in ipairs({ navLeftClipMask, navRightClipMask }) do
-			mask.Size = maskSize
-			mask.AnchorPoint = Vector2.new(0, 0)
-			mask.Rotation = bar.Rotation
-			mask.BackgroundColor3 = bar.BackgroundColor3
-			mask.BackgroundTransparency = bar.BackgroundTransparency
-			mask.Visible = bar.Visible
-			mask.ZIndex = bar.ZIndex + 5
-		end
-		navLeftClipMask.Position = leftPosition
-		navRightClipMask.Position = rightPosition
+		if not navClipGroup.Parent or not barBorderOverlay.Parent then return end
+		barBorderOverlay.Position = navClipGroup.Position
+		barBorderOverlay.Size = navClipGroup.Size
+		barBorderOverlay.AnchorPoint = navClipGroup.AnchorPoint
+		barBorderOverlay.Rotation = navClipGroup.Rotation
+		barBorderOverlay.Visible = navClipGroup.Visible
+		barBorderOverlay.ZIndex = navClipGroup.ZIndex + 10
 	end
 
 	-- Keep the chip layout and its moving selection pill in the same scrolling canvas.
@@ -7279,8 +7246,9 @@ function _VH_BuildHowToNav()
 		end
 	end))
 	_VH_RegConn(view:GetPropertyChangedSignal("Visible"):Connect(function()
+		navClipGroup.Visible = view.Visible
 		bar.Visible = view.Visible
-		barBorderOverlay.Visible = bar.Visible
+		barBorderOverlay.Visible = navClipGroup.Visible
 		if view.Visible then
 			queueBarSync()
 			queueViewSync()
