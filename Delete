@@ -6782,19 +6782,23 @@ function _VH_BuildHowToNav()
 	local sections = HowToSections
 	local barHeight = IsMobile and 30 or 36
 	local top = IsMobile and 98 or 112
-	-- The navigation track and active pill use matching square edges.
-	local navClipFrame = Instance.new("Frame", MainContent)
-	navClipFrame.Name = "HowToNavClipFrame"
-	navClipFrame.Size = UDim2.new(1, -28, 0, barHeight)
-	navClipFrame.Position = UDim2.new(0, 14, 0, top)
-	navClipFrame.BackgroundTransparency = 1
-	navClipFrame.BorderSizePixel = 0
-	navClipFrame.ClipsDescendants = true
-	navClipFrame.Active = false
-	navClipFrame.Selectable = false
-	navClipFrame.Visible = view.Visible
+	-- The rounded CanvasGroup clips the complete navigation contents, including
+	-- the active pill and its stroke, to the same rounded viewport as the track.
+	local navCornerRadius = 12
+	local navClipGroup = Instance.new("CanvasGroup", MainContent)
+	navClipGroup.Name = "HowToNavRoundedClipGroup"
+	navClipGroup.Size = UDim2.new(1, -28, 0, barHeight)
+	navClipGroup.Position = UDim2.new(0, 14, 0, top)
+	navClipGroup.BackgroundTransparency = 1
+	navClipGroup.BorderSizePixel = 0
+	navClipGroup.ClipsDescendants = true
+	navClipGroup.GroupTransparency = 0
+	navClipGroup.Active = false
+	navClipGroup.Selectable = false
+	navClipGroup.Visible = view.Visible
+	Instance.new("UICorner", navClipGroup).CornerRadius = UDim.new(0, navCornerRadius)
 
-	local bar = Instance.new("ScrollingFrame", navClipFrame)
+	local bar = Instance.new("ScrollingFrame", navClipGroup)
 	bar.Name = "HowToNav"
 	bar.Size = UDim2.new(1, 0, 1, 0)
 	bar.Position = UDim2.new(0, 0, 0, 0)
@@ -6809,23 +6813,29 @@ function _VH_BuildHowToNav()
 	bar.AutomaticCanvasSize = Enum.AutomaticSize.None
 	bar.CanvasSize = UDim2.new(0, 0, 0, 0)
 	bar.ElasticBehavior = Enum.ElasticBehavior.Never
-	navClipFrame.Visible = view.Visible
+	navClipGroup.Visible = view.Visible
 	bar.Visible = view.Visible
 	bar.ClipsDescendants = true
-	-- Keep the track outline in a fixed layer above the scrolling content.
+	local barStroke = Instance.new("UIStroke", bar)
+	barStroke.Color = Theme.Stroke
+	barStroke.Transparency = 1
+	barStroke.Thickness = 1
+	pcall(function() barStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
+	-- Keep the rounded track outline in a fixed layer above the clipped content.
 	local barBorderOverlay = Instance.new("Frame", MainContent)
 	barBorderOverlay.Name = "HowToNavBorderOverlay"
-	barBorderOverlay.Position = navClipFrame.Position
-	barBorderOverlay.Size = navClipFrame.Size
-	barBorderOverlay.AnchorPoint = navClipFrame.AnchorPoint
-	barBorderOverlay.Rotation = navClipFrame.Rotation
+	barBorderOverlay.Position = navClipGroup.Position
+	barBorderOverlay.Size = navClipGroup.Size
+	barBorderOverlay.AnchorPoint = navClipGroup.AnchorPoint
+	barBorderOverlay.Rotation = navClipGroup.Rotation
 	barBorderOverlay.BackgroundTransparency = 1
 	barBorderOverlay.BorderSizePixel = 0
 	barBorderOverlay.Active = false
 	barBorderOverlay.Selectable = false
 	barBorderOverlay.ClipsDescendants = false
-	barBorderOverlay.Visible = navClipFrame.Visible
-	barBorderOverlay.ZIndex = navClipFrame.ZIndex + 10
+	barBorderOverlay.Visible = navClipGroup.Visible
+	barBorderOverlay.ZIndex = navClipGroup.ZIndex + 10
+	Instance.new("UICorner", barBorderOverlay).CornerRadius = UDim.new(0, navCornerRadius)
 	local barBorderOverlayStroke = Instance.new("UIStroke", barBorderOverlay)
 	barBorderOverlayStroke.Color = Theme.Stroke
 	barBorderOverlayStroke.Transparency = 0.35
@@ -6833,13 +6843,13 @@ function _VH_BuildHowToNav()
 	pcall(function() barBorderOverlayStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
 
 	local function syncBarBorderOverlay()
-		if not navClipFrame.Parent or not barBorderOverlay.Parent then return end
-		barBorderOverlay.Position = navClipFrame.Position
-		barBorderOverlay.Size = navClipFrame.Size
-		barBorderOverlay.AnchorPoint = navClipFrame.AnchorPoint
-		barBorderOverlay.Rotation = navClipFrame.Rotation
-		barBorderOverlay.Visible = navClipFrame.Visible
-		barBorderOverlay.ZIndex = navClipFrame.ZIndex + 10
+		if not navClipGroup.Parent or not barBorderOverlay.Parent then return end
+		barBorderOverlay.Position = navClipGroup.Position
+		barBorderOverlay.Size = navClipGroup.Size
+		barBorderOverlay.AnchorPoint = navClipGroup.AnchorPoint
+		barBorderOverlay.Rotation = navClipGroup.Rotation
+		barBorderOverlay.Visible = navClipGroup.Visible
+		barBorderOverlay.ZIndex = navClipGroup.ZIndex + 10
 	end
 
 	-- Keep the chip layout and its moving selection pill in the same scrolling canvas.
@@ -6862,6 +6872,7 @@ function _VH_BuildHowToNav()
 	selectionPill.BorderSizePixel = 0
 	selectionPill.ZIndex = 1
 	selectionPill.Active = false
+	Instance.new("UICorner", selectionPill).CornerRadius = UDim.new(0, navCornerRadius)
 	local pillGradient = Instance.new("UIGradient", selectionPill)
 	pillGradient.Color = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, _VH_RGB(150, 118, 255)),
@@ -7200,7 +7211,11 @@ function _VH_BuildHowToNav()
 
 	_VH_RegConn(barLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(queueBarSync))
 	_VH_RegConn(bar:GetPropertyChangedSignal("AbsoluteSize"):Connect(queueBarSync))
-	_VH_RegConn(bar:GetPropertyChangedSignal("Position"):Connect(syncBarBorderOverlay))
+	_VH_RegConn(navClipGroup:GetPropertyChangedSignal("Position"):Connect(syncBarBorderOverlay))
+	_VH_RegConn(navClipGroup:GetPropertyChangedSignal("Size"):Connect(syncBarBorderOverlay))
+	_VH_RegConn(navClipGroup:GetPropertyChangedSignal("AnchorPoint"):Connect(syncBarBorderOverlay))
+	_VH_RegConn(navClipGroup:GetPropertyChangedSignal("Rotation"):Connect(syncBarBorderOverlay))
+	_VH_RegConn(navClipGroup:GetPropertyChangedSignal("Visible"):Connect(syncBarBorderOverlay))
 	_VH_RegConn(bar:GetPropertyChangedSignal("AnchorPoint"):Connect(syncBarBorderOverlay))
 	_VH_RegConn(bar:GetPropertyChangedSignal("Rotation"):Connect(syncBarBorderOverlay))
 	_VH_RegConn(bar:GetPropertyChangedSignal("Visible"):Connect(syncBarBorderOverlay))
@@ -7227,9 +7242,9 @@ function _VH_BuildHowToNav()
 		end
 	end))
 	_VH_RegConn(view:GetPropertyChangedSignal("Visible"):Connect(function()
-		navClipFrame.Visible = view.Visible
+		navClipGroup.Visible = view.Visible
 		bar.Visible = view.Visible
-		barBorderOverlay.Visible = navClipFrame.Visible
+		barBorderOverlay.Visible = navClipGroup.Visible
 		if view.Visible then
 			queueBarSync()
 			queueViewSync()
