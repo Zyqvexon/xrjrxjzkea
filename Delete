@@ -5414,29 +5414,24 @@ _VH_UpdateFilterControl()
 HubChangelog = {
 	{
 		Version = "v" .. HubVersion,
-		Title = "Thumbnail, Filters, Sort & Notifications Update",
+		Title = "Performance, Navigation & UI Polish",
 		Items = {
-			"Redesigned Filters with an icon-first header, compact wrapping chips, and one-tap Favorites and Clear buttons.",
-			"Redesigned Sort Scripts as a compact icon grid that shows the selected order and marks the Sort button when a custom order is active.",
-			"Redesigned notifications as slim icon-led toasts and moved them to the top right so they no longer sit over the mobile controls.",
-			"Fixed the Filters and Sort panels clamping over the Games and Utilities selector and search bar; they now open inside the hub directly below the search row, scale and move with it, and close when the list is tapped.",
-			"Fixed the language and refresh dropdowns in Settings appearing offset above their buttons on some devices.",
-			"Fixed the Featured label in Recommended for You breaking into two lines.",
-			"Fixed the hub being clamped to the wrong screen bounds after changing the UI scale, which could leave it partly off-screen.",
-			"Fixed outlines being cut off at the edges of the Filters and Sort panels, widened Filters to the full search row with tighter spacing, and added a soft fade so a half-visible row no longer looks clipped.",
-			"Made startup lighter: the How to Use guide and Changelog now build the first time they are opened, script cards skip badge elements they do not need, and style cleanup runs in batches.",
-			"Fixed Scripts Catalog card outlines clipping at the top of the list and card buttons clipping on narrow screens in Games and Utilities.",
-			"Filters and Sort now close automatically when switching between Games and Utilities.",
-			"Updated the How to Use Sort and Filters guides to match the new design.",
-			"Added a current game thumbnail to the Home dashboard with an automatic fallback image.",
-			"Redesigned How to Use navigation to match the Games and Utilities selector, with horizontal scrolling.",
-			"Added scroll tracking so the How to Use navigation follows the section you are reading.",
-			"Fixed clipping and overflow in How to Use and tightened Scripts Catalog spacing on smaller screens.",
-			"Removed text strokes and outlines across the entire interface for cleaner, sharper text.",
-			"Moved the Christmas tree beside the Velox Hub logo with a smaller, balanced size.",
-			"Optimized holiday effects, Home updates, and event handling to reduce redundant processing.",
-			"Removed the always-on tap listener for closing panels and kept all new interface code inside function scopes to stay clear of the compiler's local-register limit.",
-			"Removed unused variables and leftover code while keeping all fallback systems intact."
+			"Improved How to Use navigation with smoother active-tab alignment, automatic tab reveal, and section tracking during vertical scrolling.",
+			"Matched the navigation track and active pill to clean square edges, with clipping that keeps the pill inside the visible track.",
+			"Improved section detection near the bottom of the guide so Help and Reference can become active when reached.",
+			"Replaced the navigation's offscreen CanvasGroup with a lightweight clipping frame and removed redundant zero-radius UI objects.",
+			"Refined Filters with a compact icon-first layout, wrapping chips, and one-tap Favorites and Clear controls.",
+			"Updated Sort Scripts with a compact icon grid that shows the selected order and highlights custom sorting.",
+			"Polished notifications as compact, icon-led toasts and moved them away from mobile controls.",
+			"Adjusted Filters, Sort, language, and refresh popups to stay correctly positioned and close when the active catalog category changes.",
+			"Improved UI scaling and screen-boundary clamping so the hub stays on-screen after scale changes.",
+			"Fixed clipped outlines and card controls, and improved spacing and button sizing on narrow screens.",
+			"Made startup lighter by building the How to Use guide and Changelog only when first opened, batching style cleanup, and skipping unused card badges.",
+			"Updated the How to Use guide to match the current Filters and Sort controls, with navigation that follows the section being read.",
+			"Added a current-game thumbnail to Home with an automatic fallback image.",
+			"Reduced redundant work in holiday effects, Home updates, and event handling.",
+			"Removed the always-on panel-dismiss tap listener and kept UI construction inside function scopes to avoid local-register pressure.",
+			"Preserved catalog, image, configuration, and compatibility fallbacks throughout the cleanup."
 		}
 	},
 	{
@@ -6787,22 +6782,19 @@ function _VH_BuildHowToNav()
 	local sections = HowToSections
 	local barHeight = IsMobile and 30 or 36
 	local top = IsMobile and 98 or 112
-	-- Use square horizontal edges for the navigation viewport and active pill.
-	-- Matching square edges avoids rounded-end size mismatch at the track boundary.
-	local navClipGroup = Instance.new("CanvasGroup", MainContent)
-	navClipGroup.Name = "HowToNavRoundedClipGroup"
-	navClipGroup.Size = UDim2.new(1, -28, 0, barHeight)
-	navClipGroup.Position = UDim2.new(0, 14, 0, top)
-	navClipGroup.BackgroundTransparency = 1
-	navClipGroup.BorderSizePixel = 0
-	navClipGroup.ClipsDescendants = true
-	navClipGroup.GroupTransparency = 0
-	navClipGroup.Active = false
-	navClipGroup.Selectable = false
-	navClipGroup.Visible = view.Visible
-	Instance.new("UICorner", navClipGroup).CornerRadius = UDim.new(0, 0)
+	-- The navigation track and active pill use matching square edges.
+	local navClipFrame = Instance.new("Frame", MainContent)
+	navClipFrame.Name = "HowToNavClipFrame"
+	navClipFrame.Size = UDim2.new(1, -28, 0, barHeight)
+	navClipFrame.Position = UDim2.new(0, 14, 0, top)
+	navClipFrame.BackgroundTransparency = 1
+	navClipFrame.BorderSizePixel = 0
+	navClipFrame.ClipsDescendants = true
+	navClipFrame.Active = false
+	navClipFrame.Selectable = false
+	navClipFrame.Visible = view.Visible
 
-	local bar = Instance.new("ScrollingFrame", navClipGroup)
+	local bar = Instance.new("ScrollingFrame", navClipFrame)
 	bar.Name = "HowToNav"
 	bar.Size = UDim2.new(1, 0, 1, 0)
 	bar.Position = UDim2.new(0, 0, 0, 0)
@@ -6817,45 +6809,37 @@ function _VH_BuildHowToNav()
 	bar.AutomaticCanvasSize = Enum.AutomaticSize.None
 	bar.CanvasSize = UDim2.new(0, 0, 0, 0)
 	bar.ElasticBehavior = Enum.ElasticBehavior.Never
-	navClipGroup.Visible = view.Visible
+	navClipFrame.Visible = view.Visible
 	bar.Visible = view.Visible
 	bar.ClipsDescendants = true
-	local barStroke = Instance.new("UIStroke", bar)
-	barStroke.Color = Theme.Stroke
-	barStroke.Transparency = 1 -- The visible stroke is drawn by a fixed overlay above the scrolling content.
-	barStroke.Thickness = 1
-	pcall(function() barStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
-
-	-- Draw the square-corner track outline in a fixed layer above the scrolling content.
-	-- The clipping group and outline share the same square boundary.
+	-- Keep the track outline in a fixed layer above the scrolling content.
 	local barBorderOverlay = Instance.new("Frame", MainContent)
 	barBorderOverlay.Name = "HowToNavBorderOverlay"
-	barBorderOverlay.Position = navClipGroup.Position
-	barBorderOverlay.Size = navClipGroup.Size
-	barBorderOverlay.AnchorPoint = navClipGroup.AnchorPoint
-	barBorderOverlay.Rotation = navClipGroup.Rotation
+	barBorderOverlay.Position = navClipFrame.Position
+	barBorderOverlay.Size = navClipFrame.Size
+	barBorderOverlay.AnchorPoint = navClipFrame.AnchorPoint
+	barBorderOverlay.Rotation = navClipFrame.Rotation
 	barBorderOverlay.BackgroundTransparency = 1
 	barBorderOverlay.BorderSizePixel = 0
 	barBorderOverlay.Active = false
 	barBorderOverlay.Selectable = false
 	barBorderOverlay.ClipsDescendants = false
-	barBorderOverlay.Visible = navClipGroup.Visible
-	barBorderOverlay.ZIndex = navClipGroup.ZIndex + 10
-	Instance.new("UICorner", barBorderOverlay).CornerRadius = UDim.new(0, 0)
+	barBorderOverlay.Visible = navClipFrame.Visible
+	barBorderOverlay.ZIndex = navClipFrame.ZIndex + 10
 	local barBorderOverlayStroke = Instance.new("UIStroke", barBorderOverlay)
-	barBorderOverlayStroke.Color = barStroke.Color
+	barBorderOverlayStroke.Color = Theme.Stroke
 	barBorderOverlayStroke.Transparency = 0.35
 	barBorderOverlayStroke.Thickness = 1
 	pcall(function() barBorderOverlayStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
 
 	local function syncBarBorderOverlay()
-		if not navClipGroup.Parent or not barBorderOverlay.Parent then return end
-		barBorderOverlay.Position = navClipGroup.Position
-		barBorderOverlay.Size = navClipGroup.Size
-		barBorderOverlay.AnchorPoint = navClipGroup.AnchorPoint
-		barBorderOverlay.Rotation = navClipGroup.Rotation
-		barBorderOverlay.Visible = navClipGroup.Visible
-		barBorderOverlay.ZIndex = navClipGroup.ZIndex + 10
+		if not navClipFrame.Parent or not barBorderOverlay.Parent then return end
+		barBorderOverlay.Position = navClipFrame.Position
+		barBorderOverlay.Size = navClipFrame.Size
+		barBorderOverlay.AnchorPoint = navClipFrame.AnchorPoint
+		barBorderOverlay.Rotation = navClipFrame.Rotation
+		barBorderOverlay.Visible = navClipFrame.Visible
+		barBorderOverlay.ZIndex = navClipFrame.ZIndex + 10
 	end
 
 	-- Keep the chip layout and its moving selection pill in the same scrolling canvas.
@@ -6878,7 +6862,6 @@ function _VH_BuildHowToNav()
 	selectionPill.BorderSizePixel = 0
 	selectionPill.ZIndex = 1
 	selectionPill.Active = false
-	Instance.new("UICorner", selectionPill).CornerRadius = UDim.new(0, 0)
 	local pillGradient = Instance.new("UIGradient", selectionPill)
 	pillGradient.Color = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, _VH_RGB(150, 118, 255)),
@@ -7244,9 +7227,9 @@ function _VH_BuildHowToNav()
 		end
 	end))
 	_VH_RegConn(view:GetPropertyChangedSignal("Visible"):Connect(function()
-		navClipGroup.Visible = view.Visible
+		navClipFrame.Visible = view.Visible
 		bar.Visible = view.Visible
-		barBorderOverlay.Visible = navClipGroup.Visible
+		barBorderOverlay.Visible = navClipFrame.Visible
 		if view.Visible then
 			queueBarSync()
 			queueViewSync()
