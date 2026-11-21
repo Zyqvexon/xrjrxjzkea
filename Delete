@@ -6807,9 +6807,91 @@ function _VH_BuildHowToNav()
 	Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 12)
 	local barStroke = Instance.new("UIStroke", bar)
 	barStroke.Color = Theme.Stroke
-	barStroke.Transparency = 0.35
+	barStroke.Transparency = 1 -- The visible stroke is drawn by a fixed overlay above the scrolling content.
 	barStroke.Thickness = 1
 	pcall(function() barStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
+
+	-- Draw the navigation track outline in a fixed layer above the scrolling canvas.
+	-- ScrollingFrame clipping already limits the pill to the viewport, but its child
+	-- content can visually overlap the track's UIStroke while moving near an edge.
+	-- This overlay keeps the thin outer border visible without changing the tab layout.
+	local barBorderOverlay = Instance.new("Frame", MainContent)
+	barBorderOverlay.Name = "HowToNavBorderOverlay"
+	barBorderOverlay.Position = bar.Position
+	barBorderOverlay.Size = bar.Size
+	barBorderOverlay.AnchorPoint = bar.AnchorPoint
+	barBorderOverlay.Rotation = bar.Rotation
+	barBorderOverlay.BackgroundTransparency = 1
+	barBorderOverlay.BorderSizePixel = 0
+	barBorderOverlay.Active = false
+	barBorderOverlay.Selectable = false
+	barBorderOverlay.ClipsDescendants = false
+	barBorderOverlay.Visible = bar.Visible
+	barBorderOverlay.ZIndex = bar.ZIndex + 10
+	Instance.new("UICorner", barBorderOverlay).CornerRadius = UDim.new(0, 12)
+	local barBorderOverlayStroke = Instance.new("UIStroke", barBorderOverlay)
+	barBorderOverlayStroke.Color = barStroke.Color
+	barBorderOverlayStroke.Transparency = 0.35
+	barBorderOverlayStroke.Thickness = 1
+	pcall(function() barBorderOverlayStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
+
+	-- UIStroke can render slightly beyond the rounded ScrollingFrame viewport.
+	-- These fixed edge masks cover that bleed (and the first few pixels inside
+	-- the track) while the border overlay remains on top. They are siblings of
+	-- the ScrollingFrame, so horizontal CanvasPosition changes cannot move them.
+	local navEdgeMaskWidth = 4
+	local navEdgeMaskOutside = 2
+	local function createNavEdgeMask(name)
+		local mask = Instance.new("Frame", MainContent)
+		mask.Name = name
+		mask.BackgroundColor3 = bar.BackgroundColor3
+		mask.BackgroundTransparency = bar.BackgroundTransparency
+		mask.BorderSizePixel = 0
+		mask.Active = false
+		mask.Selectable = false
+		mask.Visible = bar.Visible
+		mask.ZIndex = bar.ZIndex + 5
+		return mask
+	end
+	local navLeftClipMask = createNavEdgeMask("HowToNavLeftClipMask")
+	local navRightClipMask = createNavEdgeMask("HowToNavRightClipMask")
+
+	local function syncBarBorderOverlay()
+		if not bar.Parent or not barBorderOverlay.Parent then return end
+		barBorderOverlay.Position = bar.Position
+		barBorderOverlay.Size = bar.Size
+		barBorderOverlay.AnchorPoint = bar.AnchorPoint
+		barBorderOverlay.Rotation = bar.Rotation
+		barBorderOverlay.Visible = bar.Visible
+		barBorderOverlay.ZIndex = bar.ZIndex + 10
+
+		local maskSize = UDim2.new(0, navEdgeMaskWidth, bar.Size.Y.Scale, bar.Size.Y.Offset)
+		local anchor = bar.AnchorPoint
+		local topLeftXScale = bar.Position.X.Scale - bar.Size.X.Scale * anchor.X
+		local topLeftXOffset = bar.Position.X.Offset - bar.Size.X.Offset * anchor.X
+		local topLeftYScale = bar.Position.Y.Scale - bar.Size.Y.Scale * anchor.Y
+		local topLeftYOffset = bar.Position.Y.Offset - bar.Size.Y.Offset * anchor.Y
+		local leftPosition = UDim2.new(
+			topLeftXScale, topLeftXOffset - navEdgeMaskOutside,
+			topLeftYScale, topLeftYOffset
+		)
+		local rightPosition = UDim2.new(
+			topLeftXScale + bar.Size.X.Scale,
+			topLeftXOffset + bar.Size.X.Offset - (navEdgeMaskWidth - navEdgeMaskOutside),
+			topLeftYScale, topLeftYOffset
+		)
+		for _, mask in ipairs({ navLeftClipMask, navRightClipMask }) do
+			mask.Size = maskSize
+			mask.AnchorPoint = Vector2.new(0, 0)
+			mask.Rotation = bar.Rotation
+			mask.BackgroundColor3 = bar.BackgroundColor3
+			mask.BackgroundTransparency = bar.BackgroundTransparency
+			mask.Visible = bar.Visible
+			mask.ZIndex = bar.ZIndex + 5
+		end
+		navLeftClipMask.Position = leftPosition
+		navRightClipMask.Position = rightPosition
+	end
 
 	-- Keep the chip layout and its moving selection pill in the same scrolling canvas.
 	-- This avoids an independently positioned highlight drifting away from its chip.
@@ -6924,6 +7006,7 @@ function _VH_BuildHowToNav()
 
 	local function syncBarCanvas()
 		if isDestroying or not bar.Parent then return end
+		syncBarBorderOverlay()
 		local scale = uiScale()
 		local logicalContentWidth = barLayout.AbsoluteContentSize.X / scale
 		local logicalFrameWidth = bar.AbsoluteSize.X / scale
@@ -7169,6 +7252,10 @@ function _VH_BuildHowToNav()
 
 	_VH_RegConn(barLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(queueBarSync))
 	_VH_RegConn(bar:GetPropertyChangedSignal("AbsoluteSize"):Connect(queueBarSync))
+	_VH_RegConn(bar:GetPropertyChangedSignal("Position"):Connect(syncBarBorderOverlay))
+	_VH_RegConn(bar:GetPropertyChangedSignal("AnchorPoint"):Connect(syncBarBorderOverlay))
+	_VH_RegConn(bar:GetPropertyChangedSignal("Rotation"):Connect(syncBarBorderOverlay))
+	_VH_RegConn(bar:GetPropertyChangedSignal("Visible"):Connect(syncBarBorderOverlay))
 	pcall(function() _VH_RegConn(bar:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(queueBarSync)) end)
 	_VH_RegConn(viewLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(queueViewSync))
 	_VH_RegConn(view:GetPropertyChangedSignal("AbsoluteSize"):Connect(queueViewSync))
@@ -7193,6 +7280,7 @@ function _VH_BuildHowToNav()
 	end))
 	_VH_RegConn(view:GetPropertyChangedSignal("Visible"):Connect(function()
 		bar.Visible = view.Visible
+		barBorderOverlay.Visible = bar.Visible
 		if view.Visible then
 			queueBarSync()
 			queueViewSync()
