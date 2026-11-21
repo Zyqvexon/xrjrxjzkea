@@ -6787,9 +6787,8 @@ function _VH_BuildHowToNav()
 	local sections = HowToSections
 	local barHeight = IsMobile and 30 or 36
 	local top = IsMobile and 98 or 112
-	-- CanvasGroup provides true rounded-corner clipping for descendants.
-	-- ClipsDescendants on a regular GuiObject only clips to a rectangle, which
-	-- allowed the moving violet pill to show through the rounded track corners.
+	-- Use square horizontal edges for the navigation viewport and active pill.
+	-- Matching square edges avoids rounded-end size mismatch at the track boundary.
 	local navClipGroup = Instance.new("CanvasGroup", MainContent)
 	navClipGroup.Name = "HowToNavRoundedClipGroup"
 	navClipGroup.Size = UDim2.new(1, -28, 0, barHeight)
@@ -6801,7 +6800,7 @@ function _VH_BuildHowToNav()
 	navClipGroup.Active = false
 	navClipGroup.Selectable = false
 	navClipGroup.Visible = view.Visible
-	Instance.new("UICorner", navClipGroup).CornerRadius = UDim.new(0, 12)
+	Instance.new("UICorner", navClipGroup).CornerRadius = UDim.new(0, 0)
 
 	local bar = Instance.new("ScrollingFrame", navClipGroup)
 	bar.Name = "HowToNav"
@@ -6827,9 +6826,8 @@ function _VH_BuildHowToNav()
 	barStroke.Thickness = 1
 	pcall(function() barStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
 
-	-- Draw the track outline in a fixed layer above the rounded clipping group.
-	-- The CanvasGroup clips the pill and tab content to the same rounded viewport,
-	-- so separate rectangular edge masks are no longer needed.
+	-- Draw the square-corner track outline in a fixed layer above the scrolling content.
+	-- The clipping group and outline share the same square boundary.
 	local barBorderOverlay = Instance.new("Frame", MainContent)
 	barBorderOverlay.Name = "HowToNavBorderOverlay"
 	barBorderOverlay.Position = navClipGroup.Position
@@ -6843,7 +6841,7 @@ function _VH_BuildHowToNav()
 	barBorderOverlay.ClipsDescendants = false
 	barBorderOverlay.Visible = navClipGroup.Visible
 	barBorderOverlay.ZIndex = navClipGroup.ZIndex + 10
-	Instance.new("UICorner", barBorderOverlay).CornerRadius = UDim.new(0, 12)
+	Instance.new("UICorner", barBorderOverlay).CornerRadius = UDim.new(0, 0)
 	local barBorderOverlayStroke = Instance.new("UIStroke", barBorderOverlay)
 	barBorderOverlayStroke.Color = barStroke.Color
 	barBorderOverlayStroke.Transparency = 0.35
@@ -6880,7 +6878,7 @@ function _VH_BuildHowToNav()
 	selectionPill.BorderSizePixel = 0
 	selectionPill.ZIndex = 1
 	selectionPill.Active = false
-	Instance.new("UICorner", selectionPill).CornerRadius = UDim.new(0, 9)
+	Instance.new("UICorner", selectionPill).CornerRadius = UDim.new(0, 0)
 	local pillGradient = Instance.new("UIGradient", selectionPill)
 	pillGradient.Color = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, _VH_RGB(150, 118, 255)),
