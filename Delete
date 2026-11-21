@@ -7127,63 +7127,114 @@ function _VH_BuildHowToNav()
 		if cancelScroll then cancelTrackedTween(view) end
 	end
 
+	local function sectionScrollTarget(section)
+		local block = section and section.Block
+		if not block or not block.Parent or not view.Parent then return nil, nil end
+		local scale = uiScale()
+		local current = view.CanvasPosition.Y
+		local sectionOffset = (block.AbsolutePosition.Y - view.AbsolutePosition.Y) / scale
+		local viewHeight = view.AbsoluteWindowSize.Y / scale
+		local maxScroll = math.max(0, view.CanvasSize.Y.Offset - viewHeight)
+		local target = math.clamp(current + sectionOffset - 4, 0, maxScroll)
+		return target, current
+	end
+
+	local function finishNavigation(generation)
+		if generation ~= navigationGeneration then return end
+		if navigationTweenConnection then
+			pcall(function() navigationTweenConnection:Disconnect() end)
+			navigationTweenConnection = nil
+		end
+		navigationTarget = nil
+		task.defer(function()
+			if generation == navigationGeneration and not isDestroying and view.Parent and view.Visible then
+				refreshActiveFromScroll()
+			end
+		end)
+	end
+
+	local verifyNavigationPosition
+	local function playNavigationTween(generation, section, target, duration, attempt)
+		if generation ~= navigationGeneration then return end
+		local tween = _VH_SafeTween(view, TweenInfo.new(duration, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			CanvasPosition = Vector2.new(0, target)
+		})
+		if not tween then
+			finishNavigation(generation)
+			return
+		end
+		local completedConnection
+		completedConnection = tween.Completed:Connect(function(playbackState)
+			if navigationTweenConnection == completedConnection then
+				pcall(function() completedConnection:Disconnect() end)
+				navigationTweenConnection = nil
+			end
+			if generation ~= navigationGeneration then return end
+			-- Re-measure after either completion or an external cancellation. A
+			-- still-current request may need one correction if layout changed mid-scroll.
+			verifyNavigationPosition(generation, section, attempt)
+		end)
+		navigationTweenConnection = completedConnection
+	end
+
+	verifyNavigationPosition = function(generation, section, attempt)
+		task.defer(function()
+			-- Wait for the UI layout pass after the tween before measuring the target.
+			RunService.RenderStepped:Wait()
+			RunService.RenderStepped:Wait()
+			if generation ~= navigationGeneration or isDestroying or not view.Parent or not view.Visible then return end
+			if not section.Block or not section.Block.Parent then
+				finishNavigation(generation)
+				return
+			end
+			syncViewCanvas()
+			RunService.RenderStepped:Wait()
+			if generation ~= navigationGeneration or isDestroying or not view.Parent or not view.Visible then return end
+
+			local target, current = sectionScrollTarget(section)
+			if target == nil then
+				finishNavigation(generation)
+				return
+			end
+			local difference = target - current
+			if math.abs(difference) > 1.25 and attempt < 2 then
+				local correctionDuration = math.clamp(math.abs(difference) / 1000, 0.08, 0.18)
+				playNavigationTween(generation, section, target, correctionDuration, attempt + 1)
+			else
+				finishNavigation(generation)
+			end
+		end)
+	end
+
 	local function jumpTo(index)
 		local section = sections[index]
 		if not section or not section.Block or not section.Block.Parent or not view.Visible then return end
 
-		-- Stop the previous jump before measuring the next destination. Measuring
-		-- while the old tween is still moving can combine positions from different
-		-- frames when users tap two navigation chips quickly.
+		-- Every new click invalidates the previous jump before measuring a new target.
 		cancelNavigationJump(true)
 		local generation = navigationGeneration
 		navigationTarget = index
 		setActive(index, true)
 
 		task.defer(function()
-			-- Let the cancelled scroll and pending UI layout settle before reading
-			-- AbsolutePosition. A second check makes rapid successive taps safe.
-			RunService.Heartbeat:Wait()
+			-- Allow cancellation and layout changes to settle before reading positions.
+			RunService.RenderStepped:Wait()
+			RunService.RenderStepped:Wait()
 			if generation ~= navigationGeneration or isDestroying or not view.Parent or not view.Visible then return end
 			syncViewCanvas()
-			RunService.Heartbeat:Wait()
+			RunService.RenderStepped:Wait()
 			if generation ~= navigationGeneration or isDestroying or not view.Parent or not view.Visible then return end
 			if not section.Block or not section.Block.Parent then
-				navigationTarget = nil
-				refreshActiveFromScroll()
+				finishNavigation(generation)
 				return
 			end
 
-			local scale = uiScale()
-			local current = view.CanvasPosition.Y
-			local sectionCanvasY = current + (section.Block.AbsolutePosition.Y - view.AbsolutePosition.Y) / scale
-			local viewHeight = view.AbsoluteWindowSize.Y / scale
-			local maxScroll = math.max(0, view.CanvasSize.Y.Offset - viewHeight)
-			local target = math.clamp(sectionCanvasY - 3, 0, maxScroll)
-			if math.abs(target - current) <= 0.5 then
-				navigationTarget = nil
-				refreshActiveFromScroll()
+			local target, current = sectionScrollTarget(section)
+			if target == nil or math.abs(target - current) <= 0.5 then
+				finishNavigation(generation)
 				return
 			end
-
-			local tween = _VH_SafeTween(view, TweenInfo.new(0.38, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { CanvasPosition = Vector2.new(0, target) })
-			if not tween then
-				navigationTarget = nil
-				refreshActiveFromScroll()
-				return
-			end
-			local completionConnection
-			completionConnection = tween.Completed:Connect(function()
-				if generation ~= navigationGeneration then return end
-				navigationTarget = nil
-				if navigationTweenConnection then
-					pcall(function() navigationTweenConnection:Disconnect() end)
-				end
-				navigationTweenConnection = nil
-				task.defer(function()
-					if generation == navigationGeneration and not isDestroying and view.Parent and view.Visible then refreshActiveFromScroll() end
-				end)
-			end)
-			navigationTweenConnection = completionConnection
+			playNavigationTween(generation, section, target, 0.38, 0)
 		end)
 	end
 
