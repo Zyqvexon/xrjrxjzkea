@@ -7130,44 +7130,61 @@ function _VH_BuildHowToNav()
 	local function jumpTo(index)
 		local section = sections[index]
 		if not section or not section.Block or not section.Block.Parent or not view.Visible then return end
-		syncViewCanvas()
-		local scale = uiScale()
-		local viewHeight = view.AbsoluteWindowSize.Y / scale
-		local maxScroll = math.max(0, view.CanvasSize.Y.Offset - viewHeight)
-		local current = view.CanvasPosition.Y
-		local sectionOffset = (section.Block.AbsolutePosition.Y - view.AbsolutePosition.Y) / scale
-		local target = math.clamp(current + sectionOffset - 3, 0, maxScroll)
 
+		-- Stop the previous jump before measuring the next destination. Measuring
+		-- while the old tween is still moving can combine positions from different
+		-- frames when users tap two navigation chips quickly.
 		cancelNavigationJump(true)
-		navigationGeneration = navigationGeneration + 1
 		local generation = navigationGeneration
 		navigationTarget = index
 		setActive(index, true)
-		if math.abs(target - current) <= 0.5 then
-			navigationTarget = nil
-			refreshActiveFromScroll()
-			return
-		end
 
-		local tween = _VH_SafeTween(view, TweenInfo.new(0.38, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { CanvasPosition = Vector2.new(0, target) })
-		if not tween then
-			navigationTarget = nil
-			refreshActiveFromScroll()
-			return
-		end
-		local completionConnection
-		completionConnection = tween.Completed:Connect(function()
-			if generation ~= navigationGeneration then return end
-			navigationTarget = nil
-			if navigationTweenConnection then
-				pcall(function() navigationTweenConnection:Disconnect() end)
+		task.defer(function()
+			-- Let the cancelled scroll and pending UI layout settle before reading
+			-- AbsolutePosition. A second check makes rapid successive taps safe.
+			RunService.Heartbeat:Wait()
+			if generation ~= navigationGeneration or isDestroying or not view.Parent or not view.Visible then return end
+			syncViewCanvas()
+			RunService.Heartbeat:Wait()
+			if generation ~= navigationGeneration or isDestroying or not view.Parent or not view.Visible then return end
+			if not section.Block or not section.Block.Parent then
+				navigationTarget = nil
+				refreshActiveFromScroll()
+				return
 			end
-			navigationTweenConnection = nil
-			task.defer(function()
-				if not isDestroying and view.Parent and view.Visible then refreshActiveFromScroll() end
+
+			local scale = uiScale()
+			local current = view.CanvasPosition.Y
+			local sectionCanvasY = current + (section.Block.AbsolutePosition.Y - view.AbsolutePosition.Y) / scale
+			local viewHeight = view.AbsoluteWindowSize.Y / scale
+			local maxScroll = math.max(0, view.CanvasSize.Y.Offset - viewHeight)
+			local target = math.clamp(sectionCanvasY - 3, 0, maxScroll)
+			if math.abs(target - current) <= 0.5 then
+				navigationTarget = nil
+				refreshActiveFromScroll()
+				return
+			end
+
+			local tween = _VH_SafeTween(view, TweenInfo.new(0.38, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { CanvasPosition = Vector2.new(0, target) })
+			if not tween then
+				navigationTarget = nil
+				refreshActiveFromScroll()
+				return
+			end
+			local completionConnection
+			completionConnection = tween.Completed:Connect(function()
+				if generation ~= navigationGeneration then return end
+				navigationTarget = nil
+				if navigationTweenConnection then
+					pcall(function() navigationTweenConnection:Disconnect() end)
+				end
+				navigationTweenConnection = nil
+				task.defer(function()
+					if generation == navigationGeneration and not isDestroying and view.Parent and view.Visible then refreshActiveFromScroll() end
+				end)
 			end)
+			navigationTweenConnection = completionConnection
 		end)
-		navigationTweenConnection = completionConnection
 	end
 
 	for index, section in ipairs(sections) do
