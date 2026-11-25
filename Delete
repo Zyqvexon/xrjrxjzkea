@@ -1308,7 +1308,6 @@ GlobalEnv[_G_Identifier] = function()
 	if ScreenGui and ScreenGui.Parent then ScreenGui:Destroy() end
 end
 function _VH_ToGuiSpace(point)
-	-- Converts an AbsolutePosition value into ScreenGui Position space (they differ by the topbar inset on some devices).
 	if not OriginProbe or not OriginProbe.Parent then
 		OriginProbe = Instance.new("Frame")
 		OriginProbe.Name = "OriginProbe"
@@ -1555,7 +1554,6 @@ function ApplyPanelUIScale(scaleValue)
 		if isDestroying or not MainPanel or not MainPanel.Parent then return end
 		local camera = workspace.CurrentCamera
 		local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
-		-- Use the panel's design size: AbsoluteSize already contains the new scale once the tween has finished.
 		local baseWidth, baseHeight = MainPanel.Size.X.Offset, MainPanel.Size.Y.Offset
 		if baseWidth <= 0 or baseHeight <= 0 then baseWidth, baseHeight = MainPanel.AbsoluteSize.X / nextScale, MainPanel.AbsoluteSize.Y / nextScale end
 		local visualWidth, visualHeight = baseWidth * nextScale, baseHeight * nextScale
@@ -3578,7 +3576,6 @@ function CreateCanvas(name)
 	pad.PaddingLeft = UDim.new(0, 3); pad.PaddingRight = UDim.new(0, 6); pad.PaddingBottom = UDim.new(0, 16)
 	TabViews[name] = scroll
 	if name ~= "How to Use" then
-		-- Manual sizing avoids AutomaticCanvasSize drift under the panel's UIScale.
 		local syncQueued = false
 		local function syncCanvas()
 			if isDestroying or not scroll.Parent then return end
@@ -4352,7 +4349,6 @@ FilterScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 FilterScroll.ScrollingDirection = Enum.ScrollingDirection.Y
 FilterScroll.ZIndex = 1552
 
--- A 2 unit inset keeps the outline of chips on the edges from being cut by the scroll frame.
 FilterList = Instance.new("Frame", FilterScroll)
 FilterList.Name = "FilterList"
 FilterList.Size = UDim2.new(0, FilterListWidth, 0, 0)
@@ -4360,7 +4356,6 @@ FilterList.Position = UDim2.new(0, 2, 0, 2)
 FilterList.BackgroundTransparency = 1
 FilterList.ZIndex = 1553
 
--- Soft fade at the bottom edge so a partly visible chip row reads as "more below" instead of looking cut off.
 FilterFade = Instance.new("Frame", FilterPanel)
 FilterFade.Name = "FilterFade"
 FilterFade.Size = UDim2.new(1, -20, 0, 16)
@@ -4651,7 +4646,6 @@ function _VH_AddFilterSection(sectionIcon, options, stateMap, startY, chipIcons)
 end
 
 function _VH_UpdateFilterPanelWidth()
-	-- Keep the popup narrower than the search row so it feels compact without clipping its chips.
 	local scale = (PanelUIScale and PanelUIScale.Scale) or 1
 	if scale <= 0 then scale = 1 end
 	local contentWidth = MainContent.AbsoluteSize.X / scale
@@ -4711,14 +4705,10 @@ function _VH_SetPopupPosition(panel, anchor, preferredWidth, preferredHeight, ma
 		local panelSize = MainPanel.Size
 		contentWidth, contentHeight = panelSize.X.Offset - SideWidth, panelSize.Y.Offset
 	end
-	-- The popups live inside MainContent and are placed with its own layout numbers, so nothing depends on
-	-- AbsolutePosition / GuiInset (which differ from Position on some devices) and they scale and move with the hub.
 	local rowBottom = SearchRow.Position.Y.Offset + SearchRow.Size.Y.Offset
 	local rowRight = contentWidth * (SearchRow.Position.X.Scale + SearchRow.Size.X.Scale) + SearchRow.Position.X.Offset + SearchRow.Size.X.Offset
 	local top = rowBottom + 6
 	local width = math.min(preferredWidth, math.max(120, contentWidth - margin * 2))
-	-- The panel shrinks (its content scrolls) to stay below the search row. Only on extremely short screens,
-	-- where less than minHeight is available, is it allowed to rise over the row so it stays usable.
 	local minHeight = 96
 	local height = math.min(preferredHeight, math.max(minHeight, contentHeight - margin - top))
 	if top + height > contentHeight - margin then
@@ -4799,7 +4789,7 @@ function _VH_NormalizeSearchText(value)
 	value = string.gsub(value, "[^%w%s%._%-]+", " ")
 	value = string.gsub(value, "_", " ")
 	value = string.gsub(value, "%s+", " ")
-	return string.gsub(value, "^%s*(.-)%s*$", "%1")
+	return (string.gsub(value, "^%s*(.-)%s*$", "%1"))
 end
 
 function _VH_FieldMatchScore(field, token, exactWeight, prefixWeight, containsWeight)
@@ -5416,22 +5406,19 @@ HubChangelog = {
 		Version = "v" .. HubVersion,
 		Title = "Performance, Navigation & UI Polish",
 		Items = {
-			"Improved How to Use navigation with rounded viewport clipping, accurate active-pill alignment, and automatic tab reveal.",
-			"Improved rapid tab switching by cancelling outdated scroll requests and recalculating section destinations after layout settles.",
-			"Kept the selected tab synchronized during programmatic scrolling and improved manual section tracking near the bottom of the guide.",
-			"Preserved the rounded navigation track and active pill while keeping the indicator clipped to the visible navigation area.",
-			"Refined Filters with a compact icon-first layout, wrapping chips, and one-tap Favorites and Clear controls.",
-			"Updated Sort Scripts with a compact icon grid that shows the selected order and highlights custom sorting.",
-			"Polished notifications as compact, icon-led toasts and moved them away from mobile controls.",
-			"Adjusted Filters, Sort, language, and refresh popups to stay correctly positioned and close when the active catalog category changes.",
-			"Improved UI scaling and screen-boundary clamping so the hub stays on-screen after scale changes.",
+			"Fixed How to Use navigation: rapid tab switching now always lands on the selected section, and the violet pill stays in sync whether you scroll by touch, mouse wheel, or scrollbar.",
+			"Redesigned Filters and Sort Scripts with compact icon-first layouts, wrapping chips, one-tap Favorites and Clear controls, and a clear indicator for the selected order.",
+			"Polished notifications into compact, icon-led toasts and moved them clear of mobile controls.",
+			"Filters, Sort, language, and refresh popups now stay in position and close when the catalog category changes.",
+			"Improved UI scaling and screen-edge clamping so the hub stays on screen after scale changes.",
 			"Fixed clipped outlines and card controls, and improved spacing and button sizing on narrow screens.",
-			"Made startup lighter by building the How to Use guide and Changelog only when first opened, batching style cleanup, and skipping unused card badges.",
-			"Updated the How to Use guide to match the current Filters and Sort controls, with navigation that follows the section being read.",
+			"Kept the rounded navigation track and active pill clipped to the visible bar, with automatic reveal of off-screen tabs.",
+			"Updated the How to Use guide to match the current Filters and Sort controls.",
 			"Added a current-game thumbnail to Home with an automatic fallback image.",
-			"Reduced redundant work in holiday effects, Home updates, and event handling.",
-			"Removed the always-on panel-dismiss tap listener and kept UI construction inside function scopes to avoid local-register pressure.",
-			"Preserved catalog, image, configuration, and compatibility fallbacks throughout the cleanup."
+			"Faster startup: the How to Use guide and Changelog are built on first open, style cleanup is batched, and unused card badges are skipped.",
+			"Reduced background work in holiday effects, Home updates, and event handling, and removed the always-on panel-dismiss listener.",
+			"Streamlined the code, removed unused leftovers, and kept UI construction inside function scopes to stay well below Lua's local-register limit.",
+			"Preserved catalog, image, configuration, and compatibility fallbacks."
 		}
 	},
 	{
@@ -5440,12 +5427,12 @@ HubChangelog = {
 		Items = {
 			"Improved launch validation and compatibility checks for more consistent script initialization.",
 			"Strengthened execution safeguards and launch-context cleanup.",
-			"Fixed connection-status handling for Games and Utilities to reduce duplicate displays and conflicting updates.",
-			"Improved status restoration and error handling when switching between catalog categories.",
-			"Improved GUI cleanup to help prevent duplicate Velox Hub interfaces during reinitialization.",
-			"Preserved catalog browsing, script execution, search, filters, favorites, Auto Execute, settings, and existing fallback behavior.",
-			"Improved compiler-error reporting for compatibility issues and local-register-limit failures.",
-			"Improved initialization stability while preserving the existing interface design and refresh behavior."
+			"Fixed connection-status handling for Games and Utilities to prevent duplicate displays and conflicting updates.",
+			"Improved status restoration and error handling when switching catalog categories.",
+			"Improved GUI cleanup to prevent duplicate Velox Hub interfaces on re-execution.",
+			"Improved compiler-error reporting for compatibility and local-register-limit failures.",
+			"Improved initialization stability while keeping the interface design and refresh behavior unchanged.",
+			"Preserved catalog browsing, script execution, search, filters, favorites, Auto Execute, settings, and existing fallbacks."
 		}
 	}
 }
@@ -6224,7 +6211,7 @@ function CreateChangelogContent()
 	for index, entry in ipairs(HubChangelog) do
 		_VH_CreateVersionCard(ChangelogsView, entry, index, index == 1)
 	end
-	_VH_CreateCalloutCard(ChangelogsView, "Found a Bug?", "If you run into any bugs, issues, or anything that doesn't seem right, please report it on our Discord. It really helps me figure out what's going wrong and fix it faster. Even small details can be useful, so don't hesitate to report anything you notice!", "Report on Discord", #HubChangelog + 1, function()
+	_VH_CreateCalloutCard(ChangelogsView, "Found a Bug?", "Spotted a bug or something that doesn't look right? Report it on our Discord. Even small details help me find and fix issues faster.", "Report on Discord", #HubChangelog + 1, function()
 		_VH_OpenCreditLink("https://discord.gg/duXxnUp4Vq", "Discord link opened.")
 	end)
 end
@@ -6782,7 +6769,6 @@ function _VH_BuildHowToNav()
 	local sections = HowToSections
 	local barHeight = IsMobile and 30 or 36
 	local top = IsMobile and 98 or 112
-	-- Clip the complete navigation contents to the rounded viewport.
 	local navCornerRadius = 12
 	local navClipGroup = Instance.new("CanvasGroup", MainContent)
 	navClipGroup.Name = "HowToNavRoundedClipGroup"
@@ -6820,7 +6806,6 @@ function _VH_BuildHowToNav()
 	barStroke.Transparency = 1
 	barStroke.Thickness = 1
 	pcall(function() barStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
-	-- Keep the rounded track outline visible above the clipped content.
 	local barBorderOverlay = Instance.new("Frame", MainContent)
 	barBorderOverlay.Name = "HowToNavBorderOverlay"
 	barBorderOverlay.Position = navClipGroup.Position
@@ -6851,8 +6836,6 @@ function _VH_BuildHowToNav()
 		barBorderOverlay.ZIndex = navClipGroup.ZIndex + 10
 	end
 
-	-- Keep the chip layout and its moving selection pill in the same scrolling canvas.
-	-- This avoids an independently positioned highlight drifting away from its chip.
 	local pillLayer = Instance.new("Frame", bar)
 	pillLayer.Name = "SelectionPillLayer"
 	pillLayer.Size = UDim2.new(0, 0, 1, 0)
@@ -6904,8 +6887,6 @@ function _VH_BuildHowToNav()
 	view.Position = UDim2.new(0, 14, 0, top + barHeight + 8)
 	view.Size = UDim2.new(1, -28, 1, (IsMobile and -112 or -120) - (barHeight + 8))
 
-	-- AutomaticCanvasSize under the panel's UIScale can report a stale or short canvas.
-	-- Measure the list layout and assign a logical-pixel canvas size instead.
 	view.AutomaticCanvasSize = Enum.AutomaticSize.None
 	view.CanvasSize = UDim2.new(0, 0, 0, 0)
 	local viewLayout = view:FindFirstChildOfClass("UIListLayout")
@@ -6914,6 +6895,8 @@ function _VH_BuildHowToNav()
 	local activeIndex = 0
 	local refreshActiveFromScroll
 	local navigationTarget, navigationTweenConnection = nil, nil
+	local settledIndex, settledY = nil, 0
+	local scrollStamp, scrollSettleRunning = 0, false
 	local navigationGeneration = 0
 	local fadeInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	local pillInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
@@ -6946,16 +6929,12 @@ function _VH_BuildHowToNav()
 		local button = item and item.Button
 		if not button or not button.Parent or not selectionPill.Parent or not pillLayer.Parent then return end
 		local scale = uiScale()
-		-- Both objects live in the same scrolling canvas. Their absolute-position
-		-- difference already removes horizontal scrolling, avoiding double offsets.
 		local relative = button.AbsolutePosition - pillLayer.AbsolutePosition
 		local position = UDim2.new(0, math.floor(relative.X / scale + 0.5), 0, math.floor(relative.Y / scale + 0.5))
 		local size = UDim2.new(0, math.max(1, math.floor(button.AbsoluteSize.X / scale + 0.5)), 0, math.max(1, math.floor(button.AbsoluteSize.Y / scale + 0.5)))
 		if animate then
 			_VH_SafeTween(selectionPill, pillInfo, { Position = position, Size = size })
 		else
-			-- A previous animation must not keep writing stale coordinates after a
-			-- layout/scale correction snaps the pill to its exact target.
 			cancelTrackedTween(selectionPill)
 			selectionPill.Position = position
 			selectionPill.Size = size
@@ -7009,7 +6988,6 @@ function _VH_BuildHowToNav()
 		end
 		local maxScroll = math.max(0, canvasHeight - logicalWindowHeight)
 		if view.CanvasPosition.Y > maxScroll then
-			-- Keep an active navigation tween alive; the destination is rechecked after layout settles.
 			if not navigationTarget then cancelTrackedTween(view) end
 			view.CanvasPosition = Vector2.new(0, maxScroll)
 		end
@@ -7068,8 +7046,6 @@ function _VH_BuildHowToNav()
 
 	local function setActive(index, animate)
 		if index < 1 or index > #chips then return end
-		-- Do not restart/cancel a valid pill tween on every scroll event while the
-		-- same section remains active. Geometry changes are handled by queueBarSync.
 		if index == activeIndex then return end
 		local previous = chips[activeIndex]
 		if previous then paintChip(previous, false, animate) end
@@ -7083,12 +7059,20 @@ function _VH_BuildHowToNav()
 	end
 
 	refreshActiveFromScroll = function()
-		if isDestroying or not view.Parent or not view.Visible then return end
-		-- The selected tab owns the active state until manual input takes control.
-		if navigationTarget then return end
+		if isDestroying or not view.Parent or not view.Visible or navigationTarget then return end
 		local scale = uiScale()
 		local viewTop = view.AbsolutePosition.Y
 		local viewBottom = viewTop + view.AbsoluteWindowSize.Y
+		if settledIndex then
+			local settledBlock = sections[settledIndex].Block
+			if math.abs(view.CanvasPosition.Y - settledY) <= 1.5 and settledBlock and settledBlock.Parent
+				and settledBlock.AbsolutePosition.Y < viewBottom
+				and settledBlock.AbsolutePosition.Y + settledBlock.AbsoluteSize.Y > viewTop then
+				setActive(settledIndex, true)
+				return
+			end
+			settledIndex = nil
+		end
 		local probe = viewTop + math.min(14 * scale, math.max(8 * scale, view.AbsoluteWindowSize.Y * 0.025))
 		local found = 1
 		for index = #sections, 1, -1 do
@@ -7099,9 +7083,6 @@ function _VH_BuildHowToNav()
 			end
 		end
 
-		-- Detect the real visual bottom from the final card and viewport bounds.
-		-- This remains accurate when the last sections are shorter than the viewport
-		-- and avoids relying on a UIScale-sensitive calculated max-scroll value.
 		local lastBlock = sections[#sections] and sections[#sections].Block
 		if lastBlock and lastBlock.Parent then
 			local contentBottom = lastBlock.AbsolutePosition.Y + lastBlock.AbsoluteSize.Y
@@ -7116,9 +7097,28 @@ function _VH_BuildHowToNav()
 		setActive(found, true)
 	end
 
+	local function onViewScrolled()
+		if navigationTarget then return end
+		refreshActiveFromScroll()
+		scrollStamp = scrollStamp + 1
+		if scrollSettleRunning then return end
+		scrollSettleRunning = true
+		task.defer(function()
+			local seen
+			repeat
+				seen = scrollStamp
+				RunService.RenderStepped:Wait()
+				RunService.RenderStepped:Wait()
+			until seen == scrollStamp or isDestroying
+			scrollSettleRunning = false
+			if not isDestroying then refreshActiveFromScroll() end
+		end)
+	end
+
 	local function cancelNavigationJump(cancelScroll)
 		navigationGeneration = navigationGeneration + 1
 		navigationTarget = nil
+		settledIndex = nil
 		if navigationTweenConnection then
 			pcall(function() navigationTweenConnection:Disconnect() end)
 			navigationTweenConnection = nil
@@ -7145,14 +7145,18 @@ function _VH_BuildHowToNav()
 			navigationTweenConnection = nil
 		end
 		local finalIndex = selectedIndex or navigationTarget
-		-- Keep the selected-tab lock until manual input takes control. This prevents
-		-- deferred layout callbacks from replacing the tab immediately after a jump.
+		navigationTarget = nil
 		if finalIndex then
-			navigationTarget = finalIndex
+			settledIndex, settledY = finalIndex, view.CanvasPosition.Y
 			setActive(finalIndex, false)
-		else
-			navigationTarget = nil
+			if not ActiveTweens[selectionPill] then movePill(chips[finalIndex], false) end
 		end
+	end
+
+	local function releaseToManualScroll()
+		if not navigationTarget then return end
+		cancelNavigationJump(true)
+		refreshActiveFromScroll()
 	end
 
 	local function waitForNavigationLayout(generation, section)
@@ -7244,7 +7248,6 @@ function _VH_BuildHowToNav()
 		local section = sections[index]
 		if not section or not section.Block or not section.Block.Parent or not view.Visible then return end
 
-		-- A newer click invalidates every pending wait, tween, and correction.
 		cancelNavigationJump(true)
 		local generation = navigationGeneration
 		navigationTarget = index
@@ -7319,17 +7322,15 @@ function _VH_BuildHowToNav()
 	_VH_RegConn(viewLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(queueViewSync))
 	_VH_RegConn(view:GetPropertyChangedSignal("AbsoluteSize"):Connect(queueViewSync))
 	pcall(function() _VH_RegConn(view:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(queueViewSync)) end)
-	_VH_RegConn(view:GetPropertyChangedSignal("CanvasPosition"):Connect(refreshActiveFromScroll))
+	_VH_RegConn(view:GetPropertyChangedSignal("CanvasPosition"):Connect(onViewScrolled))
 	_VH_RegConn(view.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-			cancelNavigationJump(true)
-			if refreshActiveFromScroll then refreshActiveFromScroll() end
+			releaseToManualScroll()
 		end
 	end))
 	_VH_RegConn(view.InputChanged:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseWheel then
-			cancelNavigationJump(true)
-			if refreshActiveFromScroll then refreshActiveFromScroll() end
+			releaseToManualScroll()
 		end
 	end))
 	_VH_RegConn(bar.InputBegan:Connect(function(input)
@@ -7367,7 +7368,6 @@ function _VH_BuildHowToNav()
 end
 HowToContentBuilt = false
 function _VH_EnsureHowToContent()
-	-- The guide is ~600 instances; build it the first time the tab is opened instead of at startup.
 	if HowToContentBuilt or isDestroying then return end
 	HowToContentBuilt = true
 	CreateHowToUseContent()
@@ -7400,7 +7400,7 @@ end
 function StableScriptId(data)
 	if type(data) ~= "table" then return nil end
 	if type(data.Id) == "string" and string.gsub(data.Id, "^%s*(.-)%s*$", "%1") ~= "" then
-		return string.gsub(data.Id, "^%s*(.-)%s*$", "%1")
+		return (string.gsub(data.Id, "^%s*(.-)%s*$", "%1"))
 	end
 	local source = type(data.RawUrl) == "string" and string.gsub(data.RawUrl, "^%s*(.-)%s*$", "%1") or ""
 	if source ~= "" then return "url:" .. source end
@@ -8150,7 +8150,6 @@ function CreateScriptCard(data, renderParent, registerImmediately, originalIndex
 		recommendText.ZIndex = 5
 		return recommendBadge
 	end
-	-- Badge widgets are created only for cards that actually show a tag or a recommendation.
 	local function SyncBadges()
 		local needsRow = isRecommended or tagType ~= "NONE"
 		if needsRow then EnsureBadgeRow() end
@@ -8438,7 +8437,7 @@ function GetActiveCatalogUrl(category)
 	category = category or currentScriptCategory
 	local url = category == "Utilities" and UTILITIES_CATALOG_URL or GAMES_CATALOG_URL
 	if type(url) ~= "string" then return "" end
-	return string.gsub(url, "^%s*(.-)%s*$", "%1")
+	return (string.gsub(url, "^%s*(.-)%s*$", "%1"))
 end
 function FetchCatalogWithFallback(category, cacheBust)
 	local primary = GetActiveCatalogUrl(category)
@@ -8576,7 +8575,7 @@ PendingTasks.__LoadCatalog = function(force, isAutoRefresh, expectedCategory)
 	end
 	LastCatalogRefreshAt = now
 	dbRefreshing = true
-	CatalogGeneration += 1
+	CatalogGeneration = CatalogGeneration + 1
 	local generation = CatalogGeneration
 	local savedScroll = ScriptsView.CanvasPosition
 	if force == true then
