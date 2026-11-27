@@ -13,7 +13,29 @@
       "Farming",
       "Automation"
     ]
-  },
+  }, 
+  {
+  "Name": "[🎲] Roll Your Heroes",
+  "Description": "Roll 3000+ unique heroes, build your dream team, battle powerful bosses, and conquer endless stages! Collect rare heroes, fuse them to increase their stars, upgrade your luck and damage, and unlock more team slots through prestige.",
+  "RawUrl": "https://raw.githubusercontent.com/Zyqvexon/q7vx2n9k4m8z/refs/heads/main/012.lua",
+  "ImageAssetId": "rbxassetid://77546692756033",
+  "TagType": "HOT",
+  "LastUpdated": 1795760205,
+  "PlaceId": 116401445503772,
+  "Category": "Simulation",
+  "Tags": [
+    "Simulation",
+    "Simulator",
+    "Heroes",
+    "Collection",
+    "Team Building",
+    "Fusion",
+    "Boss Battles",
+    "Progression",
+    "Prestige",
+    "Incremental"
+  ]
+  }, 
   {
   "Name": "Throw Food For Animals",
   "Description": "Throw food as far as you can to attract and collect animals from different areas! Earn money from your animals, buy better food to attract rarer animals, train your Throw Power, and unlock new areas with stronger and rarer animals.",
