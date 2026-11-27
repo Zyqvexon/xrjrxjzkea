@@ -8,7 +8,7 @@ end
 
 HubVersion = "2.0.8"
 HomeFallbackGameImage = ""
-VeloxThemeMode = "Christmas"
+VeloxThemeMode = "Auto"
 if type(GlobalEnv.VeloxTheme) == "string" then VeloxThemeMode = GlobalEnv.VeloxTheme end
 function _VH_IsChristmasActive()
 	local mode = string.lower(tostring(VeloxThemeMode or "Default"))
@@ -1551,8 +1551,7 @@ SidebarBrand.ZIndex = 5
 SidebarLogo = Instance.new("ImageLabel", SidebarBrand)
 SidebarLogo.Name = "VeloxLogo"
 SidebarLogo.Size = UDim2.new(0, IsMobile and 30 or 34, 0, IsMobile and 30 or 34)
-SidebarLogo.AnchorPoint = Vector2.new(0, 0.5)
-SidebarLogo.Position = UDim2.new(0, 0, 0.5, 0)
+SidebarLogo.Position = UDim2.new(0, 0, 0.5, -(IsMobile and 15 or 17))
 SidebarLogo.BackgroundTransparency = 1
 SidebarLogo.BorderSizePixel = 0
 SidebarLogo.Image = "rbxassetid://97589005673854"
@@ -1625,17 +1624,15 @@ end
 SearchInput = nil
 function RestoreCachedProperties()
 	for obj, c in pairs(OriginalCache) do
-		if obj and obj.Parent then
+		if obj and obj.Parent and (obj == MainPanel or obj == FloatingBtn or obj == FloatStroke) then
 			if c.BackgroundTransparency ~= nil then pcall(function() obj.BackgroundTransparency = c.BackgroundTransparency end) end
 			if c.TextTransparency ~= nil then pcall(function() obj.TextTransparency = c.TextTransparency end) end
 			if c.ImageTransparency ~= nil then pcall(function() obj.ImageTransparency = c.ImageTransparency end) end
 			if c.ScrollBarImageTransparency ~= nil then pcall(function() obj.ScrollBarImageTransparency = c.ScrollBarImageTransparency end) end
 			if c.Transparency ~= nil then pcall(function() obj.Transparency = c.Transparency end) end
-			if obj == MainPanel or obj == FloatingBtn or obj == FloatStroke then
-				if c.Size ~= nil then pcall(function() obj.Size = c.Size end) end
-				if c.Position ~= nil then pcall(function() obj.Position = c.Position end) end
-				if c.AnchorPoint ~= nil then pcall(function() obj.AnchorPoint = c.AnchorPoint end) end
-			end
+			if c.Size ~= nil and obj ~= MainPanel then pcall(function() obj.Size = c.Size end) end
+			if c.Position ~= nil then pcall(function() obj.Position = c.Position end) end
+			if c.AnchorPoint ~= nil then pcall(function() obj.AnchorPoint = c.AnchorPoint end) end
 		end
 	end
 end
@@ -1665,17 +1662,30 @@ function ToggleUI()
 	end
 	isTransitioning = false
 end
-ToastWidth = IsMobile and 235 or 280
+ToastWidth = IsMobile and 224 or 260
 ToastMargin = 12
-ToastTopInset = 14
+ToastTopInset = IsMobile and 10 or 14
+ToastOffscreen = UDim2.new(1, ToastMargin + 16, 0, 0)
+ToastDismissers = setmetatable({}, { __mode = "k" })
+function _VH_GetToastWidth()
+	local camera = workspace.CurrentCamera
+	local viewportX = camera and camera.ViewportSize.X or 800
+	return math.max(160, math.min(ToastWidth, viewportX - ToastMargin * 2))
+end
+function _VH_FitToastContainer()
+	local width = _VH_GetToastWidth()
+	if ToastContainer and ToastContainer.Parent then
+		ToastContainer.Size = UDim2.new(0, width, 1, -(ToastTopInset * 2))
+		ToastContainer.Position = UDim2.new(1, -(width + ToastMargin), 0, ToastTopInset)
+	end
+	return width
+end
 ToastContainer = Instance.new("Frame", ScreenGui)
 ToastContainer.Name = "ToastContainer"
-ToastContainer.Size = UDim2.new(0, ToastWidth, 1, -(ToastTopInset * 2))
-ToastContainer.Position = UDim2.new(1, -(ToastWidth + ToastMargin), 0, ToastTopInset)
 ToastContainer.BackgroundTransparency = 1
+ToastContainer.Active = false
 ToastContainer.ZIndex = 2000
 ToastContainer.ClipsDescendants = false
-
 ToastLayout = Instance.new("UIListLayout", ToastContainer)
 ToastLayout.Name = "NotificationLayout"
 ToastLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -1683,6 +1693,7 @@ ToastLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 ToastLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
 ToastLayout.Padding = UDim.new(0, 6)
 ToastLayout.FillDirection = Enum.FillDirection.Vertical
+_VH_FitToastContainer()
 
 NOTIF_DURATION = 3.0
 MAX_VISIBLE_NOTIFICATIONS = IsMobile and 3 or 5
@@ -1692,32 +1703,26 @@ LastNotificationAt = 0
 
 NotificationTypeInfo = {
 	Success = {
-		Label = "SUCCESS",
 		Title = "Completed",
 		Color = Theme.Success
 	},
 	Error = {
-		Label = "ERROR",
 		Title = "Something went wrong",
 		Color = Theme.Error
 	},
 	Warning = {
-		Label = "WARNING",
 		Title = "Needs your attention",
 		Color = Theme.Warning
 	},
 	Info = {
-		Label = "INFO",
 		Title = "Information",
 		Color = Theme.Info
 	},
 	System = {
-		Label = "SYSTEM",
 		Title = "System update",
 		Color = Theme.System
 	},
 	Execution = {
-		Label = "EXECUTION",
 		Title = "Script execution",
 		Color = Theme.Execution
 	}
@@ -1771,18 +1776,15 @@ function TrimNotificationStack()
 	if not ToastContainer or not ToastContainer.Parent then return end
 	local active = {}
 	for _, child in ipairs(ToastContainer:GetChildren()) do
-		if child:IsA("Frame") and child:GetAttribute("VeloxNotification") == true then
-			table.insert(active, child)
+		if child:IsA("Frame") and child:GetAttribute("VeloxNotification") == true and child:GetAttribute("VeloxClosing") ~= true then
+			active[#active + 1] = child
 		end
 	end
-	table.sort(active, function(a, b)
-		return (a.LayoutOrder or 0) < (b.LayoutOrder or 0)
-	end)
-	while #active > MAX_VISIBLE_NOTIFICATIONS do
-		local oldest = table.remove(active, 1)
-		if oldest and oldest.Parent then
-			pcall(function() oldest:Destroy() end)
-		end
+	table.sort(active, function(a, b) return a.LayoutOrder < b.LayoutOrder end)
+	for index = 1, #active - MAX_VISIBLE_NOTIFICATIONS do
+		local oldest = active[index]
+		local dismiss = ToastDismissers[oldest]
+		if dismiss then dismiss() else pcall(function() oldest:Destroy() end) end
 	end
 end
 
@@ -1825,7 +1827,7 @@ function _VH_QueueNotification(message, notifType)
 	_VH_FlushNotificationQueue()
 end
 
-function _VH_BuildToastCard(parent, nType, typeInfo, title, message)
+function _VH_BuildToastCard(parent, nType, typeInfo, message, width)
 	local color = typeInfo.Color
 	local iconAsset = ({
 		Success = VeloxIcons.NotificationSuccess,
@@ -1835,86 +1837,58 @@ function _VH_BuildToastCard(parent, nType, typeInfo, title, message)
 		System = VeloxIcons.NotificationSystem,
 		Execution = VeloxIcons.NotificationExecution
 	})[nType] or VeloxIcons.NotificationInfo
-	local compact = IsMobile
-	local tileSize = compact and 30 or 34
-	local textX = 54
-	local rightInset = 34
-	local textWidth = math.max(90, ToastWidth - textX - rightInset - 12)
-	local titleSize = compact and 11 or 12
-	local messageSize = compact and 10 or 11
-	local textService = game:GetService("TextService")
-	local titleHeight, messageHeight = titleSize + 3, messageSize + 5
-	local measured, bounds = pcall(function()
-		return textService:GetTextSize(tostring(title), titleSize, Enum.Font.GothamBold, Vector2.new(textWidth, 1000))
+	local textSize = IsMobile and 10 or 11
+	local tileSize = IsMobile and 24 or 26
+	local closeSize = IsMobile and 24 or 22
+	local pad = IsMobile and 9 or 10
+	local textX = pad + tileSize + 8
+	local textWidth = width - textX - closeSize - 14
+	local textHeight = textSize + 4
+	local okMeasure, bounds = pcall(function()
+		return game:GetService("TextService"):GetTextSize(message, textSize, Enum.Font.GothamMedium, Vector2.new(textWidth, 1000))
 	end)
-	if measured and bounds then titleHeight = math.clamp(math.ceil(bounds.Y), titleSize + 2, titleSize * 2 + 4) end
-	measured, bounds = pcall(function()
-		return textService:GetTextSize(message, messageSize, Enum.Font.GothamMedium, Vector2.new(textWidth, 1000))
-	end)
-	if measured and bounds then messageHeight = math.clamp(math.ceil(bounds.Y), messageSize + 3, messageSize * 3 + 8) end
-	local cardHeight = math.max(tileSize + 20, titleHeight + messageHeight + 24)
+	if okMeasure and bounds then textHeight = math.ceil(bounds.Y) end
+	textHeight = math.clamp(textHeight, textSize + 4, textSize * 3 + 10)
+	local cardHeight = math.max(tileSize, textHeight) + pad * 2 + 4
 
 	local box = Instance.new("Frame", parent)
 	box.Name = "Card"
 	box.Size = UDim2.new(1, 0, 1, 0)
-	box.Position = UDim2.new(1.08, 0, 0, 0)
+	box.Position = ToastOffscreen
 	box.BackgroundColor3 = Theme.Card
 	box.BorderSizePixel = 0
-	box.ClipsDescendants = true
+	box.Active = true
 	box.ZIndex = 2002
 	box:SetAttribute("VeloxNotificationType", nType)
-	Instance.new("UICorner", box).CornerRadius = UDim.new(0, 13)
-
+	Instance.new("UICorner", box).CornerRadius = UDim.new(0, 12)
 	local stroke = Instance.new("UIStroke", box)
 	stroke.Color = color
 	stroke.Thickness = 1
-	stroke.Transparency = 0.58
-
-	local accent = Instance.new("Frame", box)
-	accent.Name = "AccentRail"
-	accent.Size = UDim2.new(0, 3, 1, -14)
-	accent.Position = UDim2.new(0, 0, 0, 7)
-	accent.BackgroundColor3 = color
-	accent.BorderSizePixel = 0
-	accent.ZIndex = 2004
-	Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
+	stroke.Transparency = 0.62
 
 	local tile = Instance.new("Frame", box)
 	tile.Name = "IconTile"
 	tile.Size = UDim2.new(0, tileSize, 0, tileSize)
-	tile.Position = UDim2.new(0, 12, 0.5, -tileSize / 2)
+	tile.AnchorPoint = Vector2.new(0, 0.5)
+	tile.Position = UDim2.new(0, pad, 0.5, -2)
 	tile.BackgroundColor3 = color
-	tile.BackgroundTransparency = 0.84
+	tile.BackgroundTransparency = 0.82
 	tile.BorderSizePixel = 0
 	tile.ZIndex = 2004
-	Instance.new("UICorner", tile).CornerRadius = UDim.new(0, 10)
-	local iconSize = compact and 16 or 18
-	CreateVeloxIcon(tile, iconAsset, iconSize, color, UDim2.new(0.5, -iconSize / 2, 0.5, -iconSize / 2), nil, 2005, "NotificationIcon")
-
-	local titleLabel = Instance.new("TextLabel", box)
-	titleLabel.Name = "Title"
-	titleLabel.Size = UDim2.new(0, textWidth, 0, titleHeight)
-	titleLabel.Position = UDim2.new(0, textX, 0.5, -(titleHeight + messageHeight + 2) / 2)
-	titleLabel.BackgroundTransparency = 1
-	titleLabel.Text = tostring(title or typeInfo.Title or "Velox Hub")
-	titleLabel.TextColor3 = Theme.TextPrimary
-	titleLabel.Font = Enum.Font.GothamBold
-	titleLabel.TextSize = titleSize
-	titleLabel.TextWrapped = true
-	titleLabel.TextTruncate = Enum.TextTruncate.AtEnd
-	titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-	titleLabel.TextYAlignment = Enum.TextYAlignment.Center
-	titleLabel.ZIndex = 2004
+	Instance.new("UICorner", tile).CornerRadius = UDim.new(1, 0)
+	local iconSize = IsMobile and 13 or 14
+	CreateVeloxIcon(tile, iconAsset, iconSize, color, UDim2.new(0.5, 0, 0.5, 0), Vector2.new(0.5, 0.5), 2005, "NotificationIcon")
 
 	local description = Instance.new("TextLabel", box)
 	description.Name = "Description"
-	description.Size = UDim2.new(0, textWidth, 0, messageHeight)
-	description.Position = UDim2.new(0, textX, 0.5, (titleHeight + messageHeight + 2) / 2 - messageHeight)
+	description.Size = UDim2.new(0, textWidth, 0, textHeight)
+	description.AnchorPoint = Vector2.new(0, 0.5)
+	description.Position = UDim2.new(0, textX, 0.5, -2)
 	description.BackgroundTransparency = 1
 	description.Text = message
-	description.TextColor3 = Theme.TextSecondary
+	description.TextColor3 = Theme.TextPrimary
 	description.Font = Enum.Font.GothamMedium
-	description.TextSize = messageSize
+	description.TextSize = textSize
 	description.TextWrapped = true
 	description.TextTruncate = Enum.TextTruncate.AtEnd
 	description.TextXAlignment = Enum.TextXAlignment.Left
@@ -1923,8 +1897,9 @@ function _VH_BuildToastCard(parent, nType, typeInfo, title, message)
 
 	local closeButton = Instance.new("TextButton", box)
 	closeButton.Name = "Close"
-	closeButton.Size = UDim2.new(0, 22, 0, 22)
-	closeButton.Position = UDim2.new(1, -27, 0, 7)
+	closeButton.Size = UDim2.new(0, closeSize, 0, closeSize)
+	closeButton.AnchorPoint = Vector2.new(1, 0.5)
+	closeButton.Position = UDim2.new(1, -8, 0.5, -2)
 	closeButton.BackgroundColor3 = Theme.BackgroundMain
 	closeButton.BackgroundTransparency = 1
 	closeButton.BorderSizePixel = 0
@@ -1932,18 +1907,12 @@ function _VH_BuildToastCard(parent, nType, typeInfo, title, message)
 	closeButton.Text = ""
 	closeButton.ZIndex = 2006
 	Instance.new("UICorner", closeButton).CornerRadius = UDim.new(1, 0)
-	local closeIcon = CreateVeloxIcon(closeButton, VeloxIcons.Close, 11, Theme.TextSecondary, UDim2.new(0.5, -5.5, 0.5, -5.5), nil, 2007, "CloseIcon")
-	closeButton.MouseEnter:Connect(function()
-		_VH_SafeTween(closeButton, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 0.4 })
-	end)
-	closeButton.MouseLeave:Connect(function()
-		_VH_SafeTween(closeButton, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 })
-	end)
+	local closeIcon = CreateVeloxIcon(closeButton, VeloxIcons.Close, 10, Theme.TextSecondary, UDim2.new(0.5, 0, 0.5, 0), Vector2.new(0.5, 0.5), 2007, "CloseIcon")
 
 	local progressTrack = Instance.new("Frame", box)
 	progressTrack.Name = "TimerProgressTrack"
-	progressTrack.Size = UDim2.new(1, -24, 0, 2)
-	progressTrack.Position = UDim2.new(0, 12, 1, -5)
+	progressTrack.Size = UDim2.new(1, -pad * 2, 0, 2)
+	progressTrack.Position = UDim2.new(0, pad, 1, -5)
 	progressTrack.BackgroundColor3 = Theme.BackgroundMain
 	progressTrack.BackgroundTransparency = 0.3
 	progressTrack.BorderSizePixel = 0
@@ -1958,6 +1927,57 @@ function _VH_BuildToastCard(parent, nType, typeInfo, title, message)
 	Instance.new("UICorner", progressFill).CornerRadius = UDim.new(1, 0)
 
 	return box, closeButton, closeIcon, progressFill, cardHeight
+end
+
+function _VH_RunToast(box, closeButton, closeIcon, progressFill, onClosing, onRemove)
+	local closed = false
+	local progressTween = nil
+	local function Dismiss()
+		if closed then return end
+		closed = true
+		if onClosing then onClosing() end
+		if progressTween then pcall(function() progressTween:Cancel() end) end
+		if not box.Parent then
+			onRemove()
+			return
+		end
+		local outTween = TweenService:Create(box, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = ToastOffscreen })
+		outTween.Completed:Connect(onRemove)
+		outTween:Play()
+	end
+	closeButton.Activated:Connect(Dismiss)
+	box.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then Dismiss() end
+	end)
+	if not IsMobile then
+		closeButton.MouseEnter:Connect(function()
+			if closed then return end
+			closeIcon.ImageColor3 = Theme.TextPrimary
+			_VH_SafeTween(closeButton, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 0.4 })
+		end)
+		closeButton.MouseLeave:Connect(function()
+			if closed then return end
+			closeIcon.ImageColor3 = Theme.TextSecondary
+			_VH_SafeTween(closeButton, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 })
+		end)
+		box.MouseEnter:Connect(function()
+			if closed then return end
+			if progressTween then progressTween:Pause() end
+			_VH_SafeTween(box, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundColor3 = Theme.CardHover })
+		end)
+		box.MouseLeave:Connect(function()
+			if closed then return end
+			if progressTween then progressTween:Play() end
+			_VH_SafeTween(box, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundColor3 = Theme.Card })
+		end)
+	end
+	TweenService:Create(box, TweenInfo.new(0.28, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Position = UDim2.new(0, 0, 0, 0) }):Play()
+	progressTween = TweenService:Create(progressFill, TweenInfo.new(NOTIF_DURATION, Enum.EasingStyle.Linear), { Size = UDim2.new(0, 0, 1, 0) })
+	progressTween.Completed:Connect(function(state)
+		if state == Enum.PlaybackState.Completed then Dismiss() end
+	end)
+	progressTween:Play()
+	return Dismiss
 end
 
 function EmergencyFallbackNotification(msg, title)
@@ -1986,13 +2006,10 @@ function StandaloneBannerNotification(msg, notifType)
 	local nType = NormalizeNotificationType(notifType)
 	local message = GetNotificationMessage(msg)
 	local typeInfo = NotificationTypeInfo[nType] or NotificationTypeInfo.Info
-	local title = GetNotificationTitle(nType, message)
-
 	if not parent then
-		EmergencyFallbackNotification(message, title)
+		EmergencyFallbackNotification(message, GetNotificationTitle(nType, message))
 		return
 	end
-
 	local bannerGui = nil
 	local success = pcall(function()
 		bannerGui = Instance.new("ScreenGui")
@@ -2002,64 +2019,21 @@ function StandaloneBannerNotification(msg, notifType)
 		bannerGui.IgnoreGuiInset = true
 		bannerGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 		bannerGui.Parent = parent
-
+		local width = _VH_GetToastWidth()
 		local container = Instance.new("Frame", bannerGui)
 		container.Name = "Notification"
-		container.Size = UDim2.new(0, ToastWidth, 0, IsMobile and 46 or 48)
-		container.Position = UDim2.new(1, -(ToastWidth + ToastMargin), 0, ToastTopInset)
 		container.BackgroundTransparency = 1
-		container.ClipsDescendants = false
-
-		local box, closeButton, closeIcon, progressFill, cardHeight = _VH_BuildToastCard(container, nType, typeInfo, title, message)
-		container.Size = UDim2.new(0, ToastWidth, 0, cardHeight)
-		local closeRequested = false
-
-		local progressTween
-		local dismissTween
-		local function Dismiss()
-			if closeRequested then return end
-			closeRequested = true
-			if progressTween then pcall(function() progressTween:Cancel() end) end
-			if not container.Parent then
-				if bannerGui.Parent then bannerGui:Destroy() end
-				return
-			end
-			dismissTween = TweenService:Create(box, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-				Position = UDim2.new(1.08, 0, 0, 0)
-			})
-			dismissTween:Play()
-			dismissTween.Completed:Connect(function()
-				if bannerGui and bannerGui.Parent then bannerGui:Destroy() end
-			end)
-		end
-
-		closeButton.Activated:Connect(Dismiss)
-		closeButton.MouseEnter:Connect(function()
-			if closeIcon and closeIcon.Parent then closeIcon.ImageColor3 = Theme.TextPrimary end
-		end)
-		closeButton.MouseLeave:Connect(function()
-			if not closeRequested and closeIcon and closeIcon.Parent then closeIcon.ImageColor3 = Theme.TextSecondary end
-		end)
-
+		container.Position = UDim2.new(1, -(width + ToastMargin), 0, ToastTopInset)
+		local box, closeButton, closeIcon, progressFill, cardHeight = _VH_BuildToastCard(container, nType, typeInfo, message, width)
+		container.Size = UDim2.new(0, width, 0, cardHeight)
 		_VH_ClearTextOutlines(bannerGui)
-
-		TweenService:Create(box, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-			Position = UDim2.new(0, 0, 0, 0)
-		}):Play()
-
-		progressTween = TweenService:Create(progressFill, TweenInfo.new(NOTIF_DURATION, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {
-			Size = UDim2.new(0, 0, 1, 0)
-		})
-		progressTween:Play()
-
-		task.delay(NOTIF_DURATION, function()
-			if not closeRequested and box.Parent then Dismiss() end
+		_VH_RunToast(box, closeButton, closeIcon, progressFill, nil, function()
+			if bannerGui and bannerGui.Parent then bannerGui:Destroy() end
 		end)
 	end)
-
 	if not success then
 		if bannerGui and bannerGui.Parent then pcall(function() bannerGui:Destroy() end) end
-		EmergencyFallbackNotification(message, title)
+		EmergencyFallbackNotification(message, GetNotificationTitle(nType, message))
 	end
 end
 
@@ -2068,7 +2042,6 @@ function ShowNotification(msg, notifType)
 	local nType = NormalizeNotificationType(notifType)
 	local typeInfo = NotificationTypeInfo[nType] or NotificationTypeInfo.Info
 	local message = GetNotificationMessage(msg)
-	local title = GetNotificationTitle(nType, message)
 
 	if not _VH_IsVeloxNotificationReady() then
 		for _, item in ipairs(PendingNotifications) do
@@ -2087,69 +2060,28 @@ function ShowNotification(msg, notifType)
 	local wrapper = nil
 	local success = pcall(function()
 		NotificationSequence = NotificationSequence + 1
+		local width = _VH_FitToastContainer()
 		wrapper = Instance.new("Frame", ToastContainer)
 		wrapper.Name = "Notification_" .. tostring(NotificationSequence)
 		wrapper:SetAttribute("VeloxNotification", true)
 		wrapper.LayoutOrder = NotificationSequence
 		wrapper.BackgroundTransparency = 1
 		wrapper.ZIndex = 2001
-		local box, closeButton, closeIcon, progressFill, cardHeight = _VH_BuildToastCard(wrapper, nType, typeInfo, title, message)
+		local box, closeButton, closeIcon, progressFill, cardHeight = _VH_BuildToastCard(wrapper, nType, typeInfo, message, width)
 		wrapper.Size = UDim2.new(1, 0, 0, cardHeight)
-
-		local closeRequested = false
-		local progressTween = nil
-		local dismissTween = nil
-		local function Dismiss()
-			if closeRequested then return end
-			closeRequested = true
-			if progressTween then
-				pcall(function() progressTween:Cancel() end)
-			end
-			if not wrapper or not wrapper.Parent then return end
-			dismissTween = TweenService:Create(box, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-				Position = UDim2.new(1.08, 0, 0, 0)
-			})
-			dismissTween:Play()
-			dismissTween.Completed:Connect(function()
-				if wrapper and wrapper.Parent then wrapper:Destroy() end
-			end)
-		end
-
-		closeButton.MouseEnter:Connect(function()
-			if closeIcon and closeIcon.Parent then closeIcon.ImageColor3 = Theme.TextPrimary end
-		end)
-		closeButton.MouseLeave:Connect(function()
-			if not closeRequested and closeIcon and closeIcon.Parent then closeIcon.ImageColor3 = Theme.TextSecondary end
-		end)
-		closeButton.Activated:Connect(Dismiss)
-
-		box.MouseEnter:Connect(function()
-			_VH_SafeTween(box, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Theme.CardHover})
-		end)
-		box.MouseLeave:Connect(function()
-			if not closeRequested then
-				_VH_SafeTween(box, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Theme.Card})
-			end
-		end)
-
-		TrimNotificationStack()
-		local introTween = TweenService:Create(box, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-			Position = UDim2.new(0, 0, 0, 0)
-		})
-		introTween:Play()
-		introTween.Completed:Connect(function() pcall(function() introTween:Destroy() end) end)
-
 		_VH_ClearTextOutlines(wrapper)
-
-		progressTween = TweenService:Create(progressFill, TweenInfo.new(NOTIF_DURATION, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {
-			Size = UDim2.new(0, 0, 1, 0)
-		})
-		progressTween:Play()
-
-		task.delay(NOTIF_DURATION, function()
-			if not wrapper or not wrapper.Parent or closeRequested then return end
-			Dismiss()
+		local owner = wrapper
+		ToastDismissers[owner] = _VH_RunToast(box, closeButton, closeIcon, progressFill, function()
+			if owner.Parent then owner:SetAttribute("VeloxClosing", true) end
+		end, function()
+			if not owner.Parent then return end
+			local collapse = TweenService:Create(owner, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(1, 0, 0, 0) })
+			collapse.Completed:Connect(function()
+				if owner.Parent then owner:Destroy() end
+			end)
+			collapse:Play()
 		end)
+		TrimNotificationStack()
 	end)
 
 	if not success then
@@ -2170,29 +2102,33 @@ function AttemptActionWithCooldown(actionFunc)
 			bannerGui.Name = "VeloxCooldown_" .. _VH_GenerateRandomString(8)
 			bannerGui.DisplayOrder = 10000
 			bannerGui.ResetOnSpawn = false
+			bannerGui.IgnoreGuiInset = true
 			bannerGui.Parent = parent
-				GlobalCooldownBanner = bannerGui
+			GlobalCooldownBanner = bannerGui
 			local frame = Instance.new("Frame", bannerGui)
-			frame.Size = UDim2.new(0, IsMobile and 280 or 340, 0, 45)
+			frame.Size = UDim2.new(0, math.min(IsMobile and 244 or 288, _VH_GetToastWidth() + 28), 0, IsMobile and 38 or 42)
 			frame.Position = UDim2.new(0.5, 0, 0, -60)
 			frame.AnchorPoint = Vector2.new(0.5, 0)
-			frame.BackgroundColor3 = Theme.BackgroundSecondary
+			frame.BackgroundColor3 = Theme.Card
 			frame.BorderSizePixel = 0
-			Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+			Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
 			local stroke = Instance.new("UIStroke", frame)
 			stroke.Color = Theme.Warning
-			stroke.Thickness = 1.5
+			stroke.Thickness = 1
+			stroke.Transparency = 0.62
+			local icon = CreateVeloxIcon(frame, VeloxIcons.NotificationWarning, 14, Theme.Warning, UDim2.new(0, 14, 0.5, 0), Vector2.new(0, 0.5), 2, "CooldownIcon")
 			local txt = Instance.new("TextLabel", frame)
-			txt.Size = UDim2.new(1, -20, 1, 0)
-			txt.Position = UDim2.new(0, 10, 0, 0)
+			txt.Size = UDim2.new(1, -44, 1, 0)
+			txt.Position = UDim2.new(0, 36, 0, 0)
 			txt.BackgroundTransparency = 1
 			txt.TextColor3 = Theme.TextPrimary
-			_VH_ClearTextOutlines(bannerGui)
 			txt.Font = Enum.Font.GothamMedium
-			txt.TextSize = IsMobile and 11 or 13
+			txt.TextSize = IsMobile and 10 or 11
 			txt.TextWrapped = true
-			TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-				Position = UDim2.new(0.5, 0, 0, 20)
+			txt.TextXAlignment = Enum.TextXAlignment.Left
+			_VH_ClearTextOutlines(bannerGui)
+			TweenService:Create(frame, TweenInfo.new(0.28, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+				Position = UDim2.new(0.5, 0, 0, ToastTopInset)
 			}):Play()
 			task.spawn(function()
 				while currentLoop == GlobalCooldownLoopVersion do
@@ -2205,6 +2141,8 @@ function AttemptActionWithCooldown(actionFunc)
 						if txt and txt.Parent then
 							txt.Text = "Ready"
 							stroke.Color = Theme.Success
+							icon.Image = VeloxIcons.NotificationSuccess
+							icon.ImageColor3 = Theme.Success
 						end
 						task.wait(1)
 						if currentLoop == GlobalCooldownLoopVersion then
@@ -3045,37 +2983,12 @@ function CloseUI()
 end
 HeaderContainer = Instance.new("Frame", MainContent)
 HeaderContainer.Size = UDim2.new(1, -28, 0, IsMobile and 48 or 56)
-HeaderContainer.Position = UDim2.new(0, 14, 0, (IsMobile and 6 or 10) + (IsChristmas and 4 or 0))
+HeaderContainer.Position = UDim2.new(0, 14, 0, IsMobile and 6 or 10)
 HeaderContainer.BackgroundTransparency = 1
 HeaderContainer.Active = true
 mainDragStart, mainStartPos = nil, nil
-_VH_RegConn(HeaderContainer.InputBegan:Connect(function(input)
-	if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not activeMainDragInput then
-		activeMainDragInput = input
-		mainDragStart = input.Position
-		mainStartPos = MainPanel.Position
-		if mainDragConnection then _VH_UnregConn(mainDragConnection); mainDragConnection = nil end
-		mainDragConnection = _VH_RegConn(UserInputService.InputChanged:Connect(function(moveInput)
-			if isDestroying then return end
-			if moveInput == activeMainDragInput or moveInput.UserInputType == Enum.UserInputType.MouseMovement then
-				local delta = moveInput.Position - mainDragStart
-				local camera = workspace.CurrentCamera
-				local viewport = camera and camera.ViewportSize or Vector2.new(1920, 1080)
-				local targetX = mainStartPos.X.Scale * viewport.X + mainStartPos.X.Offset + delta.X
-				local targetY = mainStartPos.Y.Scale * viewport.Y + mainStartPos.Y.Offset + delta.Y
-				local halfX = MainPanel.AbsoluteSize.X * MainPanel.AnchorPoint.X
-				local halfY = MainPanel.AbsoluteSize.Y * MainPanel.AnchorPoint.Y
-				targetX = math.max(halfX, math.min(targetX, math.max(halfX, viewport.X - (MainPanel.AbsoluteSize.X - halfX))))
-				targetY = math.max(halfY, math.min(targetY, math.max(halfY, viewport.Y - (MainPanel.AbsoluteSize.Y - halfY))))
-				MainPanel.Position = UDim2.new(0, targetX, 0, targetY)
-			end
-		end))
-	end
-end))
-_VH_RegConn(SidebarDragHandle.InputBegan:Connect(function(input)
-	if isDestroying or not SidebarDragHandle.Visible then return end
-	if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
-	if activeMainDragInput then return end
+function _VH_BeginPanelDrag(input)
+	if isDestroying or activeMainDragInput then return end
 	activeMainDragInput = input
 	mainDragStart = input.Position
 	mainStartPos = MainPanel.Position
@@ -3095,6 +3008,17 @@ _VH_RegConn(SidebarDragHandle.InputBegan:Connect(function(input)
 			MainPanel.Position = UDim2.new(0, targetX, 0, targetY)
 		end
 	end))
+end
+_VH_RegConn(HeaderContainer.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		_VH_BeginPanelDrag(input)
+	end
+end))
+_VH_RegConn(SidebarDragHandle.InputBegan:Connect(function(input)
+	if not SidebarDragHandle.Visible then return end
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		_VH_BeginPanelDrag(input)
+	end
 end))
 _VH_RegConn(UserInputService.InputEnded:Connect(function(input)
 	if isDestroying then return end
@@ -3113,7 +3037,7 @@ _VH_RegConn(UserInputService.InputEnded:Connect(function(input)
 			floatDragConnection = nil
 		end
 		if floatStart then
-			dist = (input.Position - floatStart).Magnitude
+			local dist = (input.Position - floatStart).Magnitude
 			if dist < 12 then
 				ToggleUI()
 			else
@@ -3246,13 +3170,16 @@ MinBtn.BorderSizePixel = 0
 MinBtn.AutoButtonColor = false
 MinBtn.Text = ""
 MinBtn.LayoutOrder = 3
-MinBtn.ClipsDescendants = true
-MinBtn.Text = "−"
-MinBtn.TextColor3 = Color3.new(1, 1, 1)
-MinBtn.Font = Enum.Font.GothamBold
-MinBtn.TextSize = IsMobile and 23 or 25
-MinBtn.TextXAlignment = Enum.TextXAlignment.Center
-MinBtn.TextYAlignment = Enum.TextYAlignment.Center
+MinGlyph = Instance.new("Frame", MinBtn)
+MinGlyph.Name = "MinimizeIcon"
+MinGlyph.AnchorPoint = Vector2.new(0.5, 0.5)
+MinGlyph.Position = UDim2.new(0.5, 0, 0.5, 0)
+MinGlyph.Size = UDim2.new(0, IsMobile and 12 or 14, 0, 2)
+MinGlyph.BackgroundColor3 = Color3.new(1, 1, 1)
+MinGlyph.BorderSizePixel = 0
+MinGlyph.Active = false
+MinGlyph.ZIndex = 2
+Instance.new("UICorner", MinGlyph).CornerRadius = UDim.new(1, 0)
 Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(1, 0)
 MinStroke = Instance.new("UIStroke", MinBtn)
 MinStroke.Color = Theme.Accent
@@ -3318,7 +3245,7 @@ do
 	local headerDivider = Instance.new("Frame", MainContent)
 	headerDivider.Name = "HeaderDivider"
 	headerDivider.Size = UDim2.new(1, -28, 0, 1)
-	headerDivider.Position = UDim2.new(0, 14, 0, (IsMobile and 59 or 72) + (IsChristmas and 4 or 0))
+	headerDivider.Position = UDim2.new(0, 14, 0, IsMobile and 59 or 72)
 	headerDivider.BackgroundColor3 = Color3.new(1, 1, 1)
 	headerDivider.BorderSizePixel = 0
 	headerDivider.Active = false
@@ -3352,15 +3279,28 @@ if IsChristmas then
 		greeting.TextColor3 = Theme.AccentAlt
 		greeting.TextXAlignment = Enum.TextXAlignment.Left
 		greeting.LayoutOrder = 4
+		local okWidth, greetingSize = pcall(function()
+			return game:GetService("TextService"):GetTextSize(greeting.Text, 11, Enum.Font.GothamMedium, Vector2.new(1000, 24))
+		end)
+		local greetingWidth = okWidth and greetingSize.X or 100
+		local function fitGreeting()
+			if isDestroying or not greeting.Parent then return end
+			local scale = (PanelUIScale and PanelUIScale.Scale) or 1
+			local used = Title.AbsoluteSize.X + StatusDot.AbsoluteSize.X + StatusText.AbsoluteSize.X + (greetingWidth + 32) * scale
+			greeting.Visible = LeftHeaderFrame.AbsoluteSize.X >= used
+		end
+		for _, object in ipairs({ LeftHeaderFrame, Title, StatusText }) do
+			_VH_RegConn(object:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitGreeting))
+		end
+		task.defer(fitGreeting)
 	end
 
 	local treeModel, treeStar = nil, {}
 	local treeSize = IsMobile and 30 or 34
 	local treeOk = pcall(function()
-		local vpSize = treeSize
 		local vp = Instance.new("ViewportFrame")
 		vp.Name = "ChristmasTree3D"
-		vp.Size = UDim2.new(0, vpSize, 0, vpSize)
+		vp.Size = UDim2.new(0, treeSize, 0, treeSize)
 		vp.AnchorPoint = Vector2.new(0, 0.5)
 		vp.Position = UDim2.new(0, 0, 0.5, 0)
 		vp.BackgroundTransparency = 1
@@ -3455,15 +3395,12 @@ if IsChristmas then
 		fallback.Position = UDim2.new(0, 0, 0.5, 0)
 		fallback.BackgroundTransparency = 1
 		fallback.Text = "\u{1F384}"
-		fallback.TextSize = IsMobile and 18 or 22
+		fallback.TextSize = IsMobile and 16 or 19
 		fallback.Font = Enum.Font.GothamBold
 		fallback.TextColor3 = Color3.new(1, 1, 1)
 		fallback.ZIndex = 6
 	end
-	SidebarLogo.AnchorPoint = Vector2.new(0, 0.5)
-	SidebarLogo.Position = UDim2.new(0, treeSize + 6, 0.5, 0)
-
-	SidebarBrand.Position = UDim2.new(0, 10, 0, IsMobile and 19 or 20)
+	SidebarLogo.Position = UDim2.new(0, treeSize + 6, 0.5, -(treeSize / 2))
 	local function makeSnowLayer(name, z)
 		local layer = Instance.new("Frame", MainPanel)
 		layer.Name = name
@@ -3505,19 +3442,20 @@ if IsChristmas then
 	end
 
 	local christmasClock = 0
-	local treeUpdateAccumulator = 0
+	local holidayAccumulator = 0
 	_VH_RegConn(RunService.Heartbeat:Connect(function(dt)
 		if isDestroying or isMinimized or not MainPanel or not MainPanel.Parent or not MainPanel.Visible then return end
-		christmasClock = christmasClock + dt
+		holidayAccumulator = holidayAccumulator + dt
+		if holidayAccumulator < 0.033 then return end
+		local step = math.min(holidayAccumulator, 0.1)
+		holidayAccumulator = 0
+		christmasClock = christmasClock + step
 		for i = 1, #flakes do
 			local flake = flakes[i]
-			flake.y = flake.y + flake.speed * dt
+			flake.y = flake.y + flake.speed * step
 			if flake.y > 1.03 then flake.y = -0.03; flake.x = math.random() end
 			flake.obj.Position = UDim2.new(flake.x, math.floor(math.sin(christmasClock * flake.sway + flake.phase) * flake.amp), flake.y, 0)
 		end
-		treeUpdateAccumulator = treeUpdateAccumulator + dt
-		if treeUpdateAccumulator < 0.033 then return end
-		treeUpdateAccumulator = 0
 		if treeModel and treeModel.Parent then
 			treeModel:PivotTo(CFrame.new(0, 2.1 + math.sin(christmasClock * 1.6) * 0.05, 0) * CFrame.Angles(0, christmasClock * 0.9, 0))
 			local starPulse = 0.85 + 0.15 * math.sin(christmasClock * 3)
@@ -5384,19 +5322,21 @@ _VH_UpdateFilterControl()
 HubChangelog = {
 	{
 		Version = "v" .. HubVersion,
-		Title = "Performance & UI Polish",
+		Title = "UI Redesign, Optimization & Stability",
 		Items = {
-			"Recommended For You pills fit their text at every UI scale: names wrap or shrink cleanly, reason labels remain visible, and narrow screens show fewer pills per page.",
-			"Improved panel positioning on smaller displays at higher UI scales; open popups re-fit after a scale change.",
+			"Redesigned notifications as compact, icon-led toasts with smoother slide animations, collapsing stacks, hover-to-pause timers, and tap-to-dismiss.",
+			"Aligned the Christmas and Default themes: the tree and logo now share the same size and vertical position, and the header keeps identical dimensions in both themes.",
+			"Fixed the minimize button so its symbol sits perfectly centered inside the circle at every UI scale.",
 			"Redesigned Filters and Sort Scripts with compact icon-first layouts, wrapping chips, one-tap Favorites and Clear controls, and a clear selected-order indicator.",
-			"Polished notifications into compact, icon-led toasts and moved them away from mobile controls.",
+			"Recommended For You pills fit their text at every UI scale: names wrap or shrink cleanly, reason labels stay visible, and narrow screens show fewer pills per page.",
+			"Improved panel positioning on smaller displays at higher UI scales; open popups re-fit after a scale change.",
 			"Filters, Sort, language, and refresh popups stay in position and close when the catalog category changes.",
 			"Fixed clipped outlines and card controls, and improved spacing and button sizing on narrow screens.",
-			"Removed the How to Use auto-navigation bar so the guide uses the full content area.",
-			"Updated the How to Use guide to match the current Filters and Sort controls.",
+			"Fixed minimizing and restoring resetting tab highlights and panel size after Clear UI Cache on mobile.",
+			"Removed the How to Use auto-navigation bar so the guide uses the full content area, and updated the guide to match the current Filters and Sort controls.",
 			"Added a current-game thumbnail to Home with an automatic fallback image.",
-			"Improved startup efficiency: the How to Use guide and Changelog are built on first open, style cleanup is batched, and unused card badges are skipped.",
-			"Removed animated Christmas light strings and tree bulbs while retaining the Christmas tree, ornaments, snowfall, greeting, and theme colors; reduced holiday animation work.",
+			"Reduced background work: holiday animations update in a single step, catalog auto-refresh sleeps in longer intervals, and the How to Use guide and Changelog are built on first open.",
+			"Removed animated Christmas light strings and tree bulbs while keeping the tree, ornaments, snowfall, greeting, and theme colors.",
 			"Hardened search debounce handling, prevented stale UI-scale layout callbacks, and corrected relative last-updated labels.",
 			"Improved cleanup for catalog-card connections while preserving catalog, image, configuration, and compatibility fallbacks."
 		}
@@ -8448,7 +8388,7 @@ _VH_TrackTask(function()
 	while not isDestroying do
 		local waitTime = nextAutoRefreshAt - os.clock()
 		if waitTime > 0 then
-			task.wait(math.min(waitTime, 1))
+			task.wait(math.min(waitTime, 10))
 		else
 			if not isDestroying and not CatalogBatchRefreshing and not dbRefreshing then
 				RefreshAllCatalogs(false, true)
