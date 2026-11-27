@@ -5419,8 +5419,8 @@ HubChangelog = {
 		Version = "v" .. HubVersion,
 		Title = "Performance, Navigation & UI Polish",
 		Items = {
-			"Fixed How to Use navigation at every UI scale: the tabs, violet pill, and scrolling bar stay aligned while resizing, and rapid tab switching always lands on the selected section.",
-			"Recommended For You pills now fit their text at every UI scale: names wrap or shrink cleanly, reason labels are never cut off, and narrow screens show fewer pills per page.",
+			"Made How to Use navigation scale-aware: it waits for the resized layout to settle, recalculates section offsets from the live scrolling viewport, and gives the newest tab selection priority.",
+			"Recommended For You cards now size from the rendered list width, with wrapped game names and text sizing based on the available space.",
 			"The hub now stays fully on screen at higher UI scales on smaller displays, and open popups re-fit after a scale change.",
 			"Redesigned Filters and Sort Scripts with compact icon-first layouts, wrapping chips, one-tap Favorites and Clear controls, and a clear indicator for the selected order.",
 			"Polished notifications into compact, icon-led toasts and moved them clear of mobile controls.",
@@ -6912,17 +6912,20 @@ function _VH_BuildHowToNav()
 	local settledIndex, settledY = nil, 0
 	local scrollSettle, scaleSettle = { stamp = 0, running = false }, { stamp = 0, running = false }
 	local revealChip
+	local jumpTo, cancelNavigationJump
 	local navigationGeneration = 0
+	local scaleLayoutPending = false
+	local pendingScaleNavigation = nil
 	local fadeInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	local pillInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 	local barSyncQueued, viewSyncQueued = false, false
 
 	local function uiScale()
+		local scale = PanelUIScale and tonumber(PanelUIScale.Scale)
+		if scale and scale > 0 then return scale end
 		local measured = bar.AbsoluteSize.Y
 		if measured > 0 then return measured / barHeight end
-		local scale = PanelUIScale and tonumber(PanelUIScale.Scale) or 1
-		if not scale or scale <= 0 then return 1 end
-		return scale
+		return 1
 	end
 
 	local function cancelTrackedTween(instance)
@@ -7082,7 +7085,7 @@ function _VH_BuildHowToNav()
 	end
 
 	refreshActiveFromScroll = function()
-		if isDestroying or not view.Parent or not view.Visible or navigationTarget then return end
+		if isDestroying or not view.Parent or not view.Visible or navigationTarget or scaleLayoutPending then return end
 		local scale = uiScale()
 		local viewTop = view.AbsolutePosition.Y
 		local viewBottom = viewTop + view.AbsoluteWindowSize.Y
@@ -7137,24 +7140,36 @@ function _VH_BuildHowToNav()
 	end
 
 	local function onViewScrolled()
-		if navigationTarget then return end
+		if navigationTarget or scaleLayoutPending then return end
 		refreshActiveFromScroll()
 		settleLater(scrollSettle, refreshActiveFromScroll)
 	end
 
-	local function resyncLayout()
-		syncBarCanvas()
-		syncViewCanvas()
-		refreshActiveFromScroll()
-	end
-
 	local function onScaleChanged()
+		if isDestroying then return end
+		if navigationTarget then
+			pendingScaleNavigation = navigationTarget
+			if cancelNavigationJump then cancelNavigationJump(true) end
+		end
+		scaleLayoutPending = true
 		queueBarSync()
 		queueViewSync()
-		settleLater(scaleSettle, resyncLayout)
+		settleLater(scaleSettle, function()
+			if isDestroying or not bar.Parent or not view.Parent then return end
+			syncBarCanvas()
+			syncViewCanvas()
+			scaleLayoutPending = false
+			local selectedIndex = pendingScaleNavigation
+			pendingScaleNavigation = nil
+			if selectedIndex and jumpTo and view.Visible then
+				jumpTo(selectedIndex)
+			else
+				refreshActiveFromScroll()
+			end
+		end)
 	end
 
-	local function cancelNavigationJump(cancelScroll)
+	cancelNavigationJump = function(cancelScroll)
 		navigationGeneration = navigationGeneration + 1
 		navigationTarget = nil
 		settledIndex = nil
@@ -7193,38 +7208,57 @@ function _VH_BuildHowToNav()
 	end
 
 	local function releaseToManualScroll()
-		if not navigationTarget then return end
-		cancelNavigationJump(true)
-		refreshActiveFromScroll()
+		if not navigationTarget and not pendingScaleNavigation then return end
+		pendingScaleNavigation = nil
+		if navigationTarget then cancelNavigationJump(true) end
+		if not scaleLayoutPending then refreshActiveFromScroll() end
 	end
 
 	local function waitForNavigationLayout(generation, section)
-		local previousPosition, previousHeight, previousContent, previousWindow
+		local previous
 		local stableFrames = 0
-		for _ = 1, 8 do
+		for _ = 1, 60 do
 			RunService.RenderStepped:Wait()
 			if generation ~= navigationGeneration or isDestroying or not view.Parent or not view.Visible then
 				return false
 			end
 			local block = section and section.Block
 			if not block or not block.Parent then return false end
-			syncViewCanvas()
-			local position = block.AbsolutePosition.Y
-			local height = block.AbsoluteSize.Y
-			local content = viewLayout and viewLayout.AbsoluteContentSize.Y or 0
-			local window = view.AbsoluteWindowSize.Y
-			if previousPosition
-				and math.abs(position - previousPosition) < 0.5
-				and math.abs(height - previousHeight) < 0.5
-				and math.abs(content - previousContent) < 0.5
-				and math.abs(window - previousWindow) < 0.5 then
-				stableFrames = stableFrames + 1
-				if stableFrames >= 2 then return true end
-			else
+			if scaleLayoutPending then
 				stableFrames = 0
+				previous = nil
+			else
+				syncBarCanvas()
+				syncViewCanvas()
+				local scale = uiScale()
+				local state = {
+					Scale = scale,
+					Position = block.AbsolutePosition.Y,
+					Height = block.AbsoluteSize.Y,
+					Content = viewLayout and viewLayout.AbsoluteContentSize.Y or 0,
+					Window = view.AbsoluteWindowSize.Y,
+					ViewPosition = view.AbsolutePosition.Y,
+					ViewSize = view.AbsoluteSize.Y,
+					CanvasHeight = view.CanvasSize.Y.Offset,
+					CanvasPosition = view.CanvasPosition.Y
+				}
+				if previous
+					and math.abs(state.Scale - previous.Scale) < 0.0005
+					and math.abs(state.Position - previous.Position) < 0.5
+					and math.abs(state.Height - previous.Height) < 0.5
+					and math.abs(state.Content - previous.Content) < 0.5
+					and math.abs(state.Window - previous.Window) < 0.5
+					and math.abs(state.ViewPosition - previous.ViewPosition) < 0.5
+					and math.abs(state.ViewSize - previous.ViewSize) < 0.5
+					and math.abs(state.CanvasHeight - previous.CanvasHeight) < 0.5
+					and math.abs(state.CanvasPosition - previous.CanvasPosition) < 0.5 then
+					stableFrames = stableFrames + 1
+					if stableFrames >= 3 then return true end
+				else
+					stableFrames = 0
+				end
+				previous = state
 			end
-			previousPosition, previousHeight = position, height
-			previousContent, previousWindow = content, window
 		end
 		return generation == navigationGeneration and not isDestroying and view.Parent ~= nil and view.Visible
 	end
@@ -7283,17 +7317,23 @@ function _VH_BuildHowToNav()
 		end)
 	end
 
-	local function jumpTo(index)
+	jumpTo = function(index)
 		local section = sections[index]
 		if not section or not section.Block or not section.Block.Parent or not view.Visible then return end
 
+		pendingScaleNavigation = nil
 		cancelNavigationJump(true)
 		local generation = navigationGeneration
 		navigationTarget = index
 		setActive(index, true)
 
 		task.defer(function()
-			if not waitForNavigationLayout(generation, section) then return end
+			if not waitForNavigationLayout(generation, section) then
+				if generation == navigationGeneration and navigationTarget == index then
+					finishNavigation(generation, index)
+				end
+				return
+			end
 			if generation ~= navigationGeneration or not section.Block or not section.Block.Parent then return end
 			local target, current = sectionScrollTarget(section)
 			if target == nil then
@@ -7611,21 +7651,39 @@ function _VH_FitText(label, maxWidth, maxHeight, maxSize, minSize, singleLine)
 end
 
 function _VH_GetRecommendationLayout()
-	local panelWidth = MainPanel and MainPanel.Size.X.Offset or 0
 	local maxPageSize = math.max(1, tonumber(RecommendationPageSize) or 3)
-	if panelWidth <= 0 then return 0, maxPageSize end
-	local listWidth = panelWidth - SideWidth - 28 - 9 - 4 - (IsMobile and 80 or 88)
+	local scale = PanelUIScale and tonumber(PanelUIScale.Scale) or 1
+	if not scale or scale <= 0 then scale = 1 end
+	local listWidth = 0
+	if RecommendationList and RecommendationList.Parent then
+		listWidth = RecommendationList.AbsoluteSize.X / scale
+	end
+	if listWidth <= 1 then
+		local panelWidth = MainPanel and MainPanel.Size.X.Offset or 0
+		if panelWidth <= 0 then return 0, maxPageSize end
+		listWidth = panelWidth - SideWidth - 28 - 9 - 4 - (IsMobile and 80 or 88)
+	end
+	listWidth = math.max(0, listWidth)
 	local gap = IsMobile and 7 or 8
 	local minCardWidth = IsMobile and 152 or 170
-	return listWidth, math.clamp(math.floor((listWidth + gap) / (minCardWidth + gap)), 1, maxPageSize)
+	local pageSize = math.clamp(math.floor((listWidth + gap) / (minCardWidth + gap)), 1, maxPageSize)
+	return listWidth, pageSize
 end
 
 function _VH_FitRecommendationHeader()
 	if not RecommendationPanel or not RecommendationPanel.Parent then return end
-	local listWidth = _VH_GetRecommendationLayout()
-	local panelWidth = listWidth + (IsMobile and 80 or 88)
-	_VH_FitText(RecommendationTitle, panelWidth - (IsMobile and 150 or 170), 18, IsMobile and 12 or 14, IsMobile and 9 or 10, true)
-	_VH_FitText(RecommendationSubtitle, panelWidth - (IsMobile and 155 or 175), 15, IsMobile and 8 or 9, 7, true)
+	local scale = PanelUIScale and tonumber(PanelUIScale.Scale) or 1
+	if not scale or scale <= 0 then scale = 1 end
+	local titleWidth = RecommendationTitle and RecommendationTitle.AbsoluteSize.X / scale or 0
+	local subtitleWidth = RecommendationSubtitle and RecommendationSubtitle.AbsoluteSize.X / scale or 0
+	if titleWidth <= 1 or subtitleWidth <= 1 then
+		local listWidth = _VH_GetRecommendationLayout()
+		local panelWidth = listWidth + (IsMobile and 80 or 88)
+		titleWidth = math.max(titleWidth, panelWidth - (IsMobile and 150 or 170))
+		subtitleWidth = math.max(subtitleWidth, panelWidth - (IsMobile and 155 or 175))
+	end
+	_VH_FitText(RecommendationTitle, titleWidth, 18, IsMobile and 12 or 14, IsMobile and 9 or 10, true)
+	_VH_FitText(RecommendationSubtitle, subtitleWidth, 15, IsMobile and 8 or 9, 7, true)
 end
 
 function _VH_GetRecommendationShortReason(reason)
@@ -7760,8 +7818,9 @@ function _VH_RefreshRecommendationPanel(items, currentCount)
 
 			local textX = imageSize + 15
 			local nameLabel = Instance.new("TextLabel", button)
-			nameLabel.Size = UDim2.new(1, -textX - 7, 0, IsMobile and 25 or 28)
-			nameLabel.Position = UDim2.new(0, textX, 0, 7)
+			local nameHeight = IsMobile and 32 or 34
+			nameLabel.Size = UDim2.new(1, -textX - 7, 0, nameHeight)
+			nameLabel.Position = UDim2.new(0, textX, 0, 6)
 			nameLabel.BackgroundTransparency = 1
 			nameLabel.Text = tostring(entry.ExactName or entry.Name or "Unknown Game")
 			nameLabel.TextColor3 = Theme.TextPrimary
@@ -7771,7 +7830,8 @@ function _VH_RefreshRecommendationPanel(items, currentCount)
 			nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 			nameLabel.TextYAlignment = Enum.TextYAlignment.Top
 			nameLabel.ZIndex = 7
-			_VH_FitText(nameLabel, cardWidth - textX - 7, IsMobile and 25 or 28, IsMobile and 8 or 10, IsMobile and 7 or 8, false)
+			_VH_FitText(nameLabel, cardWidth - textX - 7, nameHeight, IsMobile and 8 or 10, IsMobile and 7 or 8, false)
+			nameLabel.TextTruncate = Enum.TextTruncate.None
 
 			local reasonChip = Instance.new("Frame", button)
 			reasonChip.Size = UDim2.new(1, -textX - 8, 0, IsMobile and 17 or 19)
