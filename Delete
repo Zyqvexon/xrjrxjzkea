@@ -3275,7 +3275,7 @@ if IsChristmas then
 		greeting.LayoutOrder = 4
 	end
 
-	local treeModel, treeLights, treeStar = nil, {}, {}
+	local treeModel, treeStar = nil, {}
 	local treeSize = IsMobile and 32 or 38
 	local treeOk = pcall(function()
 		local vpSize = treeSize
@@ -3358,17 +3358,6 @@ if IsChristmas then
 			end
 		end
 
-		local lightColors = { Color3.fromRGB(255, 90, 90), Color3.fromRGB(255, 225, 120), Color3.fromRGB(110, 235, 160), Color3.fromRGB(255, 255, 255) }
-		for k = 1, 16 do
-			local t = k / 17
-			local angle = k * 0.95
-			local r = (3.3 * 0.5) * (1 - t) + 0.28
-			local base = lightColors[((k - 1) % #lightColors) + 1]
-			local bulb = part(Enum.PartType.Ball, Vector3.new(0.16, 0.16, 0.16),
-				CFrame.new(math.cos(angle) * r, 0.95 + t * 2.5, math.sin(angle) * r), base, Enum.Material.Neon)
-			treeLights[#treeLights + 1] = { part = bulb, on = base, off = base:Lerp(Color3.new(0, 0, 0), 0.7) }
-		end
-
 		local gold = Color3.fromRGB(255, 214, 80)
 		treeStar[1] = part(Enum.PartType.Block, Vector3.new(0.62, 0.62, 0.16), CFrame.new(0, 4.0, 0), gold, Enum.Material.Neon)
 		treeStar[2] = part(Enum.PartType.Block, Vector3.new(0.62, 0.62, 0.16), CFrame.new(0, 4.0, 0) * CFrame.Angles(0, 0, math.rad(45)), gold, Enum.Material.Neon)
@@ -3395,109 +3384,6 @@ if IsChristmas then
 	SidebarLogo.Position = UDim2.new(0, treeSize + 6, 0.5, -(IsMobile and 15 or 17))
 
 	SidebarBrand.Position = UDim2.new(0, 10, 0, IsMobile and 19 or 20)
-	local lightsHost = Instance.new("Frame", MainPanel)
-	lightsHost.Name = "ChristmasLights"
-	lightsHost.Size = UDim2.new(1, -44, 0, 26)
-	lightsHost.Position = UDim2.new(0, 22, 0, 0)
-	lightsHost.BackgroundTransparency = 1
-	lightsHost.BorderSizePixel = 0
-	lightsHost.Active = false
-	lightsHost.ZIndex = 30
-	local wireY = 2
-	local wire = Instance.new("Frame", lightsHost)
-	wire.Name = "Wire"
-	wire.Size = UDim2.new(1, 0, 0, 2)
-	wire.Position = UDim2.new(0, 0, 0, wireY)
-	wire.BackgroundColor3 = Color3.fromRGB(36, 62, 49)
-	wire.BorderSizePixel = 0
-	wire.Active = false
-	wire.ZIndex = 30
-	Instance.new("UICorner", wire).CornerRadius = UDim.new(1, 0)
-	for side = 0, 1 do
-		local clip = Instance.new("Frame", lightsHost)
-		clip.Name = "WireClip"
-		clip.Size = UDim2.new(0, IsMobile and 4 or 5, 0, IsMobile and 4 or 5)
-		clip.AnchorPoint = Vector2.new(0.5, 0)
-		clip.Position = UDim2.new(side, 0, 0, wireY - 1)
-		clip.BackgroundColor3 = Color3.fromRGB(104, 118, 110)
-		clip.BorderSizePixel = 0
-		clip.Active = false
-		clip.ZIndex = 31
-		Instance.new("UICorner", clip).CornerRadius = UDim.new(0, 2)
-	end
-	local panelWidth = MainPanel.Size.X.Offset
-	if panelWidth <= 0 then panelWidth = IsMobile and 600 or 1000 end
-	local bulbSpacing = IsMobile and 30 or 36
-	local bulbCount = math.max(8, math.floor((panelWidth - 44) / bulbSpacing))
-	local bulbW = IsMobile and 4 or 6
-	local bulbH = IsMobile and 7 or 9
-	local bulbPalette = {
-		Color3.fromRGB(240, 62, 74), Color3.fromRGB(255, 202, 64),
-		Color3.fromRGB(64, 208, 120), Color3.fromRGB(150, 205, 255)
-	}
-	local bulbs, halos, outerHalos = {}, {}, {}
-	for i = 1, bulbCount do
-		local f = (i - 0.5) / bulbCount
-		local color = bulbPalette[((i - 1) % #bulbPalette) + 1]
-		local centerY = wireY + 5 + bulbH / 2
-		local outer = Instance.new("Frame", lightsHost)
-		outer.Name = "HaloOuter"
-		outer.Size = UDim2.new(0, bulbW * 4.6, 0, bulbW * 4.6)
-		outer.AnchorPoint = Vector2.new(0.5, 0.5)
-		outer.Position = UDim2.new(f, 0, 0, centerY)
-		outer.BackgroundColor3 = color
-		outer.BackgroundTransparency = 0.9
-		outer.BorderSizePixel = 0
-		outer.Active = false
-		outer.ZIndex = 31
-		Instance.new("UICorner", outer).CornerRadius = UDim.new(1, 0)
-		local halo = Instance.new("Frame", lightsHost)
-		halo.Name = "Halo"
-		halo.Size = UDim2.new(0, bulbW * 2.5, 0, bulbH * 1.9)
-		halo.AnchorPoint = Vector2.new(0.5, 0.5)
-		halo.Position = UDim2.new(f, 0, 0, centerY)
-		halo.BackgroundColor3 = color
-		halo.BackgroundTransparency = 0.75
-		halo.BorderSizePixel = 0
-		halo.Active = false
-		halo.ZIndex = 32
-		Instance.new("UICorner", halo).CornerRadius = UDim.new(1, 0)
-		local socket = Instance.new("Frame", lightsHost)
-		socket.Name = "Socket"
-		socket.Size = UDim2.new(0, bulbW - 1, 0, 4)
-		socket.AnchorPoint = Vector2.new(0.5, 0)
-		socket.Position = UDim2.new(f, 0, 0, wireY + 1)
-		socket.BackgroundColor3 = Color3.fromRGB(22, 38, 30)
-		socket.BorderSizePixel = 0
-		socket.Active = false
-		socket.ZIndex = 33
-		Instance.new("UICorner", socket).CornerRadius = UDim.new(0, 1)
-		local bulb = Instance.new("Frame", lightsHost)
-		bulb.Name = "Bulb"
-		bulb.Size = UDim2.new(0, bulbW, 0, bulbH)
-		bulb.AnchorPoint = Vector2.new(0.5, 0)
-		bulb.Position = UDim2.new(f, 0, 0, wireY + 5)
-		bulb.BackgroundColor3 = color
-		bulb.BackgroundTransparency = 0.08
-		bulb.BorderSizePixel = 0
-		bulb.Active = false
-		bulb.ZIndex = 34
-		Instance.new("UICorner", bulb).CornerRadius = UDim.new(1, 0)
-		local shine = Instance.new("Frame", bulb)
-		shine.Name = "Shine"
-		shine.Size = UDim2.new(0, math.max(2, math.floor(bulbW * 0.3)), 0, math.max(3, math.floor(bulbH * 0.3)))
-		shine.Position = UDim2.new(0.2, 0, 0.12, 0)
-		shine.BackgroundColor3 = Color3.new(1, 1, 1)
-		shine.BackgroundTransparency = 0.35
-		shine.BorderSizePixel = 0
-		shine.Active = false
-		shine.ZIndex = 35
-		Instance.new("UICorner", shine).CornerRadius = UDim.new(1, 0)
-		bulbs[i] = bulb
-		halos[i] = halo
-		outerHalos[i] = outer
-	end
-
 	local function makeSnowLayer(name, z)
 		local layer = Instance.new("Frame", MainPanel)
 		layer.Name = name
@@ -3539,7 +3425,7 @@ if IsChristmas then
 	end
 
 	local christmasClock = 0
-	local lightAccum = 0
+	local treeUpdateAccumulator = 0
 	_VH_RegConn(RunService.Heartbeat:Connect(function(dt)
 		if isDestroying or isMinimized or not MainPanel or not MainPanel.Parent or not MainPanel.Visible then return end
 		christmasClock = christmasClock + dt
@@ -3549,21 +3435,11 @@ if IsChristmas then
 			if flake.y > 1.03 then flake.y = -0.03; flake.x = math.random() end
 			flake.obj.Position = UDim2.new(flake.x, math.floor(math.sin(christmasClock * flake.sway + flake.phase) * flake.amp), flake.y, 0)
 		end
-		lightAccum = lightAccum + dt
-		if lightAccum < 0.033 then return end
-		lightAccum = 0
-		for i = 1, #bulbs do
-			local dim = 1 - (0.5 + 0.5 * math.sin(christmasClock * 2.4 - i * 0.55))
-			bulbs[i].BackgroundTransparency = 0.04 + 0.2 * dim
-			halos[i].BackgroundTransparency = 0.68 + 0.22 * dim
-			outerHalos[i].BackgroundTransparency = 0.86 + 0.1 * dim
-		end
+		treeUpdateAccumulator = treeUpdateAccumulator + dt
+		if treeUpdateAccumulator < 0.033 then return end
+		treeUpdateAccumulator = 0
 		if treeModel and treeModel.Parent then
 			treeModel:PivotTo(CFrame.new(0, 2.1 + math.sin(christmasClock * 1.6) * 0.05, 0) * CFrame.Angles(0, christmasClock * 0.9, 0))
-			for i = 1, #treeLights do
-				local l = treeLights[i]
-				l.part.Color = (math.sin(christmasClock * 4.2 + i * 1.9) > -0.15) and l.on or l.off
-			end
 			local starPulse = 0.85 + 0.15 * math.sin(christmasClock * 3)
 			for i = 1, #treeStar do
 				treeStar[i].Color = Color3.fromRGB(255 * starPulse, 214 * starPulse, 80 * starPulse)
@@ -5419,8 +5295,8 @@ HubChangelog = {
 		Version = "v" .. HubVersion,
 		Title = "Performance, Navigation & UI Polish",
 		Items = {
-			"Made How to Use navigation scale-aware: it waits for the resized layout to settle, recalculates section offsets from the live scrolling viewport, and gives the newest tab selection priority.",
-			"Recommended For You cards now size from the rendered list width, with wrapped game names and text sizing based on the available space.",
+			"Updated How to Use navigation to use the exact panel UIScale value, preserve fractional coordinates, and resynchronize the active tab after scale changes.",
+			"Recommended For You pills now fit their text at every UI scale: names wrap or shrink cleanly, reason labels are never cut off, and narrow screens show fewer pills per page.",
 			"The hub now stays fully on screen at higher UI scales on smaller displays, and open popups re-fit after a scale change.",
 			"Redesigned Filters and Sort Scripts with compact icon-first layouts, wrapping chips, one-tap Favorites and Clear controls, and a clear indicator for the selected order.",
 			"Polished notifications into compact, icon-led toasts and moved them clear of mobile controls.",
@@ -5430,7 +5306,7 @@ HubChangelog = {
 			"Updated the How to Use guide to match the current Filters and Sort controls.",
 			"Added a current-game thumbnail to Home with an automatic fallback image.",
 			"Faster startup: the How to Use guide and Changelog are built on first open, style cleanup is batched, and unused card badges are skipped.",
-			"Reduced background work in holiday effects, Home updates, and event handling, and removed the always-on panel-dismiss listener.",
+			"Removed animated Christmas light strings and tree bulbs while retaining the Christmas tree, ornaments, snowfall, greeting, and theme colors; reduced holiday animation work.",
 			"Streamlined the code, removed unused leftovers, and kept UI construction inside function scopes to stay well below Lua's local-register limit.",
 			"Preserved catalog, image, configuration, and compatibility fallbacks."
 		}
@@ -6914,18 +6790,14 @@ function _VH_BuildHowToNav()
 	local revealChip
 	local jumpTo, cancelNavigationJump
 	local navigationGeneration = 0
-	local scaleLayoutPending = false
-	local pendingScaleNavigation = nil
 	local fadeInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	local pillInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 	local barSyncQueued, viewSyncQueued = false, false
 
 	local function uiScale()
-		local scale = PanelUIScale and tonumber(PanelUIScale.Scale)
-		if scale and scale > 0 then return scale end
-		local measured = bar.AbsoluteSize.Y
-		if measured > 0 then return measured / barHeight end
-		return 1
+		local scale = PanelUIScale and tonumber(PanelUIScale.Scale) or 1
+		if not scale or scale <= 0 then return 1 end
+		return scale
 	end
 
 	local function cancelTrackedTween(instance)
@@ -6950,8 +6822,8 @@ function _VH_BuildHowToNav()
 		if not button or not button.Parent or not selectionPill.Parent or not pillLayer.Parent then return end
 		local scale = uiScale()
 		local relative = button.AbsolutePosition - pillLayer.AbsolutePosition
-		local position = UDim2.new(0, math.floor(relative.X / scale + 0.5), 0, math.floor(relative.Y / scale + 0.5))
-		local size = UDim2.new(0, math.max(1, math.floor(button.AbsoluteSize.X / scale + 0.5)), 0, math.max(1, math.floor(button.AbsoluteSize.Y / scale + 0.5)))
+		local position = UDim2.fromOffset(relative.X / scale, relative.Y / scale)
+		local size = UDim2.fromOffset(math.max(1, button.AbsoluteSize.X / scale), math.max(1, button.AbsoluteSize.Y / scale))
 		if animate then
 			_VH_SafeTween(selectionPill, pillInfo, { Position = position, Size = size })
 		else
@@ -7072,11 +6944,14 @@ function _VH_BuildHowToNav()
 
 	local function setActive(index, animate)
 		if index < 1 or index > #chips then return end
-		if index == activeIndex then return end
+		local item = chips[index]
+		if index == activeIndex then
+			if item then movePill(item, false) end
+			return
+		end
 		local previous = chips[activeIndex]
 		if previous then paintChip(previous, false, animate) end
 		activeIndex = index
-		local item = chips[index]
 		if item then
 			paintChip(item, true, animate)
 			movePill(item, animate)
@@ -7085,7 +6960,7 @@ function _VH_BuildHowToNav()
 	end
 
 	refreshActiveFromScroll = function()
-		if isDestroying or not view.Parent or not view.Visible or navigationTarget or scaleLayoutPending then return end
+		if isDestroying or not view.Parent or not view.Visible or navigationTarget then return end
 		local scale = uiScale()
 		local viewTop = view.AbsolutePosition.Y
 		local viewBottom = viewTop + view.AbsoluteWindowSize.Y
@@ -7140,31 +7015,33 @@ function _VH_BuildHowToNav()
 	end
 
 	local function onViewScrolled()
-		if navigationTarget or scaleLayoutPending then return end
+		if navigationTarget then return end
 		refreshActiveFromScroll()
 		settleLater(scrollSettle, refreshActiveFromScroll)
 	end
 
+	local function resyncLayout()
+		syncBarCanvas()
+		syncViewCanvas()
+		refreshActiveFromScroll()
+	end
+
 	local function onScaleChanged()
-		if isDestroying then return end
-		if navigationTarget then
-			pendingScaleNavigation = navigationTarget
-			if cancelNavigationJump then cancelNavigationJump(true) end
+		local pendingTarget = navigationTarget
+		if pendingTarget then
+			cancelNavigationJump(true)
+			navigationTarget = pendingTarget
 		end
-		scaleLayoutPending = true
 		queueBarSync()
 		queueViewSync()
 		settleLater(scaleSettle, function()
-			if isDestroying or not bar.Parent or not view.Parent then return end
-			syncBarCanvas()
-			syncViewCanvas()
-			scaleLayoutPending = false
-			local selectedIndex = pendingScaleNavigation
-			pendingScaleNavigation = nil
-			if selectedIndex and jumpTo and view.Visible then
-				jumpTo(selectedIndex)
-			else
-				refreshActiveFromScroll()
+			resyncLayout()
+			local latestTarget = navigationTarget
+			if latestTarget and jumpTo then
+				jumpTo(latestTarget)
+			elseif activeIndex > 0 then
+				movePill(chips[activeIndex], false)
+				revealChip(activeIndex, true)
 			end
 		end)
 	end
@@ -7208,57 +7085,38 @@ function _VH_BuildHowToNav()
 	end
 
 	local function releaseToManualScroll()
-		if not navigationTarget and not pendingScaleNavigation then return end
-		pendingScaleNavigation = nil
-		if navigationTarget then cancelNavigationJump(true) end
-		if not scaleLayoutPending then refreshActiveFromScroll() end
+		if not navigationTarget then return end
+		cancelNavigationJump(true)
+		refreshActiveFromScroll()
 	end
 
 	local function waitForNavigationLayout(generation, section)
-		local previous
+		local previousPosition, previousHeight, previousContent, previousWindow
 		local stableFrames = 0
-		for _ = 1, 60 do
+		for _ = 1, 8 do
 			RunService.RenderStepped:Wait()
 			if generation ~= navigationGeneration or isDestroying or not view.Parent or not view.Visible then
 				return false
 			end
 			local block = section and section.Block
 			if not block or not block.Parent then return false end
-			if scaleLayoutPending then
-				stableFrames = 0
-				previous = nil
+			syncViewCanvas()
+			local position = block.AbsolutePosition.Y
+			local height = block.AbsoluteSize.Y
+			local content = viewLayout and viewLayout.AbsoluteContentSize.Y or 0
+			local window = view.AbsoluteWindowSize.Y
+			if previousPosition
+				and math.abs(position - previousPosition) < 0.5
+				and math.abs(height - previousHeight) < 0.5
+				and math.abs(content - previousContent) < 0.5
+				and math.abs(window - previousWindow) < 0.5 then
+				stableFrames = stableFrames + 1
+				if stableFrames >= 2 then return true end
 			else
-				syncBarCanvas()
-				syncViewCanvas()
-				local scale = uiScale()
-				local state = {
-					Scale = scale,
-					Position = block.AbsolutePosition.Y,
-					Height = block.AbsoluteSize.Y,
-					Content = viewLayout and viewLayout.AbsoluteContentSize.Y or 0,
-					Window = view.AbsoluteWindowSize.Y,
-					ViewPosition = view.AbsolutePosition.Y,
-					ViewSize = view.AbsoluteSize.Y,
-					CanvasHeight = view.CanvasSize.Y.Offset,
-					CanvasPosition = view.CanvasPosition.Y
-				}
-				if previous
-					and math.abs(state.Scale - previous.Scale) < 0.0005
-					and math.abs(state.Position - previous.Position) < 0.5
-					and math.abs(state.Height - previous.Height) < 0.5
-					and math.abs(state.Content - previous.Content) < 0.5
-					and math.abs(state.Window - previous.Window) < 0.5
-					and math.abs(state.ViewPosition - previous.ViewPosition) < 0.5
-					and math.abs(state.ViewSize - previous.ViewSize) < 0.5
-					and math.abs(state.CanvasHeight - previous.CanvasHeight) < 0.5
-					and math.abs(state.CanvasPosition - previous.CanvasPosition) < 0.5 then
-					stableFrames = stableFrames + 1
-					if stableFrames >= 3 then return true end
-				else
-					stableFrames = 0
-				end
-				previous = state
+				stableFrames = 0
 			end
+			previousPosition, previousHeight = position, height
+			previousContent, previousWindow = content, window
 		end
 		return generation == navigationGeneration and not isDestroying and view.Parent ~= nil and view.Visible
 	end
@@ -7321,19 +7179,13 @@ function _VH_BuildHowToNav()
 		local section = sections[index]
 		if not section or not section.Block or not section.Block.Parent or not view.Visible then return end
 
-		pendingScaleNavigation = nil
 		cancelNavigationJump(true)
 		local generation = navigationGeneration
 		navigationTarget = index
 		setActive(index, true)
 
 		task.defer(function()
-			if not waitForNavigationLayout(generation, section) then
-				if generation == navigationGeneration and navigationTarget == index then
-					finishNavigation(generation, index)
-				end
-				return
-			end
+			if not waitForNavigationLayout(generation, section) then return end
 			if generation ~= navigationGeneration or not section.Block or not section.Block.Parent then return end
 			local target, current = sectionScrollTarget(section)
 			if target == nil then
@@ -7651,39 +7503,21 @@ function _VH_FitText(label, maxWidth, maxHeight, maxSize, minSize, singleLine)
 end
 
 function _VH_GetRecommendationLayout()
+	local panelWidth = MainPanel and MainPanel.Size.X.Offset or 0
 	local maxPageSize = math.max(1, tonumber(RecommendationPageSize) or 3)
-	local scale = PanelUIScale and tonumber(PanelUIScale.Scale) or 1
-	if not scale or scale <= 0 then scale = 1 end
-	local listWidth = 0
-	if RecommendationList and RecommendationList.Parent then
-		listWidth = RecommendationList.AbsoluteSize.X / scale
-	end
-	if listWidth <= 1 then
-		local panelWidth = MainPanel and MainPanel.Size.X.Offset or 0
-		if panelWidth <= 0 then return 0, maxPageSize end
-		listWidth = panelWidth - SideWidth - 28 - 9 - 4 - (IsMobile and 80 or 88)
-	end
-	listWidth = math.max(0, listWidth)
+	if panelWidth <= 0 then return 0, maxPageSize end
+	local listWidth = panelWidth - SideWidth - 28 - 9 - 4 - (IsMobile and 80 or 88)
 	local gap = IsMobile and 7 or 8
 	local minCardWidth = IsMobile and 152 or 170
-	local pageSize = math.clamp(math.floor((listWidth + gap) / (minCardWidth + gap)), 1, maxPageSize)
-	return listWidth, pageSize
+	return listWidth, math.clamp(math.floor((listWidth + gap) / (minCardWidth + gap)), 1, maxPageSize)
 end
 
 function _VH_FitRecommendationHeader()
 	if not RecommendationPanel or not RecommendationPanel.Parent then return end
-	local scale = PanelUIScale and tonumber(PanelUIScale.Scale) or 1
-	if not scale or scale <= 0 then scale = 1 end
-	local titleWidth = RecommendationTitle and RecommendationTitle.AbsoluteSize.X / scale or 0
-	local subtitleWidth = RecommendationSubtitle and RecommendationSubtitle.AbsoluteSize.X / scale or 0
-	if titleWidth <= 1 or subtitleWidth <= 1 then
-		local listWidth = _VH_GetRecommendationLayout()
-		local panelWidth = listWidth + (IsMobile and 80 or 88)
-		titleWidth = math.max(titleWidth, panelWidth - (IsMobile and 150 or 170))
-		subtitleWidth = math.max(subtitleWidth, panelWidth - (IsMobile and 155 or 175))
-	end
-	_VH_FitText(RecommendationTitle, titleWidth, 18, IsMobile and 12 or 14, IsMobile and 9 or 10, true)
-	_VH_FitText(RecommendationSubtitle, subtitleWidth, 15, IsMobile and 8 or 9, 7, true)
+	local listWidth = _VH_GetRecommendationLayout()
+	local panelWidth = listWidth + (IsMobile and 80 or 88)
+	_VH_FitText(RecommendationTitle, panelWidth - (IsMobile and 150 or 170), 18, IsMobile and 12 or 14, IsMobile and 9 or 10, true)
+	_VH_FitText(RecommendationSubtitle, panelWidth - (IsMobile and 155 or 175), 15, IsMobile and 8 or 9, 7, true)
 end
 
 function _VH_GetRecommendationShortReason(reason)
@@ -7818,9 +7652,8 @@ function _VH_RefreshRecommendationPanel(items, currentCount)
 
 			local textX = imageSize + 15
 			local nameLabel = Instance.new("TextLabel", button)
-			local nameHeight = IsMobile and 32 or 34
-			nameLabel.Size = UDim2.new(1, -textX - 7, 0, nameHeight)
-			nameLabel.Position = UDim2.new(0, textX, 0, 6)
+			nameLabel.Size = UDim2.new(1, -textX - 7, 0, IsMobile and 25 or 28)
+			nameLabel.Position = UDim2.new(0, textX, 0, 7)
 			nameLabel.BackgroundTransparency = 1
 			nameLabel.Text = tostring(entry.ExactName or entry.Name or "Unknown Game")
 			nameLabel.TextColor3 = Theme.TextPrimary
@@ -7830,8 +7663,7 @@ function _VH_RefreshRecommendationPanel(items, currentCount)
 			nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 			nameLabel.TextYAlignment = Enum.TextYAlignment.Top
 			nameLabel.ZIndex = 7
-			_VH_FitText(nameLabel, cardWidth - textX - 7, nameHeight, IsMobile and 8 or 10, IsMobile and 7 or 8, false)
-			nameLabel.TextTruncate = Enum.TextTruncate.None
+			_VH_FitText(nameLabel, cardWidth - textX - 7, IsMobile and 25 or 28, IsMobile and 8 or 10, IsMobile and 7 or 8, false)
 
 			local reasonChip = Instance.new("Frame", button)
 			reasonChip.Size = UDim2.new(1, -textX - 8, 0, IsMobile and 17 or 19)
