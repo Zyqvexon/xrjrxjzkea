@@ -8,7 +8,7 @@ end
 
 HubVersion = "2.0.8"
 HomeFallbackGameImage = ""
-VeloxThemeMode = "Christmas"
+VeloxThemeMode = "Auto"
 if type(GlobalEnv.VeloxTheme) == "string" then VeloxThemeMode = GlobalEnv.VeloxTheme end
 function _VH_IsChristmasActive()
 	local mode = string.lower(tostring(VeloxThemeMode or "Default"))
@@ -303,6 +303,8 @@ RecommendationPage = 1
 RecommendationPageSize = 3
 RecommendationPageCount = 1
 RecommendationRenderSignature = ""
+RecommendationLastItems, RecommendationLastCount, RecommendationResizeToken = nil, 0, 0
+_VH_TextService = nil
 FavoriteRecommendationLimit = 8
 FavoriteRecommendationMaxBoost = 12
 FavoriteRecommendationRefreshDelay = 0.35
@@ -1323,10 +1325,11 @@ end
 function GetPanelSize()
 	local camera = workspace.CurrentCamera
 	local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
+	local fit = math.clamp(tonumber(PanelUIScale and PanelUIScale.Scale or SavedData.Settings.UIScale) or 1, 1, 1.2)
 	local maxWidth = IsMobile and 600 or 1120
 	local maxHeight = IsMobile and 360 or 580
-	local width = math.max(180, math.min(maxWidth, viewport.X - 12))
-	local height = math.max(220, math.min(maxHeight, viewport.Y - 12))
+	local width = math.max(180, math.min(maxWidth, (viewport.X - 12) / fit))
+	local height = math.max(220, math.min(maxHeight, (viewport.Y - 12) / fit))
 	return UDim2.fromOffset(width, height)
 end
 HoverTweens = setmetatable({}, { __mode = "k" })
@@ -1541,6 +1544,11 @@ do
 end
 PanelUIScale = Instance.new("UIScale", MainPanel)
 PanelUIScale.Scale = math.clamp(tonumber(SavedData.Settings.UIScale) or 1, 0.8, 1.2)
+_VH_RegConn(PanelUIScale:GetPropertyChangedSignal("Scale"):Connect(function()
+	if isDestroying or not MainPanel or not MainPanel.Parent then return end
+	local size = GetPanelSize()
+	if MainPanel.Size ~= size then MainPanel.Size = size end
+end))
 function ApplyPanelUIScale(scaleValue)
 	local nextScale = math.clamp(tonumber(scaleValue) or 1, 0.8, 1.2)
 	SavedData.Settings.UIScale = nextScale
@@ -1565,7 +1573,11 @@ function ApplyPanelUIScale(scaleValue)
 		local maxX = math.max(minX, viewport.X - (visualWidth - halfX))
 		local maxY = math.max(minY, viewport.Y - (visualHeight - halfY))
 		MainPanel.Position = UDim2.new(0, math.clamp(currentX, minX, maxX), 0, math.clamp(currentY, minY, maxY))
-		if PositionOpenPanels then PositionOpenPanels() end
+		if FilterPanel and FilterPanel.Visible and RebuildFilterPanel then
+			RebuildFilterPanel()
+		elseif PositionOpenPanels then
+			PositionOpenPanels()
+		end
 	end)
 end
 SearchInput = nil
@@ -3861,6 +3873,7 @@ local function CreateScriptCategoryButton(category, layoutOrder)
 		end
 		table.clear(RecommendationConnections)
 		RecommendationItems = {}
+		RecommendationLastItems = nil
 		RecommendationRenderSignature = ""
 		if RecommendationPanel and RecommendationPanel.Parent then
 			RecommendationPanel.Visible = false
@@ -5406,11 +5419,12 @@ HubChangelog = {
 		Version = "v" .. HubVersion,
 		Title = "Performance, Navigation & UI Polish",
 		Items = {
-			"Fixed How to Use navigation: rapid tab switching now always lands on the selected section, and the violet pill stays in sync whether you scroll by touch, mouse wheel, or scrollbar.",
+			"Fixed How to Use navigation at every UI scale: the tabs, violet pill, and scrolling bar stay aligned while resizing, and rapid tab switching always lands on the selected section.",
+			"Recommended For You pills now fit their text at every UI scale: names wrap or shrink cleanly, reason labels are never cut off, and narrow screens show fewer pills per page.",
+			"The hub now stays fully on screen at higher UI scales on smaller displays, and open popups re-fit after a scale change.",
 			"Redesigned Filters and Sort Scripts with compact icon-first layouts, wrapping chips, one-tap Favorites and Clear controls, and a clear indicator for the selected order.",
 			"Polished notifications into compact, icon-led toasts and moved them clear of mobile controls.",
 			"Filters, Sort, language, and refresh popups now stay in position and close when the catalog category changes.",
-			"Improved UI scaling and screen-edge clamping so the hub stays on screen after scale changes.",
 			"Fixed clipped outlines and card controls, and improved spacing and button sizing on narrow screens.",
 			"Kept the rounded navigation track and active pill clipped to the visible bar, with automatic reveal of off-screen tabs.",
 			"Updated the How to Use guide to match the current Filters and Sort controls.",
@@ -6896,13 +6910,16 @@ function _VH_BuildHowToNav()
 	local refreshActiveFromScroll
 	local navigationTarget, navigationTweenConnection = nil, nil
 	local settledIndex, settledY = nil, 0
-	local scrollStamp, scrollSettleRunning = 0, false
+	local scrollSettle, scaleSettle = { stamp = 0, running = false }, { stamp = 0, running = false }
+	local revealChip
 	local navigationGeneration = 0
 	local fadeInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	local pillInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 	local barSyncQueued, viewSyncQueued = false, false
 
 	local function uiScale()
+		local measured = bar.AbsoluteSize.Y
+		if measured > 0 then return measured / barHeight end
 		local scale = PanelUIScale and tonumber(PanelUIScale.Scale) or 1
 		if not scale or scale <= 0 then return 1 end
 		return scale
@@ -6959,7 +6976,10 @@ function _VH_BuildHowToNav()
 			cancelTrackedTween(bar)
 			bar.CanvasPosition = Vector2.new(maxScroll, 0)
 		end
-		if activeIndex > 0 then movePill(chips[activeIndex], false) end
+		if activeIndex > 0 then
+			movePill(chips[activeIndex], false)
+			revealChip(activeIndex, true)
+		end
 	end
 
 	local function queueBarSync()
@@ -7018,29 +7038,32 @@ function _VH_BuildHowToNav()
 		end
 	end
 
-	local function revealChip(index)
+	revealChip = function(index, instant)
 		local item = chips[index]
 		local button = item and item.Button
-		if not button or not button.Parent then return end
+		if not button or not button.Parent or not pillLayer.Parent then return end
 		local scale = uiScale()
-		local visibleWidth = bar.AbsoluteWindowSize.X
-		local left = button.AbsolutePosition.X - bar.AbsolutePosition.X
-		local right = left + button.AbsoluteSize.X
-		local margin = 6 * scale
-		local delta = 0
-		if left < margin then
-			delta = left - margin
-		elseif right > visibleWidth - margin then
-			delta = right - (visibleWidth - margin)
+		local chipLeft = (button.AbsolutePosition.X - pillLayer.AbsolutePosition.X) / scale
+		local chipRight = chipLeft + button.AbsoluteSize.X / scale
+		local visibleWidth = bar.AbsoluteWindowSize.X / scale
+		local current = bar.CanvasPosition.X
+		local margin = 6
+		local target
+		if chipLeft < current + margin then
+			target = chipLeft - margin
+		elseif chipRight > current + visibleWidth - margin then
+			target = chipRight - visibleWidth + margin
 		else
 			return
 		end
-		local logicalVisibleWidth = visibleWidth / scale
-		local maxScroll = math.max(0, bar.CanvasSize.X.Offset - logicalVisibleWidth)
-		local current = bar.CanvasPosition.X
-		local target = math.clamp(current + delta / scale, 0, maxScroll)
+		target = math.clamp(target, 0, math.max(0, bar.CanvasSize.X.Offset - visibleWidth))
 		if math.abs(target - current) > 0.5 then
-			_VH_SafeTween(bar, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CanvasPosition = Vector2.new(target, 0) })
+			if instant then
+				cancelTrackedTween(bar)
+				bar.CanvasPosition = Vector2.new(target, 0)
+			else
+				_VH_SafeTween(bar, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CanvasPosition = Vector2.new(target, 0) })
+			end
 		end
 	end
 
@@ -7097,22 +7120,38 @@ function _VH_BuildHowToNav()
 		setActive(found, true)
 	end
 
-	local function onViewScrolled()
-		if navigationTarget then return end
-		refreshActiveFromScroll()
-		scrollStamp = scrollStamp + 1
-		if scrollSettleRunning then return end
-		scrollSettleRunning = true
+	local function settleLater(state, action)
+		state.stamp = state.stamp + 1
+		if state.running then return end
+		state.running = true
 		task.defer(function()
 			local seen
 			repeat
-				seen = scrollStamp
+				seen = state.stamp
 				RunService.RenderStepped:Wait()
 				RunService.RenderStepped:Wait()
-			until seen == scrollStamp or isDestroying
-			scrollSettleRunning = false
-			if not isDestroying then refreshActiveFromScroll() end
+			until seen == state.stamp or isDestroying
+			state.running = false
+			if not isDestroying and bar.Parent then action() end
 		end)
+	end
+
+	local function onViewScrolled()
+		if navigationTarget then return end
+		refreshActiveFromScroll()
+		settleLater(scrollSettle, refreshActiveFromScroll)
+	end
+
+	local function resyncLayout()
+		syncBarCanvas()
+		syncViewCanvas()
+		refreshActiveFromScroll()
+	end
+
+	local function onScaleChanged()
+		queueBarSync()
+		queueViewSync()
+		settleLater(scaleSettle, resyncLayout)
 	end
 
 	local function cancelNavigationJump(cancelScroll)
@@ -7351,10 +7390,7 @@ function _VH_BuildHowToNav()
 		end
 	end))
 	if PanelUIScale and PanelUIScale.Parent then
-		_VH_RegConn(PanelUIScale:GetPropertyChangedSignal("Scale"):Connect(function()
-			queueBarSync()
-			queueViewSync()
-		end))
+		_VH_RegConn(PanelUIScale:GetPropertyChangedSignal("Scale"):Connect(onScaleChanged))
 	end
 
 	queueBarSync()
@@ -7550,6 +7586,48 @@ function _VH_BuildRecommendationState()
 	return candidates, currentCount
 end
 
+function _VH_FitText(label, maxWidth, maxHeight, maxSize, minSize, singleLine)
+	label.TextSize = maxSize
+	label.TextTruncate = Enum.TextTruncate.AtEnd
+	if maxWidth <= 8 then return end
+	if not _VH_TextService then
+		local ok, service = pcall(function() return game:GetService("TextService") end)
+		if not ok or not service then return end
+		_VH_TextService = service
+	end
+	local text, font, width = label.Text, label.Font, maxWidth - 2
+	local size = maxSize
+	while size > minSize do
+		local ok, bounds = pcall(_VH_TextService.GetTextSize, _VH_TextService, text, size, font, Vector2.new(singleLine and 10000 or width, 10000))
+		if not ok or not bounds then break end
+		if singleLine then
+			if bounds.X <= width then break end
+		elseif bounds.Y <= maxHeight then
+			break
+		end
+		size = size - 1
+	end
+	label.TextSize = size
+end
+
+function _VH_GetRecommendationLayout()
+	local panelWidth = MainPanel and MainPanel.Size.X.Offset or 0
+	local maxPageSize = math.max(1, tonumber(RecommendationPageSize) or 3)
+	if panelWidth <= 0 then return 0, maxPageSize end
+	local listWidth = panelWidth - SideWidth - 28 - 9 - 4 - (IsMobile and 80 or 88)
+	local gap = IsMobile and 7 or 8
+	local minCardWidth = IsMobile and 152 or 170
+	return listWidth, math.clamp(math.floor((listWidth + gap) / (minCardWidth + gap)), 1, maxPageSize)
+end
+
+function _VH_FitRecommendationHeader()
+	if not RecommendationPanel or not RecommendationPanel.Parent then return end
+	local listWidth = _VH_GetRecommendationLayout()
+	local panelWidth = listWidth + (IsMobile and 80 or 88)
+	_VH_FitText(RecommendationTitle, panelWidth - (IsMobile and 150 or 170), 18, IsMobile and 12 or 14, IsMobile and 9 or 10, true)
+	_VH_FitText(RecommendationSubtitle, panelWidth - (IsMobile and 155 or 175), 15, IsMobile and 8 or 9, 7, true)
+end
+
 function _VH_GetRecommendationShortReason(reason)
 	local text = tostring(reason or "")
 	if text == "Similar to your current game" then return "Similar game" end
@@ -7574,12 +7652,13 @@ function _VH_RefreshRecommendationPanel(items, currentCount)
 		end
 	end
 
-	local pageSize = math.max(1, tonumber(RecommendationPageSize) or 3)
+	RecommendationLastItems, RecommendationLastCount = items, currentCount
+	local listWidth, pageSize = _VH_GetRecommendationLayout()
 	RecommendationPageCount = math.max(1, math.ceil(#allItems / pageSize))
 	RecommendationPage = math.clamp(tonumber(RecommendationPage) or 1, 1, RecommendationPageCount)
 	local previewStart = ((RecommendationPage - 1) * pageSize) + 1
 	local previewEnd = math.min(previewStart + pageSize - 1, #allItems)
-	local previewParts = { tostring(RecommendationPage), tostring(RecommendationPageCount), tostring(currentCount or 0), tostring(math.floor(RecommendationList.AbsoluteSize.X)) }
+	local previewParts = { tostring(RecommendationPage), tostring(RecommendationPageCount), tostring(currentCount or 0), tostring(pageSize) .. ":" .. tostring(math.floor(listWidth)) }
 	for index = previewStart, previewEnd do
 		local item = allItems[index]
 		if item then
@@ -7603,6 +7682,7 @@ function _VH_RefreshRecommendationPanel(items, currentCount)
 		else
 			RecommendationSubtitle.Text = L("No other recommendations found yet")
 		end
+		_VH_FitRecommendationHeader()
 		return
 	end
 
@@ -7627,6 +7707,7 @@ function _VH_RefreshRecommendationPanel(items, currentCount)
 
 	local gap = IsMobile and 7 or 8
 	local totalGaps = math.max(0, visibleCount - 1) * gap
+	local cardWidth = visibleCount > 0 and (listWidth - totalGaps) / visibleCount or listWidth
 	local cardHeight = IsMobile and 64 or 72
 	local cardWidthScale = visibleCount > 0 and (1 / visibleCount) or 1
 	local cardWidthOffset = visibleCount > 0 and -(totalGaps / visibleCount) or 0
@@ -7686,11 +7767,11 @@ function _VH_RefreshRecommendationPanel(items, currentCount)
 			nameLabel.TextColor3 = Theme.TextPrimary
 			nameLabel.Font = Enum.Font.GothamBold
 			nameLabel.TextSize = IsMobile and 8 or 10
-			nameLabel.TextTruncate = Enum.TextTruncate.None
 			nameLabel.TextWrapped = true
 			nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 			nameLabel.TextYAlignment = Enum.TextYAlignment.Top
 			nameLabel.ZIndex = 7
+			_VH_FitText(nameLabel, cardWidth - textX - 7, IsMobile and 25 or 28, IsMobile and 8 or 10, IsMobile and 7 or 8, false)
 
 			local reasonChip = Instance.new("Frame", button)
 			reasonChip.Size = UDim2.new(1, -textX - 8, 0, IsMobile and 17 or 19)
@@ -7730,14 +7811,10 @@ function _VH_RefreshRecommendationPanel(items, currentCount)
 			reasonLabel.TextColor3 = Theme.TextPrimary
 			reasonLabel.Font = Enum.Font.GothamMedium
 			reasonLabel.TextSize = IsMobile and 7 or 8
-			reasonLabel.TextTruncate = Enum.TextTruncate.None
 			reasonLabel.TextXAlignment = Enum.TextXAlignment.Left
-			reasonLabel.TextScaled = true
 			reasonLabel.TextWrapped = false
 			reasonLabel.ZIndex = 8
-			local reasonTextConstraint = Instance.new("UITextSizeConstraint", reasonLabel)
-			reasonTextConstraint.MinTextSize = IsMobile and 5 or 6
-			reasonTextConstraint.MaxTextSize = IsMobile and 7 or 8
+			_VH_FitText(reasonLabel, cardWidth - textX - 8 - 18, IsMobile and 17 or 19, IsMobile and 7 or 8, IsMobile and 5 or 6, true)
 
 			RecommendationConnections[#RecommendationConnections + 1] = button.Activated:Connect(function()
 				if isDestroying or not entry.Instance or not entry.Instance.Parent then return end
@@ -7764,6 +7841,7 @@ function _VH_RefreshRecommendationPanel(items, currentCount)
 		RecommendationSubtitle.Text = L("No other recommendations found yet")
 	end
 
+	_VH_FitRecommendationHeader()
 	RecommendationRenderSignature = previewSignature
 
 	local function GoToRecommendationPage(nextPage)
@@ -7790,6 +7868,15 @@ function _VH_RefreshRecommendationPanel(items, currentCount)
 		GoToRecommendationPage(target)
 	end)
 end
+
+_VH_RegConn(MainPanel:GetPropertyChangedSignal("Size"):Connect(function()
+	RecommendationResizeToken = RecommendationResizeToken + 1
+	local token = RecommendationResizeToken
+	task.delay(0.15, function()
+		if isDestroying or token ~= RecommendationResizeToken or not RecommendationLastItems then return end
+		_VH_RefreshRecommendationPanel(RecommendationLastItems, RecommendationLastCount)
+	end)
+end))
 
 function _VH_RefreshRecommendations()
 	RecommendationRenderSignature = ""
@@ -9500,7 +9587,7 @@ function SetLanguage(language)
 	_VH_ApplyTranslations(ScreenGui)
 	SetHubStatus(HubStatusKey, StatusText.TextColor3)
 	if ScriptCategoryButtons then UpdateScriptCategoryButtons() end
-	if RecommendationPanel and RecommendationPanel.Parent then RecommendationTitle.Text = L("Recommended for You"); RecommendationSeeMoreButton.Text = L("See More") end
+	if RecommendationPanel and RecommendationPanel.Parent then RecommendationTitle.Text = L("Recommended for You"); RecommendationSeeMoreButton.Text = L("See More"); _VH_FitRecommendationHeader() end
 	if RecommendationPanel and RecommendationPanel.Visible then _VH_RefreshRecommendations() end
 	if currentTab then SectionHeaderLabel.Text = GetLocalizedSectionHeader(currentTab) end
 	SaveConfiguration()
