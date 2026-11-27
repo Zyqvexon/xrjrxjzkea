@@ -13,7 +13,29 @@
       "Farming",
       "Automation"
     ]
-  }, 
+  },   
+  {
+  "Name": "Cast For Fish!",
+  "Description": "Cast your line, catch rare fish, and build your own fishing pond! Explore different zones, discover 182 unique fish, unlock rare mutations, upgrade your rods and bait, train your Cast Power, and earn passive income from your catches.",
+  "RawUrl": "https://raw.githubusercontent.com/Zyqvexon/q7vx2n9k4m8z/refs/heads/main/014.lua",
+  "ImageAssetId": "rbxassetid://126007169230268",
+  "TagType": "HOT",
+  "LastUpdated": 1795779204,
+  "PlaceId": 131424283721618,
+  "Category": "Tycoon",
+  "Tags": [
+    "Simulation",
+    "Tycoon",
+    "Fishing",
+    "Fish Collection",
+    "Mutations",
+    "Upgrades",
+    "Progression",
+    "Passive Income",
+    "Exploration",
+    "Index Collection"
+  ]
+  },
   {
   "Name": "[🎲] Roll Your Heroes",
   "Description": "Roll 3000+ unique heroes, build your dream team, battle powerful bosses, and conquer endless stages! Collect rare heroes, fuse them to increase their stars, upgrade your luck and damage, and unlock more team slots through prestige.",
