@@ -8,7 +8,7 @@ end
 
 HubVersion = "2.0.8"
 HomeFallbackGameImage = ""
-VeloxThemeMode = "Christmas"
+VeloxThemeMode = "Auto"
 if type(GlobalEnv.VeloxTheme) == "string" then VeloxThemeMode = GlobalEnv.VeloxTheme end
 function _VH_IsChristmasActive()
 	local mode = string.lower(tostring(VeloxThemeMode or "Default"))
@@ -1551,7 +1551,8 @@ SidebarBrand.ZIndex = 5
 SidebarLogo = Instance.new("ImageLabel", SidebarBrand)
 SidebarLogo.Name = "VeloxLogo"
 SidebarLogo.Size = UDim2.new(0, IsMobile and 30 or 34, 0, IsMobile and 30 or 34)
-SidebarLogo.Position = UDim2.new(0, 0, 0.5, -(IsMobile and 15 or 17))
+SidebarLogo.AnchorPoint = Vector2.new(0, 0.5)
+SidebarLogo.Position = UDim2.new(0, 0, 0.5, 0)
 SidebarLogo.BackgroundTransparency = 1
 SidebarLogo.BorderSizePixel = 0
 SidebarLogo.Image = "rbxassetid://97589005673854"
@@ -1834,17 +1835,24 @@ function _VH_BuildToastCard(parent, nType, typeInfo, title, message)
 		System = VeloxIcons.NotificationSystem,
 		Execution = VeloxIcons.NotificationExecution
 	})[nType] or VeloxIcons.NotificationInfo
-	local textSize = IsMobile and 10 or 11
-	local tileSize = IsMobile and 28 or 30
-	local textX = 12 + tileSize + 10
-	local textWidth = ToastWidth - textX - 34
-	local textHeight = textSize + 4
-	local okMeasure, bounds = pcall(function()
-		return game:GetService("TextService"):GetTextSize(message, textSize, Enum.Font.GothamMedium, Vector2.new(textWidth, 1000))
+	local compact = IsMobile
+	local tileSize = compact and 30 or 34
+	local textX = 54
+	local rightInset = 34
+	local textWidth = math.max(90, ToastWidth - textX - rightInset - 12)
+	local titleSize = compact and 11 or 12
+	local messageSize = compact and 10 or 11
+	local textService = game:GetService("TextService")
+	local titleHeight, messageHeight = titleSize + 3, messageSize + 5
+	local measured, bounds = pcall(function()
+		return textService:GetTextSize(tostring(title), titleSize, Enum.Font.GothamBold, Vector2.new(textWidth, 1000))
 	end)
-	if okMeasure and bounds then textHeight = math.ceil(bounds.Y) end
-	textHeight = math.clamp(textHeight, textSize + 4, textSize * 3 + 10)
-	local cardHeight = math.max(tileSize + 18, textHeight + 22)
+	if measured and bounds then titleHeight = math.clamp(math.ceil(bounds.Y), titleSize + 2, titleSize * 2 + 4) end
+	measured, bounds = pcall(function()
+		return textService:GetTextSize(message, messageSize, Enum.Font.GothamMedium, Vector2.new(textWidth, 1000))
+	end)
+	if measured and bounds then messageHeight = math.clamp(math.ceil(bounds.Y), messageSize + 3, messageSize * 3 + 8) end
+	local cardHeight = math.max(tileSize + 20, titleHeight + messageHeight + 24)
 
 	local box = Instance.new("Frame", parent)
 	box.Name = "Card"
@@ -1855,33 +1863,58 @@ function _VH_BuildToastCard(parent, nType, typeInfo, title, message)
 	box.ClipsDescendants = true
 	box.ZIndex = 2002
 	box:SetAttribute("VeloxNotificationType", nType)
-	Instance.new("UICorner", box).CornerRadius = UDim.new(0, 14)
+	Instance.new("UICorner", box).CornerRadius = UDim.new(0, 13)
+
 	local stroke = Instance.new("UIStroke", box)
 	stroke.Color = color
 	stroke.Thickness = 1
-	stroke.Transparency = 0.62
+	stroke.Transparency = 0.58
+
+	local accent = Instance.new("Frame", box)
+	accent.Name = "AccentRail"
+	accent.Size = UDim2.new(0, 3, 1, -14)
+	accent.Position = UDim2.new(0, 0, 0, 7)
+	accent.BackgroundColor3 = color
+	accent.BorderSizePixel = 0
+	accent.ZIndex = 2004
+	Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
 
 	local tile = Instance.new("Frame", box)
 	tile.Name = "IconTile"
 	tile.Size = UDim2.new(0, tileSize, 0, tileSize)
-	tile.Position = UDim2.new(0, 12, 0.5, -(tileSize / 2) - 3)
+	tile.Position = UDim2.new(0, 12, 0.5, -tileSize / 2)
 	tile.BackgroundColor3 = color
-	tile.BackgroundTransparency = 0.82
+	tile.BackgroundTransparency = 0.84
 	tile.BorderSizePixel = 0
 	tile.ZIndex = 2004
 	Instance.new("UICorner", tile).CornerRadius = UDim.new(0, 10)
-	local iconSize = IsMobile and 15 or 16
+	local iconSize = compact and 16 or 18
 	CreateVeloxIcon(tile, iconAsset, iconSize, color, UDim2.new(0.5, -iconSize / 2, 0.5, -iconSize / 2), nil, 2005, "NotificationIcon")
+
+	local titleLabel = Instance.new("TextLabel", box)
+	titleLabel.Name = "Title"
+	titleLabel.Size = UDim2.new(0, textWidth, 0, titleHeight)
+	titleLabel.Position = UDim2.new(0, textX, 0.5, -(titleHeight + messageHeight + 2) / 2)
+	titleLabel.BackgroundTransparency = 1
+	titleLabel.Text = tostring(title or typeInfo.Title or "Velox Hub")
+	titleLabel.TextColor3 = Theme.TextPrimary
+	titleLabel.Font = Enum.Font.GothamBold
+	titleLabel.TextSize = titleSize
+	titleLabel.TextWrapped = true
+	titleLabel.TextTruncate = Enum.TextTruncate.AtEnd
+	titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+	titleLabel.TextYAlignment = Enum.TextYAlignment.Center
+	titleLabel.ZIndex = 2004
 
 	local description = Instance.new("TextLabel", box)
 	description.Name = "Description"
-	description.Size = UDim2.new(0, textWidth, 1, -6)
-	description.Position = UDim2.new(0, textX, 0, 0)
+	description.Size = UDim2.new(0, textWidth, 0, messageHeight)
+	description.Position = UDim2.new(0, textX, 0.5, (titleHeight + messageHeight + 2) / 2 - messageHeight)
 	description.BackgroundTransparency = 1
 	description.Text = message
-	description.TextColor3 = Theme.TextPrimary
+	description.TextColor3 = Theme.TextSecondary
 	description.Font = Enum.Font.GothamMedium
-	description.TextSize = textSize
+	description.TextSize = messageSize
 	description.TextWrapped = true
 	description.TextTruncate = Enum.TextTruncate.AtEnd
 	description.TextXAlignment = Enum.TextXAlignment.Left
@@ -1891,7 +1924,7 @@ function _VH_BuildToastCard(parent, nType, typeInfo, title, message)
 	local closeButton = Instance.new("TextButton", box)
 	closeButton.Name = "Close"
 	closeButton.Size = UDim2.new(0, 22, 0, 22)
-	closeButton.Position = UDim2.new(1, -28, 0.5, -14)
+	closeButton.Position = UDim2.new(1, -27, 0, 7)
 	closeButton.BackgroundColor3 = Theme.BackgroundMain
 	closeButton.BackgroundTransparency = 1
 	closeButton.BorderSizePixel = 0
@@ -1910,7 +1943,7 @@ function _VH_BuildToastCard(parent, nType, typeInfo, title, message)
 	local progressTrack = Instance.new("Frame", box)
 	progressTrack.Name = "TimerProgressTrack"
 	progressTrack.Size = UDim2.new(1, -24, 0, 2)
-	progressTrack.Position = UDim2.new(0, 12, 1, -6)
+	progressTrack.Position = UDim2.new(0, 12, 1, -5)
 	progressTrack.BackgroundColor3 = Theme.BackgroundMain
 	progressTrack.BackgroundTransparency = 0.3
 	progressTrack.BorderSizePixel = 0
@@ -3214,7 +3247,12 @@ MinBtn.AutoButtonColor = false
 MinBtn.Text = ""
 MinBtn.LayoutOrder = 3
 MinBtn.ClipsDescendants = true
-CreateVeloxIcon(MinBtn, VeloxIcons.Minus, 22, Color3.new(1, 1, 1), UDim2.new(0.5, -11, 0.5, -11), nil, 2, "MinimizeIcon")
+MinBtn.Text = "−"
+MinBtn.TextColor3 = Color3.new(1, 1, 1)
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.TextSize = IsMobile and 23 or 25
+MinBtn.TextXAlignment = Enum.TextXAlignment.Center
+MinBtn.TextYAlignment = Enum.TextYAlignment.Center
 Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(1, 0)
 MinStroke = Instance.new("UIStroke", MinBtn)
 MinStroke.Color = Theme.Accent
@@ -3317,7 +3355,7 @@ if IsChristmas then
 	end
 
 	local treeModel, treeStar = nil, {}
-	local treeSize = IsMobile and 32 or 38
+	local treeSize = IsMobile and 30 or 34
 	local treeOk = pcall(function()
 		local vpSize = treeSize
 		local vp = Instance.new("ViewportFrame")
@@ -3422,7 +3460,8 @@ if IsChristmas then
 		fallback.TextColor3 = Color3.new(1, 1, 1)
 		fallback.ZIndex = 6
 	end
-	SidebarLogo.Position = UDim2.new(0, treeSize + 6, 0.5, -(IsMobile and 15 or 17))
+	SidebarLogo.AnchorPoint = Vector2.new(0, 0.5)
+	SidebarLogo.Position = UDim2.new(0, treeSize + 6, 0.5, 0)
 
 	SidebarBrand.Position = UDim2.new(0, 10, 0, IsMobile and 19 or 20)
 	local function makeSnowLayer(name, z)
