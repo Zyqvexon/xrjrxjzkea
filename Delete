@@ -329,6 +329,7 @@ NotificationFlushBusy = false
 ConfirmOverlay = nil
 ScriptDetailsOverlay = nil
 ScriptDetailsUIScale = nil
+PanelScaleObjects = {}
 GlobalCooldownBanner = nil
 GlobalCooldownLoopVersion = 0
 GlobalActionCooldownEndTime = 0
@@ -502,7 +503,7 @@ SavedData = {
 	Favorites = {},
 	AutoExecutes = {},
 	ToggleKeybind = "RightControl",
-	Settings = { UIScale = 1, Language = "English" }
+	Settings = { UIScale = 1, Language = "English", PanelScales = { Sidebar = 1, HowToNavigation = 1, HowToContent = 1, Recommendations = 1, Settings = 1, ScriptDetails = 1 } }
 }
 SavedConfigExtras = {}
 ConfigurationLoaded = false
@@ -607,9 +608,15 @@ function _VH_BuildConfigurationData()
 	cleanData.ToggleKeybind = tostring(SavedData.ToggleKeybind or "RightControl")
 	local savedLanguage = type(SavedData.Settings.Language) == "string" and SavedData.Settings.Language or "English"
 	if savedLanguage ~= "English" and savedLanguage ~= "Filipino" and savedLanguage ~= "Chinese" then savedLanguage = "English" end
+	local panelScales = {}
+	local panelScaleKeys = { "Sidebar", "HowToNavigation", "HowToContent", "Recommendations", "Settings", "ScriptDetails" }
+	for _, key in ipairs(panelScaleKeys) do
+		panelScales[key] = math.clamp(tonumber(SavedData.Settings.PanelScales and SavedData.Settings.PanelScales[key]) or 1, 0.8, 1.2)
+	end
 	cleanData.Settings = {
 		UIScale = math.clamp(tonumber(SavedData.Settings.UIScale) or 1, 0.8, 1.2),
-		Language = savedLanguage
+		Language = savedLanguage,
+		PanelScales = panelScales
 	}
 	for k, v in pairs(SavedData.Favorites) do
 		if v then cleanData.Favorites[tostring(k)] = true end
@@ -709,8 +716,19 @@ function LoadConfiguration()
 	if type(result.Settings) == "table" then
 		if result.Settings.UIScale ~= nil then SavedData.Settings.UIScale = result.Settings.UIScale end
 		if type(result.Settings.Language) == "string" then SavedData.Settings.Language = result.Settings.Language end
+		if type(result.Settings.PanelScales) == "table" then
+			for key, value in pairs(result.Settings.PanelScales) do
+				if type(key) == "string" and tonumber(value) then
+					SavedData.Settings.PanelScales[key] = value
+				end
+			end
+		end
 	end
 	SavedData.Settings.UIScale = math.clamp(tonumber(SavedData.Settings.UIScale) or 1, 0.8, 1.2)
+	SavedData.Settings.PanelScales = type(SavedData.Settings.PanelScales) == "table" and SavedData.Settings.PanelScales or {}
+	for _, key in ipairs({ "Sidebar", "HowToNavigation", "HowToContent", "Recommendations", "Settings", "ScriptDetails" }) do
+		SavedData.Settings.PanelScales[key] = math.clamp(tonumber(SavedData.Settings.PanelScales[key]) or 1, 0.8, 1.2)
+	end
 	if SavedData.Settings.Language ~= "English" and SavedData.Settings.Language ~= "Filipino" and SavedData.Settings.Language ~= "Chinese" then
 		SavedData.Settings.Language = "English"
 	end
@@ -736,6 +754,8 @@ LanguageTranslations = {
 		["Updated Today"] = "Updated Today", ["Updated This Week"] = "Updated This Week", ["Updated This Month"] = "Updated This Month",
 		["User Preferences"] = "User Preferences", ["Toggle UI"] = "Toggle UI", ["Keybind to show or hide hub."] = "Keybind to show or hide hub.",
 		["UI Scale"] = "UI Scale", ["Adjust the hub size from 80% to 120%."] = "Adjust the hub size from 80% to 120%.",
+		["Panel Scaling"] = "Panel Scaling", ["Sidebar Scale"] = "Sidebar Scale", ["How-to Navigation Scale"] = "How-to Navigation Scale", ["How-to Content Scale"] = "How-to Content Scale", ["Recommended Panel Scale"] = "Recommended Panel Scale", ["Settings Panel Scale"] = "Settings Panel Scale", ["Script Details Scale"] = "Script Details Scale",
+		["Adjust the sidebar independently."] = "Adjust the sidebar independently.", ["Adjust the guide navigation independently."] = "Adjust the guide navigation independently.", ["Adjust the guide content independently."] = "Adjust the guide content independently.", ["Adjust the recommendations card independently."] = "Adjust the recommendations card independently.", ["Adjust the settings page independently."] = "Adjust the settings page independently.", ["Adjust the script details window independently."] = "Adjust the script details window independently.",
 		["Language"] = "Language", ["Change the hub language."] = "Change the hub language.", ["System Actions"] = "System Actions",
 		["Manual Refresh"] = "Manual Refresh", ["Choose a catalog to refresh."] = "Choose a catalog to refresh.",
 		["All"] = "All",
@@ -761,6 +781,8 @@ LanguageTranslations = {
 		["Updated Today"] = "Na-update Ngayon", ["Updated This Week"] = "Na-update Ngayong Linggo", ["Updated This Month"] = "Na-update Ngayong Buwan",
 		["User Preferences"] = "Mga Kagustuhan", ["Toggle UI"] = "I-toggle ang UI", ["Keybind to show or hide hub."] = "Keybind para ipakita o itago ang hub.",
 		["UI Scale"] = "Laki ng UI", ["Adjust the hub size from 80% to 120%."] = "Ayusin ang laki ng hub mula 80% hanggang 120%.",
+		["Panel Scaling"] = "Pag-scale ng mga Panel", ["Sidebar Scale"] = "Laki ng Sidebar", ["How-to Navigation Scale"] = "Laki ng Guide Navigation", ["How-to Content Scale"] = "Laki ng Guide Content", ["Recommended Panel Scale"] = "Laki ng Recommended Panel", ["Settings Panel Scale"] = "Laki ng Settings Panel", ["Script Details Scale"] = "Laki ng Script Details",
+		["Adjust the sidebar independently."] = "Ayusin nang hiwalay ang laki ng sidebar.", ["Adjust the guide navigation independently."] = "Ayusin nang hiwalay ang laki ng navigation ng guide.", ["Adjust the guide content independently."] = "Ayusin nang hiwalay ang laki ng content ng guide.", ["Adjust the recommendations card independently."] = "Ayusin nang hiwalay ang laki ng recommendations card.", ["Adjust the settings page independently."] = "Ayusin nang hiwalay ang laki ng Settings page.", ["Adjust the script details window independently."] = "Ayusin nang hiwalay ang laki ng Script Details window.",
 		["Language"] = "Wika", ["Change the hub language."] = "Palitan ang wika ng hub.", ["System Actions"] = "Mga System Action",
 		["Manual Refresh"] = "Manual Refresh", ["Choose a catalog to refresh."] = "Pumili ng catalog na ire-refresh.",
 		["All"] = "Lahat",
@@ -786,6 +808,8 @@ LanguageTranslations = {
 		["Updated Today"] = "今天更新", ["Updated This Week"] = "本周更新", ["Updated This Month"] = "本月更新",
 		["User Preferences"] = "用户偏好", ["Toggle UI"] = "切换界面", ["Keybind to show or hide hub."] = "用于显示或隐藏中心的快捷键。",
 		["UI Scale"] = "界面缩放", ["Adjust the hub size from 80% to 120%."] = "将中心大小调整为 80% 到 120%。",
+		["Panel Scaling"] = "面板缩放", ["Sidebar Scale"] = "侧边栏缩放", ["How-to Navigation Scale"] = "使用指南导航缩放", ["How-to Content Scale"] = "使用指南内容缩放", ["Recommended Panel Scale"] = "推荐面板缩放", ["Settings Panel Scale"] = "设置面板缩放", ["Script Details Scale"] = "脚本详情缩放",
+		["Adjust the sidebar independently."] = "单独调整侧边栏大小。", ["Adjust the guide navigation independently."] = "单独调整指南导航大小。", ["Adjust the guide content independently."] = "单独调整指南内容大小。", ["Adjust the recommendations card independently."] = "单独调整推荐卡片大小。", ["Adjust the settings page independently."] = "单独调整设置页面大小。", ["Adjust the script details window independently."] = "单独调整脚本详情窗口大小。",
 		["Language"] = "语言", ["Change the hub language."] = "更改中心语言。", ["System Actions"] = "系统操作",
 		["Manual Refresh"] = "手动刷新", ["Choose a catalog to refresh."] = "选择要刷新的目录。",
 		["All"] = "全部",
@@ -1480,6 +1504,13 @@ Sidebar.BackgroundTransparency = 0
 Sidebar.BorderSizePixel = 0
 Sidebar.ClipsDescendants = true
 Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 18)
+SidebarContentScaleRoot = Instance.new("Frame", Sidebar)
+SidebarContentScaleRoot.Name = "SidebarContentScaleRoot"
+SidebarContentScaleRoot.Size = UDim2.new(1, 0, 1, 0)
+SidebarContentScaleRoot.Position = UDim2.new(0, 0, 0, 0)
+SidebarContentScaleRoot.BackgroundTransparency = 1
+SidebarContentScaleRoot.BorderSizePixel = 0
+SidebarContentScaleRoot.ZIndex = 1
 SidebarSquareEdge = Instance.new("Frame", Sidebar)
 SidebarSquareEdge.Name = "SidebarSquareEdge"
 SidebarSquareEdge.Size = UDim2.new(0, 28, 1, 0)
@@ -1505,7 +1536,7 @@ SidebarDragHandle.Text = ""
 SidebarDragHandle.AutoButtonColor = false
 SidebarDragHandle.Active = true
 SidebarDragHandle.ZIndex = 1
-SidebarBrand = Instance.new("Frame", Sidebar)
+SidebarBrand = Instance.new("Frame", SidebarContentScaleRoot)
 SidebarBrand.Size = UDim2.new(1, -20, 0, 40)
 SidebarBrand.Position = UDim2.new(0, 10, 0, 10)
 SidebarBrand.BackgroundTransparency = 1
@@ -1544,19 +1575,38 @@ do
 end
 PanelUIScale = Instance.new("UIScale", MainPanel)
 PanelUIScale.Scale = math.clamp(tonumber(SavedData.Settings.UIScale) or 1, 0.8, 1.2)
+function _VH_GetPanelScaleValue(key)
+	local settings = SavedData and SavedData.Settings
+	local scales = settings and settings.PanelScales
+	return math.clamp(tonumber(scales and scales[key]) or 1, 0.8, 1.2)
+end
+function _VH_GetEffectiveUIScale(localScaleObject)
+	local masterScale = PanelUIScale and tonumber(PanelUIScale.Scale) or 1
+	local localScale = localScaleObject and tonumber(localScaleObject.Scale) or 1
+	if not masterScale or masterScale <= 0 then masterScale = 1 end
+	if not localScale or localScale <= 0 then localScale = 1 end
+	return masterScale * localScale
+end
+function _VH_CreatePanelScale(parent, key, objectName)
+	if not parent then return nil end
+	local scaleObject = Instance.new("UIScale")
+	scaleObject.Name = objectName or ("Velox" .. tostring(key) .. "Scale")
+	scaleObject.Scale = _VH_GetPanelScaleValue(key)
+	scaleObject.Parent = parent
+	PanelScaleObjects[key] = scaleObject
+	return scaleObject
+end
 _VH_RegConn(PanelUIScale:GetPropertyChangedSignal("Scale"):Connect(function()
 	if isDestroying or not MainPanel or not MainPanel.Parent then return end
 	local size = GetPanelSize()
 	if MainPanel.Size ~= size then MainPanel.Size = size end
 end))
+_VH_CreatePanelScale(SidebarContentScaleRoot, "Sidebar", "VeloxSidebarScale")
 function ApplyPanelUIScale(scaleValue)
 	local nextScale = math.clamp(tonumber(scaleValue) or 1, 0.8, 1.2)
 	SavedData.Settings.UIScale = nextScale
 	if PanelUIScale and PanelUIScale.Parent then
 		_VH_SafeTween(PanelUIScale, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = nextScale})
-	end
-	if ScriptDetailsUIScale and ScriptDetailsUIScale.Parent then
-		_VH_SafeTween(ScriptDetailsUIScale, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = nextScale})
 	end
 	task.delay(0.24, function()
 		if isDestroying or not MainPanel or not MainPanel.Parent then return end
@@ -2452,7 +2502,8 @@ ScriptDetailsGradient.Color = ColorSequence.new({
 	ColorSequenceKeypoint.new(1, _VH_RGB(14, 15, 26))
 })
 ScriptDetailsUIScale = Instance.new("UIScale", ScriptDetailsBox)
-ScriptDetailsUIScale.Scale = math.clamp(tonumber(SavedData.Settings.UIScale) or 1, 0.8, 1.2)
+ScriptDetailsUIScale.Scale = _VH_GetPanelScaleValue("ScriptDetails")
+PanelScaleObjects.ScriptDetails = ScriptDetailsUIScale
 do
 	local bannerH = IsMobile and 70 or 84
 	local thumb = IsMobile and 60 or 72
@@ -2916,7 +2967,7 @@ function _VH_OpenScriptDetails(data, entry)
 	ScriptDetailsOverlay.Visible = true
 	ScriptDetailsOverlay.Active = true
 	_VH_SafeTween(ScriptDetailsOverlay, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 0.5 })
-	local detailsTargetScale = math.clamp(tonumber(SavedData.Settings.UIScale) or 1, 0.8, 1.2)
+	local detailsTargetScale = _VH_GetPanelScaleValue("ScriptDetails")
 	ScriptDetailsUIScale.Scale = detailsTargetScale * 0.92
 	_VH_SafeTween(ScriptDetailsUIScale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = detailsTargetScale })
 end
@@ -3202,7 +3253,7 @@ _VH_RegConn(RunService.Heartbeat:Connect(function(deltaTime)
 	end
 	fpsCount = 0
 end))
-TabContainer = Instance.new("Frame", Sidebar)
+TabContainer = Instance.new("Frame", SidebarContentScaleRoot)
 TabContainer.Size = UDim2.new(1, -20, 0, IsMobile and 180 or 212)
 TabContainer.Position = UDim2.new(0, 10, 0, IsMobile and 58 or 86)
 TabContainer.BackgroundTransparency = 1
@@ -3462,13 +3513,18 @@ function CreateCanvas(name)
 	layout.Padding = UDim.new(0, IsMobile and 8 or 12); layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.HorizontalAlignment = Enum.HorizontalAlignment.Left; layout.VerticalAlignment = Enum.VerticalAlignment.Top
 	local pad = Instance.new("UIPadding", scroll)
 	pad.PaddingLeft = UDim.new(0, 3); pad.PaddingRight = UDim.new(0, 6); pad.PaddingBottom = UDim.new(0, 16)
+	local localScaleObject = nil
+	if name == "Settings" then
+		localScaleObject = _VH_CreatePanelScale(scroll, "Settings", "VeloxSettingsScale")
+	elseif name == "How to Use" then
+		localScaleObject = _VH_CreatePanelScale(scroll, "HowToContent", "VeloxHowToContentScale")
+	end
 	TabViews[name] = scroll
 	if name ~= "How to Use" then
 		local syncQueued = false
 		local function syncCanvas()
 			if isDestroying or not scroll.Parent then return end
-			local scale = PanelUIScale and tonumber(PanelUIScale.Scale) or 1
-			if not scale or scale <= 0 then scale = 1 end
+			local scale = _VH_GetEffectiveUIScale(localScaleObject)
 			local logicalHeight = scroll.AbsoluteSize.Y / scale
 			local windowHeight = scroll.AbsoluteWindowSize.Y / scale
 			local paddingTop = pad.PaddingTop.Offset + pad.PaddingTop.Scale * logicalHeight
@@ -3496,6 +3552,9 @@ function CreateCanvas(name)
 		pcall(function() _VH_RegConn(scroll:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(queueSync)) end)
 		if PanelUIScale and PanelUIScale.Parent then
 			_VH_RegConn(PanelUIScale:GetPropertyChangedSignal("Scale"):Connect(queueSync))
+		end
+		if localScaleObject then
+			_VH_RegConn(localScaleObject:GetPropertyChangedSignal("Scale"):Connect(queueSync))
 		end
 		queueSync()
 	end
@@ -3908,6 +3967,7 @@ _VH_RegConn(SearchInput.FocusLost:Connect(function() SearchStroke.Color = Theme.
 
 RecommendationPanel = Instance.new("Frame", ScriptsView)
 RecommendationPanel.Name = "RecommendedForYouPanel"
+_VH_CreatePanelScale(RecommendationPanel, "Recommendations", "VeloxRecommendationsScale")
 RecommendationPanel.Size = UDim2.new(1, -4, 0, IsMobile and 136 or 148)
 RecommendationPanel.Position = UDim2.new(0, 2, 0, 0)
 RecommendationPanel.BackgroundColor3 = Color3.new(1, 1, 1)
@@ -5295,7 +5355,8 @@ HubChangelog = {
 		Version = "v" .. HubVersion,
 		Title = "Performance, Navigation & UI Polish",
 		Items = {
-			"Updated How to Use navigation to use the exact panel UIScale value, preserve fractional coordinates, and resynchronize the active tab after scale changes.",
+			"Added independent 80%–120% scale controls for the Sidebar, How-to Navigation, How-to Content, Recommended panel, Settings page, and Script Details window; each value saves separately from the main UI scale.",
+			"Updated How to Use navigation to use each panel's effective scale, preserve fractional coordinates, and resynchronize the active tab after scale changes.",
 			"Recommended For You pills now fit their text at every UI scale: names wrap or shrink cleanly, reason labels are never cut off, and narrow screens show fewer pills per page.",
 			"The hub now stays fully on screen at higher UI scales on smaller displays, and open popups re-fit after a scale change.",
 			"Redesigned Filters and Sort Scripts with compact icon-first layouts, wrapping chips, one-tap Favorites and Clear controls, and a clear indicator for the selected order.",
@@ -5903,7 +5964,7 @@ end
 
 CreateHomeContent()
 _VH_LoadHomeThumbnail()
-SidebarCredits = Instance.new("Frame", Sidebar)
+SidebarCredits = Instance.new("Frame", SidebarContentScaleRoot)
 SidebarCredits.Size = UDim2.new(1, -20, 0, IsMobile and 106 or 126)
 SidebarCredits.AnchorPoint = Vector2.new(0.5, 1)
 SidebarCredits.Position = UDim2.new(0.5, 0, 1, -8)
@@ -5916,7 +5977,7 @@ SidebarCreditsStroke.Color = Theme.Stroke
 SidebarCreditsStroke.Transparency = 0.45
 SidebarCreditsStroke.Thickness = 1
 SidebarCredits.ZIndex = 6
-SidebarCreditsLine = Instance.new("Frame", Sidebar)
+SidebarCreditsLine = Instance.new("Frame", SidebarContentScaleRoot)
 SidebarCreditsLine.Size = UDim2.new(1, -24, 0, 1)
 SidebarCreditsLine.Position = UDim2.new(0, 12, 1, -(IsMobile and 132 or 148))
 SidebarCreditsLine.BackgroundColor3 = Theme.Stroke
@@ -6660,10 +6721,18 @@ function _VH_BuildHowToNav()
 	local barHeight = IsMobile and 30 or 36
 	local top = IsMobile and 98 or 112
 	local navCornerRadius = 12
-	local navClipGroup = Instance.new("CanvasGroup", MainContent)
+	local navScaleRoot = Instance.new("Frame", MainContent)
+	navScaleRoot.Name = "HowToNavigationScaleRoot"
+	navScaleRoot.Size = UDim2.new(1, -28, 0, barHeight)
+	navScaleRoot.Position = UDim2.new(0, 14, 0, top)
+	navScaleRoot.BackgroundTransparency = 1
+	navScaleRoot.BorderSizePixel = 0
+	navScaleRoot.ClipsDescendants = false
+	local navScaleObject = _VH_CreatePanelScale(navScaleRoot, "HowToNavigation", "VeloxHowToNavigationScale")
+	local navClipGroup = Instance.new("CanvasGroup", navScaleRoot)
 	navClipGroup.Name = "HowToNavRoundedClipGroup"
-	navClipGroup.Size = UDim2.new(1, -28, 0, barHeight)
-	navClipGroup.Position = UDim2.new(0, 14, 0, top)
+	navClipGroup.Size = UDim2.new(1, 0, 1, 0)
+	navClipGroup.Position = UDim2.new(0, 0, 0, 0)
 	navClipGroup.BackgroundTransparency = 1
 	navClipGroup.BorderSizePixel = 0
 	navClipGroup.ClipsDescendants = true
@@ -6696,7 +6765,7 @@ function _VH_BuildHowToNav()
 	barStroke.Transparency = 1
 	barStroke.Thickness = 1
 	pcall(function() barStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
-	local barBorderOverlay = Instance.new("Frame", MainContent)
+	local barBorderOverlay = Instance.new("Frame", navScaleRoot)
 	barBorderOverlay.Name = "HowToNavBorderOverlay"
 	barBorderOverlay.Position = navClipGroup.Position
 	barBorderOverlay.Size = navClipGroup.Size
@@ -6776,6 +6845,20 @@ function _VH_BuildHowToNav()
 
 	view.Position = UDim2.new(0, 14, 0, top + barHeight + 8)
 	view.Size = UDim2.new(1, -28, 1, (IsMobile and -112 or -120) - (barHeight + 8))
+	local function syncHowToContentGeometry()
+		if not navScaleRoot or not navScaleRoot.Parent or not view or not view.Parent or not MainContent then return end
+		local masterScale = PanelUIScale and tonumber(PanelUIScale.Scale) or 1
+		if not masterScale or masterScale <= 0 then masterScale = 1 end
+		local navBottom = (navScaleRoot.AbsolutePosition.Y + navScaleRoot.AbsoluteSize.Y - MainContent.AbsolutePosition.Y) / masterScale
+		local contentTop = math.max(0, navBottom + 8)
+		local bottomMargin = IsMobile and 112 or 120
+		view.Position = UDim2.new(0, 14, 0, contentTop)
+		view.Size = UDim2.new(1, -28, 1, -(bottomMargin + contentTop))
+	end
+	syncHowToContentGeometry()
+	_VH_RegConn(navScaleRoot:GetPropertyChangedSignal("AbsoluteSize"):Connect(syncHowToContentGeometry))
+	_VH_RegConn(navScaleRoot:GetPropertyChangedSignal("AbsolutePosition"):Connect(syncHowToContentGeometry))
+	task.defer(syncHowToContentGeometry)
 
 	view.AutomaticCanvasSize = Enum.AutomaticSize.None
 	view.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -6794,10 +6877,8 @@ function _VH_BuildHowToNav()
 	local pillInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 	local barSyncQueued, viewSyncQueued = false, false
 
-	local function uiScale()
-		local scale = PanelUIScale and tonumber(PanelUIScale.Scale) or 1
-		if not scale or scale <= 0 then return 1 end
-		return scale
+	local function uiScale(localScaleObject)
+		return _VH_GetEffectiveUIScale(localScaleObject)
 	end
 
 	local function cancelTrackedTween(instance)
@@ -6820,7 +6901,7 @@ function _VH_BuildHowToNav()
 	local function movePill(item, animate)
 		local button = item and item.Button
 		if not button or not button.Parent or not selectionPill.Parent or not pillLayer.Parent then return end
-		local scale = uiScale()
+		local scale = uiScale(navScaleObject)
 		local relative = button.AbsolutePosition - pillLayer.AbsolutePosition
 		local position = UDim2.fromOffset(relative.X / scale, relative.Y / scale)
 		local size = UDim2.fromOffset(math.max(1, button.AbsoluteSize.X / scale), math.max(1, button.AbsoluteSize.Y / scale))
@@ -6836,7 +6917,7 @@ function _VH_BuildHowToNav()
 	local function syncBarCanvas()
 		if isDestroying or not bar.Parent then return end
 		syncBarBorderOverlay()
-		local scale = uiScale()
+		local scale = uiScale(navScaleObject)
 		local logicalContentWidth = barLayout.AbsoluteContentSize.X / scale
 		local logicalFrameWidth = bar.AbsoluteSize.X / scale
 		local leftPadding = udimPixels(barPad.PaddingLeft, logicalFrameWidth)
@@ -6868,7 +6949,7 @@ function _VH_BuildHowToNav()
 
 	local function syncViewCanvas()
 		if isDestroying or not view.Parent or not viewLayout then return end
-		local scale = uiScale()
+		local scale = uiScale(PanelScaleObjects.HowToContent)
 		local logicalHeight = view.AbsoluteSize.Y / scale
 		local logicalWindowHeight = view.AbsoluteWindowSize.Y / scale
 		local topPadding, bottomPadding = 0, 0
@@ -6917,7 +6998,7 @@ function _VH_BuildHowToNav()
 		local item = chips[index]
 		local button = item and item.Button
 		if not button or not button.Parent or not pillLayer.Parent then return end
-		local scale = uiScale()
+		local scale = uiScale(navScaleObject)
 		local chipLeft = (button.AbsolutePosition.X - pillLayer.AbsolutePosition.X) / scale
 		local chipRight = chipLeft + button.AbsoluteSize.X / scale
 		local visibleWidth = bar.AbsoluteWindowSize.X / scale
@@ -6961,7 +7042,7 @@ function _VH_BuildHowToNav()
 
 	refreshActiveFromScroll = function()
 		if isDestroying or not view.Parent or not view.Visible or navigationTarget then return end
-		local scale = uiScale()
+		local scale = uiScale(PanelScaleObjects.HowToContent)
 		local viewTop = view.AbsolutePosition.Y
 		local viewBottom = viewTop + view.AbsoluteWindowSize.Y
 		if settledIndex then
@@ -7060,7 +7141,7 @@ function _VH_BuildHowToNav()
 	local function sectionScrollTarget(section)
 		local block = section and section.Block
 		if not block or not block.Parent or not view.Parent then return nil, nil end
-		local scale = uiScale()
+		local scale = uiScale(PanelScaleObjects.HowToContent)
 		local current = view.CanvasPosition.Y
 		local sectionOffset = (block.AbsolutePosition.Y - view.AbsolutePosition.Y) / scale
 		local viewHeight = view.AbsoluteWindowSize.Y / scale
@@ -7282,7 +7363,19 @@ function _VH_BuildHowToNav()
 		end
 	end))
 	if PanelUIScale and PanelUIScale.Parent then
-		_VH_RegConn(PanelUIScale:GetPropertyChangedSignal("Scale"):Connect(onScaleChanged))
+		_VH_RegConn(PanelUIScale:GetPropertyChangedSignal("Scale"):Connect(function()
+			syncHowToContentGeometry()
+			onScaleChanged()
+		end))
+	end
+	if navScaleObject then
+		_VH_RegConn(navScaleObject:GetPropertyChangedSignal("Scale"):Connect(function()
+			syncHowToContentGeometry()
+			onScaleChanged()
+		end))
+	end
+	if PanelScaleObjects.HowToContent then
+		_VH_RegConn(PanelScaleObjects.HowToContent:GetPropertyChangedSignal("Scale"):Connect(onScaleChanged))
 	end
 
 	queueBarSync()
@@ -9157,7 +9250,7 @@ function CreateSettingRowInGroup(groupCard, title, desc, iconAsset, order)
 		if isDestroying or not row.Parent then return end
 		local width = textContainer.AbsoluteSize.X
 		if width <= 0 then return end
-		local scale = (PanelUIScale and PanelUIScale.Scale) or 1
+		local scale = _VH_GetEffectiveUIScale(PanelScaleObjects.Settings)
 		local ok, bounds = pcall(function()
 			return TextService:GetTextSize(descLabel.Text, descLabel.TextSize, descLabel.Font, Vector2.new(math.max(40, width / scale), 10000))
 		end)
@@ -9540,7 +9633,70 @@ ApplyInteractiveAnimations(scalePlus, Theme.BackgroundMain, Theme.CardHover, _VH
 _VH_RegConn(scaleMinus.Activated:Connect(_VH_CreateDebounce(0.08, function() SetUIScaleFromSetting(scaleValue - 0.05) end)))
 _VH_RegConn(scalePlus.Activated:Connect(_VH_CreateDebounce(0.08, function() SetUIScaleFromSetting(scaleValue + 0.05) end)))
 
-actionGroup = CreateSettingsGroup("System Actions", SettingsView, 2)
+panelScalingGroup = CreateSettingsGroup("Panel Scaling", SettingsView, 2)
+function CreatePanelScaleSetting(group, key, title, description, order)
+	local _, right = CreateSettingRowInGroup(group, title, description, VeloxIcons.UIScale, order)
+	local frame = Instance.new("Frame", right)
+	frame.Name = "PanelScaleControls"
+	frame.Size = UDim2.new(1, 0, 1, 0)
+	frame.BackgroundTransparency = 1
+	local minus = Instance.new("TextButton", frame)
+	minus.Size = UDim2.new(0, 28, 0, 26)
+	minus.Position = UDim2.new(0, 0, 0.5, -13)
+	minus.BackgroundColor3 = Theme.BackgroundMain
+	minus.Text = ""
+	minus.AutoButtonColor = false
+	CreateVeloxIcon(minus, VeloxIcons.Minus, 11, Theme.TextPrimary, UDim2.new(0.5, -5.5, 0.5, -5.5), nil, 2, "MinusIcon")
+	Instance.new("UICorner", minus).CornerRadius = UDim.new(0, 8)
+	local minusStroke = Instance.new("UIStroke", minus)
+	minusStroke.Color = Theme.Stroke
+	local valueLabel = Instance.new("TextLabel", frame)
+	valueLabel.Size = UDim2.new(0, 48, 0, 26)
+	valueLabel.Position = UDim2.new(0.5, -24, 0.5, -13)
+	valueLabel.BackgroundTransparency = 1
+	valueLabel.TextColor3 = Theme.Accent
+	valueLabel.Font = Enum.Font.GothamBold
+	valueLabel.TextSize = 11
+	valueLabel.TextXAlignment = Enum.TextXAlignment.Center
+	local plus = Instance.new("TextButton", frame)
+	plus.Size = UDim2.new(0, 28, 0, 26)
+	plus.Position = UDim2.new(1, -28, 0.5, -13)
+	plus.BackgroundColor3 = Theme.BackgroundMain
+	plus.Text = ""
+	plus.AutoButtonColor = false
+	CreateVeloxIcon(plus, VeloxIcons.Plus, 11, Theme.TextPrimary, UDim2.new(0.5, -5.5, 0.5, -5.5), nil, 2, "PlusIcon")
+	Instance.new("UICorner", plus).CornerRadius = UDim.new(0, 8)
+	local plusStroke = Instance.new("UIStroke", plus)
+	plusStroke.Color = Theme.Stroke
+	local value = _VH_GetPanelScaleValue(key)
+	local function refresh()
+		valueLabel.Text = tostring(math.floor(value * 100 + 0.5)) .. "%"
+	end
+	local function setValue(nextValue)
+		value = math.clamp(math.floor(((tonumber(nextValue) or 1) * 20) + 0.5) / 20, 0.8, 1.2)
+		SavedData.Settings.PanelScales[key] = value
+		local scaleObject = PanelScaleObjects[key]
+		if scaleObject and scaleObject.Parent then
+			_VH_SafeTween(scaleObject, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = value })
+		end
+		refresh()
+		SaveConfiguration()
+		ShowNotification(title .. ": " .. tostring(math.floor(value * 100 + 0.5)) .. "%.", "Success")
+	end
+	refresh()
+	ApplyInteractiveAnimations(minus, Theme.BackgroundMain, Theme.CardHover, _VH_RGB(9, 10, 18), minusStroke, Theme.Stroke, Theme.Accent)
+	ApplyInteractiveAnimations(plus, Theme.BackgroundMain, Theme.CardHover, _VH_RGB(9, 10, 18), plusStroke, Theme.Stroke, Theme.Accent)
+	_VH_RegConn(minus.Activated:Connect(_VH_CreateDebounce(0.08, function() setValue(value - 0.05) end)))
+	_VH_RegConn(plus.Activated:Connect(_VH_CreateDebounce(0.08, function() setValue(value + 0.05) end)))
+end
+CreatePanelScaleSetting(panelScalingGroup, "Sidebar", "Sidebar Scale", "Adjust the sidebar independently.", 1)
+CreatePanelScaleSetting(panelScalingGroup, "HowToNavigation", "How-to Navigation Scale", "Adjust the guide navigation independently.", 2)
+CreatePanelScaleSetting(panelScalingGroup, "HowToContent", "How-to Content Scale", "Adjust the guide content independently.", 3)
+CreatePanelScaleSetting(panelScalingGroup, "Recommendations", "Recommended Panel Scale", "Adjust the recommendations card independently.", 4)
+CreatePanelScaleSetting(panelScalingGroup, "Settings", "Settings Panel Scale", "Adjust the settings page independently.", 5)
+CreatePanelScaleSetting(panelScalingGroup, "ScriptDetails", "Script Details Scale", "Adjust the script details window independently.", 6)
+
+actionGroup = CreateSettingsGroup("System Actions", SettingsView, 3)
 manualRefreshRow, manualRefreshRight = CreateSettingRowInGroup(actionGroup, "Manual Refresh", "Choose a catalog to refresh.", VeloxIcons.RefreshCatalog, 1)
 manualRefreshTextContainer = manualRefreshRow:FindFirstChild("TextContainer")
 manualRefreshRightWidth = IsMobile and 188 or 202
@@ -9796,7 +9952,7 @@ CreateButtonSettingInGroup(actionGroup, "Unload Hub", "Removes Velox Hub complet
 end)
 
 if IsMobile then
-	UserDataGroup = CreateSettingsGroup("User Data", SettingsView, 3)
+	UserDataGroup = CreateSettingsGroup("User Data", SettingsView, 4)
 	CreateButtonSettingInGroup(UserDataGroup, "Clear UI Cache", "Resets layout position.", VeloxIcons.ClearUICache, "Reset", 1, true, function()
 		if isDestroying then return end
 		table.clear(OriginalCache)
