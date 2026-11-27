@@ -313,6 +313,8 @@ InteractiveElements = setmetatable({}, { __mode = "k" })
 isDestroying = false
 isMinimized = false
 isTransitioning = false
+PanelScaleLayoutGeneration = 0
+SearchDebounceGeneration = 0
 IsBindingKey = false
 IsMobile = UserInputService.TouchEnabled and (not UserInputService.MouseEnabled or (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize.Y <= 800) or (GuiService and GuiService:IsTenFootInterface()))
 mainDragConnection, floatDragConnection = nil, nil
@@ -403,8 +405,13 @@ function _VH_CleanUpMemory()
 	LastNotificationSignature = nil
 	LastNotificationAt = 0
 	isDestroying = true
+	PanelScaleLayoutGeneration = PanelScaleLayoutGeneration + 1
+	SearchDebounceGeneration = SearchDebounceGeneration + 1
 	GlobalEnv[_G_Identifier] = nil
-	if typingTask then pcall(task.cancel, typingTask); typingTask = nil end
+	if typingTask then
+		if type(task.cancel) == "function" then pcall(task.cancel, typingTask) end
+		typingTask = nil
+	end
 	_VH_CancelTrackedTasks()
 	if mainDragConnection then pcall(function() mainDragConnection:Disconnect() end) end
 	if floatDragConnection then pcall(function() floatDragConnection:Disconnect() end) end
@@ -446,6 +453,36 @@ function _VH_CleanUpMemory()
 	end
 	table.clear(RecommendationConnections)
 	if RecommendationPanel and RecommendationPanel.Parent then pcall(function() RecommendationPanel:Destroy() end) end
+	local cleanedEntries = {}
+	local function disconnectEntryConnections(entries)
+		if type(entries) ~= "table" then return end
+		for _, entry in ipairs(entries) do
+			if entry and not cleanedEntries[entry] then
+				cleanedEntries[entry] = true
+				if type(entry.DisconnectConnections) == "function" then
+					pcall(entry.DisconnectConnections)
+				end
+			end
+		end
+	end
+	disconnectEntryConnections(RegisteredScripts)
+	for _, state in pairs(CategoryCatalogStates or {}) do
+		disconnectEntryConnections(state and state.Entries)
+		if type(state) == "table" then
+			if type(state.Entries) == "table" then table.clear(state.Entries) end
+			if type(state.ByKey) == "table" then table.clear(state.ByKey) end
+		end
+	end
+	table.clear(CategoryCatalogStates)
+	for obj, hoverTween in pairs(HoverTweens or {}) do
+		if hoverTween then
+			pcall(function()
+				hoverTween:Cancel()
+				hoverTween:Destroy()
+			end)
+		end
+		HoverTweens[obj] = nil
+	end
 	table.clear(RegisteredScripts)
 	table.clear(ActiveTweens)
 	table.clear(InteractiveElements)
@@ -1195,10 +1232,10 @@ function FormatLastUpdatedLabel(value)
 	end
 	compact = compact or "Now"
 	if compact == "Now" then return "Updated Now" end
-	local amount, shortUnit = string.match(compact, "^(%d+)(m|h|d|w|mo|y)%s+ago$")
-	if amount and shortUnit then
-		local unitNames = { m = "Minute", h = "Hour", d = "Day", w = "Week", mo = "Month", y = "Year" }
-		local unitName = unitNames[shortUnit] or "Time"
+	local amount, shortUnit = string.match(compact, "^(%d+)(%a+)%s+ago$")
+	local unitNames = { m = "Minute", h = "Hour", d = "Day", w = "Week", mo = "Month", y = "Year" }
+	local unitName = amount and unitNames[shortUnit]
+	if unitName then
 		if tonumber(amount) ~= 1 then unitName = unitName .. "s" end
 		return "Updated " .. amount .. " " .. unitName .. " Ago"
 	end
@@ -1551,6 +1588,8 @@ _VH_RegConn(PanelUIScale:GetPropertyChangedSignal("Scale"):Connect(function()
 end))
 function ApplyPanelUIScale(scaleValue)
 	local nextScale = math.clamp(tonumber(scaleValue) or 1, 0.8, 1.2)
+	PanelScaleLayoutGeneration = PanelScaleLayoutGeneration + 1
+	local layoutGeneration = PanelScaleLayoutGeneration
 	SavedData.Settings.UIScale = nextScale
 	if PanelUIScale and PanelUIScale.Parent then
 		_VH_SafeTween(PanelUIScale, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = nextScale})
@@ -1559,12 +1598,14 @@ function ApplyPanelUIScale(scaleValue)
 		_VH_SafeTween(ScriptDetailsUIScale, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = nextScale})
 	end
 	task.delay(0.24, function()
-		if isDestroying or not MainPanel or not MainPanel.Parent then return end
+		if isDestroying or layoutGeneration ~= PanelScaleLayoutGeneration or not MainPanel or not MainPanel.Parent then return end
+		local layoutScale = tonumber(PanelUIScale and PanelUIScale.Scale) or nextScale
+		if layoutScale <= 0 then layoutScale = 1 end
 		local camera = workspace.CurrentCamera
 		local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
 		local baseWidth, baseHeight = MainPanel.Size.X.Offset, MainPanel.Size.Y.Offset
-		if baseWidth <= 0 or baseHeight <= 0 then baseWidth, baseHeight = MainPanel.AbsoluteSize.X / nextScale, MainPanel.AbsoluteSize.Y / nextScale end
-		local visualWidth, visualHeight = baseWidth * nextScale, baseHeight * nextScale
+		if baseWidth <= 0 or baseHeight <= 0 then baseWidth, baseHeight = MainPanel.AbsoluteSize.X / layoutScale, MainPanel.AbsoluteSize.Y / layoutScale end
+		local visualWidth, visualHeight = baseWidth * layoutScale, baseHeight * layoutScale
 		local halfX, halfY = visualWidth * MainPanel.AnchorPoint.X, visualHeight * MainPanel.AnchorPoint.Y
 		local position = MainPanel.Position
 		local currentX = position.X.Scale * viewport.X + position.X.Offset
@@ -4858,8 +4899,17 @@ end
 
 _VH_RegConn(SearchInput:GetPropertyChangedSignal("Text"):Connect(function()
 	ClearSearchBtn.Visible = (SearchInput.Text ~= "")
-	if typingTask then task.cancel(typingTask) end
-	typingTask = task.delay(0.16, function() UpdateFilter() end)
+	SearchDebounceGeneration = SearchDebounceGeneration + 1
+	local debounceGeneration = SearchDebounceGeneration
+	if typingTask then
+		if type(task.cancel) == "function" then pcall(task.cancel, typingTask) end
+		typingTask = nil
+	end
+	typingTask = task.delay(0.16, function()
+		if debounceGeneration ~= SearchDebounceGeneration then return end
+		typingTask = nil
+		if not isDestroying and SearchInput and SearchInput.Parent then UpdateFilter() end
+	end)
 end))
 
 _VH_RegConn(ClearSearchBtn.Activated:Connect(function()
@@ -5297,19 +5347,19 @@ HubChangelog = {
 		Version = "v" .. HubVersion,
 		Title = "Performance & UI Polish",
 		Items = {
-			"Recommended For You pills now fit their text at every UI scale: names wrap or shrink cleanly, reason labels are never cut off, and narrow screens show fewer pills per page.",
-			"The hub now stays fully on screen at higher UI scales on smaller displays, and open popups re-fit after a scale change.",
-			"Redesigned Filters and Sort Scripts with compact icon-first layouts, wrapping chips, one-tap Favorites and Clear controls, and a clear indicator for the selected order.",
-			"Polished notifications into compact, icon-led toasts and moved them clear of mobile controls.",
-			"Filters, Sort, language, and refresh popups now stay in position and close when the catalog category changes.",
+			"Recommended For You pills fit their text at every UI scale: names wrap or shrink cleanly, reason labels remain visible, and narrow screens show fewer pills per page.",
+			"Improved panel positioning on smaller displays at higher UI scales; open popups re-fit after a scale change.",
+			"Redesigned Filters and Sort Scripts with compact icon-first layouts, wrapping chips, one-tap Favorites and Clear controls, and a clear selected-order indicator.",
+			"Polished notifications into compact, icon-led toasts and moved them away from mobile controls.",
+			"Filters, Sort, language, and refresh popups stay in position and close when the catalog category changes.",
 			"Fixed clipped outlines and card controls, and improved spacing and button sizing on narrow screens.",
 			"Removed the How to Use auto-navigation bar so the guide uses the full content area.",
 			"Updated the How to Use guide to match the current Filters and Sort controls.",
 			"Added a current-game thumbnail to Home with an automatic fallback image.",
-			"Faster startup: the How to Use guide and Changelog are built on first open, style cleanup is batched, and unused card badges are skipped.",
+			"Improved startup efficiency: the How to Use guide and Changelog are built on first open, style cleanup is batched, and unused card badges are skipped.",
 			"Removed animated Christmas light strings and tree bulbs while retaining the Christmas tree, ornaments, snowfall, greeting, and theme colors; reduced holiday animation work.",
-			"Streamlined the code, removed unused leftovers, and kept UI construction inside function scopes to stay well below Lua's local-register limit.",
-			"Preserved catalog, image, configuration, and compatibility fallbacks."
+			"Hardened search debounce handling, prevented stale UI-scale layout callbacks, and corrected relative last-updated labels.",
+			"Improved cleanup for catalog-card connections while preserving catalog, image, configuration, and compatibility fallbacks."
 		}
 	},
 	{
@@ -8570,7 +8620,7 @@ function CreateButtonSettingInGroup(groupCard, title, desc, iconAsset, btnText, 
 end
 function AnimateRefreshButton(button, state)
 	if not button or not button.Parent then return end
-	scaleObj = button:FindFirstChild("VeloxRefreshScale")
+	local scaleObj = button:FindFirstChild("VeloxRefreshScale")
 	if not scaleObj then
 		scaleObj = Instance.new("UIScale")
 		scaleObj.Name = "VeloxRefreshScale"
