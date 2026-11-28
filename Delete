@@ -1706,9 +1706,9 @@ function ToggleUI()
 	end
 	isTransitioning = false
 end
-ToastWidth = IsMobile and 252 or 304
+ToastWidth = IsMobile and 256 or 296
 ToastMargin = 12
-ToastTopInset = IsMobile and 10 or 16
+ToastBottomInset = IsMobile and 12 or 16
 ToastDismissers = setmetatable({}, { __mode = "k" })
 function _VH_GetToastWidth()
 	local camera = workspace.CurrentCamera
@@ -1718,14 +1718,14 @@ end
 function _VH_FitToastContainer()
 	local width = _VH_GetToastWidth()
 	if ToastContainer and ToastContainer.Parent then
-		ToastContainer.Size = UDim2.new(0, width, 1, -(ToastTopInset * 2))
-		ToastContainer.Position = UDim2.new(0.5, 0, 0, ToastTopInset)
+		ToastContainer.Size = UDim2.new(0, width, 1, -(ToastBottomInset * 2))
+		ToastContainer.Position = UDim2.new(1, -ToastMargin, 1, -ToastBottomInset)
 	end
 	return width
 end
 ToastContainer = Instance.new("Frame", ScreenGui)
 ToastContainer.Name = "ToastContainer"
-ToastContainer.AnchorPoint = Vector2.new(0.5, 0)
+ToastContainer.AnchorPoint = Vector2.new(1, 1)
 ToastContainer.BackgroundTransparency = 1
 ToastContainer.Active = false
 ToastContainer.ZIndex = 2000
@@ -1733,8 +1733,8 @@ ToastContainer.ClipsDescendants = false
 ToastLayout = Instance.new("UIListLayout", ToastContainer)
 ToastLayout.Name = "NotificationLayout"
 ToastLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ToastLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-ToastLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+ToastLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+ToastLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
 ToastLayout.Padding = UDim.new(0, 6)
 ToastLayout.FillDirection = Enum.FillDirection.Vertical
 _VH_FitToastContainer()
@@ -1883,10 +1883,11 @@ function _VH_BuildToastCard(parent, nType, typeInfo, title, message, width)
 	})[nType] or VeloxIcons.NotificationInfo
 	local titleSize = IsMobile and 11 or 12
 	local messageSize = IsMobile and 10 or 11
+	local tileSize = IsMobile and 30 or 34
 	local iconSize = IsMobile and 14 or 16
 	local closeSize = IsMobile and 24 or 22
-	local pad = IsMobile and 10 or 12
-	local textX = pad + 6 + iconSize + 8
+	local pad = 10
+	local textX = pad + tileSize + 10
 	local titleHeight = titleSize + 4
 	local messageWidth = width - textX - pad
 	local messageHeight = messageSize + 4
@@ -1895,7 +1896,9 @@ function _VH_BuildToastCard(parent, nType, typeInfo, title, message, width)
 	end)
 	if okMeasure and bounds then messageHeight = math.ceil(bounds.Y) end
 	messageHeight = math.clamp(messageHeight, messageSize + 4, messageSize * 3 + 10)
-	local cardHeight = pad + titleHeight + 3 + messageHeight + pad
+	local blockHeight = titleHeight + 3 + messageHeight
+	local cardHeight = math.max(tileSize, blockHeight) + pad * 2
+	local textTop = math.floor((cardHeight - blockHeight) / 2)
 
 	local okGroup, box = pcall(Instance.new, "CanvasGroup")
 	if not okGroup or not box then box = Instance.new("Frame") end
@@ -1907,25 +1910,28 @@ function _VH_BuildToastCard(parent, nType, typeInfo, title, message, width)
 	box.ZIndex = 2002
 	box:SetAttribute("VeloxNotificationType", nType)
 	box.Parent = parent
-	Instance.new("UICorner", box).CornerRadius = UDim.new(0, 14)
+	Instance.new("UICorner", box).CornerRadius = UDim.new(0, 8)
 	local stroke = Instance.new("UIStroke", box)
-	stroke.Color = Theme.Stroke
+	stroke.Color = IsChristmas and Theme.Accent or Theme.Stroke
 	stroke.Thickness = 1
-	stroke.Transparency = 0.15
+	stroke.Transparency = IsChristmas and 0.45 or 0.1
 
-	local rail = Instance.new("Frame", box)
-	rail.Name = "AccentBar"
-	rail.Size = UDim2.new(0, 3, 1, 0)
-	rail.BackgroundColor3 = color
-	rail.BorderSizePixel = 0
-	rail.ZIndex = 2004
-
-	local icon = CreateVeloxIcon(box, iconAsset, iconSize, color, UDim2.new(0, pad + 6, 0, pad + math.floor((titleHeight - iconSize) / 2)), nil, 2005, "NotificationIcon")
+	local tile = Instance.new("Frame", box)
+	tile.Name = "IconTile"
+	tile.Size = UDim2.new(0, tileSize, 0, tileSize)
+	tile.AnchorPoint = Vector2.new(0, 0.5)
+	tile.Position = UDim2.new(0, pad, 0.5, 0)
+	tile.BackgroundColor3 = color
+	tile.BackgroundTransparency = 0.84
+	tile.BorderSizePixel = 0
+	tile.ZIndex = 2004
+	Instance.new("UICorner", tile).CornerRadius = UDim.new(0, 8)
+	CreateVeloxIcon(tile, iconAsset, iconSize, color, UDim2.new(0.5, 0, 0.5, 0), Vector2.new(0.5, 0.5), 2005, "NotificationIcon")
 
 	local titleLabel = Instance.new("TextLabel", box)
 	titleLabel.Name = "Title"
 	titleLabel.Size = UDim2.new(1, -(textX + closeSize + pad), 0, titleHeight)
-	titleLabel.Position = UDim2.new(0, textX, 0, pad)
+	titleLabel.Position = UDim2.new(0, textX, 0, textTop)
 	titleLabel.BackgroundTransparency = 1
 	titleLabel.Text = title
 	titleLabel.TextColor3 = Theme.TextPrimary
@@ -1938,7 +1944,7 @@ function _VH_BuildToastCard(parent, nType, typeInfo, title, message, width)
 	local description = Instance.new("TextLabel", box)
 	description.Name = "Description"
 	description.Size = UDim2.new(0, messageWidth, 0, messageHeight)
-	description.Position = UDim2.new(0, textX, 0, pad + titleHeight + 3)
+	description.Position = UDim2.new(0, textX, 0, textTop + titleHeight + 3)
 	description.BackgroundTransparency = 1
 	description.Text = message
 	description.TextColor3 = Theme.TextSecondary
@@ -1954,30 +1960,48 @@ function _VH_BuildToastCard(parent, nType, typeInfo, title, message, width)
 	closeButton.Name = "Close"
 	closeButton.Size = UDim2.new(0, closeSize, 0, closeSize)
 	closeButton.AnchorPoint = Vector2.new(1, 0.5)
-	closeButton.Position = UDim2.new(1, -(pad - 4), 0, pad + titleHeight / 2)
+	closeButton.Position = UDim2.new(1, -(pad - 2), 0, textTop + titleHeight / 2)
 	closeButton.BackgroundColor3 = Theme.CardHover
 	closeButton.BackgroundTransparency = 1
 	closeButton.BorderSizePixel = 0
 	closeButton.AutoButtonColor = false
 	closeButton.Text = ""
 	closeButton.ZIndex = 2006
-	Instance.new("UICorner", closeButton).CornerRadius = UDim.new(1, 0)
+	Instance.new("UICorner", closeButton).CornerRadius = UDim.new(0, 6)
 	local closeIcon = CreateVeloxIcon(closeButton, VeloxIcons.Close, 10, Theme.TextSecondary, UDim2.new(0.5, 0, 0.5, 0), Vector2.new(0.5, 0.5), 2007, "CloseIcon")
 
 	local progressTrack = Instance.new("Frame", box)
 	progressTrack.Name = "TimerProgressTrack"
-	progressTrack.Size = UDim2.new(1, 0, 0, 2)
-	progressTrack.Position = UDim2.new(0, 0, 1, -2)
+	progressTrack.Size = UDim2.new(1, -16, 0, 2)
+	progressTrack.Position = UDim2.new(0, 8, 1, -5)
 	progressTrack.BackgroundTransparency = 1
 	progressTrack.BorderSizePixel = 0
 	progressTrack.ZIndex = 2005
 	local progressFill = Instance.new("Frame", progressTrack)
 	progressFill.Name = "TimerProgress"
 	progressFill.Size = UDim2.new(1, 0, 1, 0)
-	progressFill.BackgroundColor3 = color
-	progressFill.BackgroundTransparency = 0.25
+	progressFill.BackgroundColor3 = Theme.Accent
+	progressFill.BackgroundTransparency = 0.2
 	progressFill.BorderSizePixel = 0
 	progressFill.ZIndex = 2006
+	Instance.new("UICorner", progressFill).CornerRadius = UDim.new(1, 0)
+
+	if IsChristmas then
+		for i = 1, 7 do
+			local cap = Instance.new("Frame", box)
+			cap.Name = "SnowCap"
+			local capSize = 7 + ((i * 5) % 4) * 2
+			cap.Size = UDim2.new(0, capSize, 0, capSize)
+			cap.AnchorPoint = Vector2.new(0.5, 0.5)
+			cap.Position = UDim2.new(0.07 + (i - 1) * 0.143, 0, 0, 0)
+			cap.BackgroundColor3 = Color3.fromRGB(244, 250, 252)
+			cap.BackgroundTransparency = 0.05
+			cap.BorderSizePixel = 0
+			cap.Active = false
+			cap.ZIndex = 2008
+			Instance.new("UICorner", cap).CornerRadius = UDim.new(1, 0)
+		end
+	end
 
 	return box, closeButton, closeIcon, progressFill, cardHeight
 end
@@ -1986,7 +2010,7 @@ function _VH_RunToast(box, closeButton, closeIcon, progressFill, holder, cardHei
 	local closed = false
 	local progressTween = nil
 	local isGroup = box:IsA("CanvasGroup")
-	local hiddenPosition = UDim2.new(0, 0, 0, -10)
+	local hiddenPosition = UDim2.new(0, 28, 0, 0)
 	local function Dismiss()
 		if closed then return end
 		closed = true
@@ -2099,9 +2123,9 @@ function StandaloneBannerNotification(msg, notifType)
 		local width = _VH_GetToastWidth()
 		local container = Instance.new("Frame", bannerGui)
 		container.Name = "Notification"
-		container.AnchorPoint = Vector2.new(0.5, 0)
+		container.AnchorPoint = Vector2.new(1, 1)
 		container.BackgroundTransparency = 1
-		container.Position = UDim2.new(0.5, 0, 0, ToastTopInset)
+		container.Position = UDim2.new(1, -ToastMargin, 1, -ToastBottomInset)
 		local box, closeButton, closeIcon, progressFill, cardHeight = _VH_BuildToastCard(container, nType, typeInfo, title, message, width)
 		container.Size = UDim2.new(0, width, 0, cardHeight)
 		_VH_ClearTextOutlines(bannerGui)
@@ -2143,7 +2167,7 @@ function ShowNotification(msg, notifType)
 		wrapper.Name = "Notification_" .. tostring(NotificationSequence)
 		wrapper:SetAttribute("VeloxNotification", true)
 		wrapper:SetAttribute("VeloxSeq", NotificationSequence)
-		wrapper.LayoutOrder = -NotificationSequence
+		wrapper.LayoutOrder = NotificationSequence
 		wrapper.BackgroundTransparency = 1
 		wrapper.Size = UDim2.new(1, 0, 0, 0)
 		wrapper.ZIndex = 2001
@@ -2180,9 +2204,13 @@ function AttemptActionWithCooldown(actionFunc)
 			bannerGui.Parent = parent
 			GlobalCooldownBanner = bannerGui
 			local width = _VH_GetToastWidth()
+			local stackHeight = 0
+			if ToastLayout and ToastLayout.Parent and ToastLayout.AbsoluteContentSize.Y > 0 then
+				stackHeight = ToastLayout.AbsoluteContentSize.Y + 6
+			end
 			local holder = Instance.new("Frame", bannerGui)
-			holder.AnchorPoint = Vector2.new(0.5, 0)
-			holder.Position = UDim2.new(0.5, 0, 0, ToastTopInset)
+			holder.AnchorPoint = Vector2.new(1, 1)
+			holder.Position = UDim2.new(1, -ToastMargin, 1, -(ToastBottomInset + stackHeight))
 			holder.BackgroundTransparency = 1
 			local card, closeButton, _, progressFill, cardHeight = _VH_BuildToastCard(holder, "Warning", NotificationTypeInfo.Warning, "Please wait", "Please try again in a moment.", width)
 			holder.Size = UDim2.new(0, width, 0, cardHeight)
@@ -2190,11 +2218,11 @@ function AttemptActionWithCooldown(actionFunc)
 			progressFill.Parent:Destroy()
 			local titleLabel = card:FindFirstChild("Title")
 			local txt = card:FindFirstChild("Description")
-			local rail = card:FindFirstChild("AccentBar")
-			local icon = card:FindFirstChild("NotificationIcon")
+			local tile = card:FindFirstChild("IconTile")
+			local icon = card:FindFirstChild("NotificationIcon", true)
 			local isGroup = card:IsA("CanvasGroup")
 			_VH_ClearTextOutlines(bannerGui)
-			card.Position = UDim2.new(0, 0, 0, -10)
+			card.Position = UDim2.new(0, 28, 0, 0)
 			local inProps = { Position = UDim2.new(0, 0, 0, 0) }
 			if isGroup then
 				card.GroupTransparency = 1
@@ -2212,14 +2240,14 @@ function AttemptActionWithCooldown(actionFunc)
 						if txt and txt.Parent then
 							titleLabel.Text = "Ready"
 							txt.Text = "You can try again now."
-							rail.BackgroundColor3 = Theme.Success
+							tile.BackgroundColor3 = Theme.Success
 							icon.Image = VeloxIcons.NotificationSuccess
 							icon.ImageColor3 = Theme.Success
 						end
 						task.wait(1)
 						if currentLoop == GlobalCooldownLoopVersion then
 							if card and card.Parent then
-								local outProps = { Position = UDim2.new(0, 0, 0, -10) }
+								local outProps = { Position = UDim2.new(0, 28, 0, 0) }
 								if isGroup then outProps.GroupTransparency = 1 end
 								local outro = TweenService:Create(card, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.In), outProps)
 								outro:Play()
@@ -5396,7 +5424,7 @@ HubChangelog = {
 		Version = "v" .. HubVersion,
 		Title = "UI Redesign, Optimization & Stability",
 		Items = {
-			"Redesigned notifications as top-center cards with a status accent, title and message, fade-and-slide animations, newest-first stacking, hover-to-pause timers, and tap-to-dismiss.",
+			"Redesigned notifications as compact rectangular cards in the bottom-right corner with a status icon, title and message, fade-and-slide animations, stacking, hover-to-pause timers, and tap-to-dismiss. They follow the active theme, with snow-capped cards on Christmas.",
 			"Refreshed the default theme with a clean black, graphite, and white palette; Christmas theme colors are unchanged.",
 			"Aligned the Christmas and Default themes: the tree and logo now share the same size and vertical position, and the header keeps identical dimensions in both themes.",
 			"Fixed the minimize button so its symbol sits perfectly centered inside the circle at every UI scale.",
